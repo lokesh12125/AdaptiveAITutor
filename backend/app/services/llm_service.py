@@ -19,16 +19,16 @@ class TutorLLM:
             return fallback
         sys_msg = system_prompt or "You are a concise Python tutor. Give a Socratic hint; never provide a complete solution."
         try:
-            response = self._client.responses.create(
+            response = self._client.chat.completions.create(
                 model=OPENAI_MODEL,
-                input=[
+                messages=[
                     {"role": "system", "content": sys_msg},
                     {"role": "user", "content": prompt}
                 ],
-                max_output_tokens=300,
+                max_tokens=300,
                 timeout=8.0,
             )
-            text = response.output_text.strip()
+            text = response.choices[0].message.content.strip()
             if text:
                 self.last_was_fallback = False
                 return text
