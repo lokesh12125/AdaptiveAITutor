@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Adaptive Multi-Agent AI Tutor
 
 A FastAPI + LangGraph prototype for personalized Python practice. The six graph nodes are Diagnostic, Learner State, Similar Learner Retrieval, Adaptive Scaffolding, Reflection, and Learning Planner. Learner-state scores are interaction-based estimates, not clinical measurements. Similar profiles are synthetic demo records only.
@@ -21,3 +22,7 @@ The server starts without an API key. If an OpenAI request fails because the key
 - `POST /api/chat` with `learner_id`, `problem_id`, `message`
 
 For a code review: LangGraph carries one shared `TutorState` through the six nodes. OpenAI enriches diagnostics and hints when available; deterministic logic keeps every other path runnable in Demo Mode.
+=======
+# AdaptiveAITutor
+This project helps learners learn based on their performance simply we can it as ai teacher personally taking of each student clearly 
+>>>>>>> 144fc71fab0b4368bbd74516ed1233e4cfad228a
