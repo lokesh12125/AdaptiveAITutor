@@ -96,6 +96,7 @@ class Submission(BaseModel):
     problem_id: int
     code: str = Field(min_length=1, max_length=15000)
     response_time: float = Field(default=0.0, ge=0.0, le=86400.0)
+    session_id: Optional[int] = None
 
 
 class ChatRequest(BaseModel):
@@ -251,9 +252,18 @@ def run_code(payload: Submission) -> dict:
 
 @app.post("/api/submit")
 def submit(payload: Submission, current_user: Optional[dict] = Depends(get_optional_user)) -> dict:
-    if current_user and current_user.get("role") != "teacher":
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required: Code submission requires a valid Bearer token.",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+    if current_user.get("role") != "teacher":
         if current_user.get("uid") != payload.learner_id:
-            raise HTTPException(status_code=403, detail="Forbidden: You cannot submit work on behalf of another learner.")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: You cannot submit work on behalf of another learner."
+            )
 
     item = get_problem(payload.problem_id)
     if not item:
@@ -302,6 +312,13 @@ def submit(payload: Submission, current_user: Optional[dict] = Depends(get_optio
         hints_used=result["learner_state"].get("hints_used", 0)
     )
 
+    # 4b. Update session counters if active session_id is provided
+    if payload.session_id:
+        try:
+            update_learning_session(payload.session_id, attempted=True, solved=execution["passed"])
+        except Exception:
+            pass
+
     # 5. Persist learning recommendation if generated
     rec = result.get("recommendation")
     if rec and isinstance(rec, dict):
@@ -331,9 +348,18 @@ def submit(payload: Submission, current_user: Optional[dict] = Depends(get_optio
 # --- 5. LEARNER PROFILE, HISTORY & DASHBOARD ---
 
 def check_learner_access(learner_id: str, current_user: Optional[dict]) -> None:
-    if current_user and current_user.get("role") != "teacher":
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required: Access to private learner records requires a valid Bearer token.",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+    if current_user.get("role") != "teacher":
         if current_user.get("uid") != learner_id:
-            raise HTTPException(status_code=403, detail="Forbidden: Access to another learner's records is restricted.")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: You do not have permission to access another learner's records."
+            )
 
 
 @app.get("/api/learner/{learner_id}")
@@ -430,7 +456,13 @@ def session_start(payload: SessionStartRequest, current_user: Optional[dict] = D
 
 
 @app.post("/api/sessions/{session_id}/end")
-def session_end(session_id: int) -> dict:
+def session_end(session_id: int, current_user: Optional[dict] = Depends(get_optional_user)) -> dict:
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required: Ending a learning session requires a valid Bearer token.",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
     end_learning_session(session_id)
     return {"status": "ok", "session_id": session_id}
 
@@ -508,8 +540,9 @@ def chat(payload: ChatRequest, current_user: Optional[dict] = Depends(get_option
 # --- 7. EVALUATION METRICS ENGINE ---
 
 @app.get("/api/metrics/{learner_id}")
-def evaluation_metrics(learner_id: str) -> dict:
+def evaluation_metrics(learner_id: str, current_user: Optional[dict] = Depends(get_optional_user)) -> dict:
     """Calculate and return research evaluation metrics from actual database interaction records."""
+    check_learner_access(learner_id, current_user)
     attempts = history(learner_id)
     total_attempts = len(attempts)
     solved = len([a for a in attempts if a["passed"]])
@@ -557,8 +590,9 @@ def evaluation_metrics(learner_id: str) -> dict:
 
 
 @app.post("/api/metrics/satisfaction")
-def submit_satisfaction(payload: SatisfactionRequest) -> dict:
-    current = evaluation_metrics(payload.learner_id)
+def submit_satisfaction(payload: SatisfactionRequest, current_user: Optional[dict] = Depends(get_optional_user)) -> dict:
+    check_learner_access(payload.learner_id, current_user)
+    current = evaluation_metrics(payload.learner_id, current_user=current_user)
     save_evaluation_metric(
         learner_id=payload.learner_id,
         learning_gain=current["learning_gain"],

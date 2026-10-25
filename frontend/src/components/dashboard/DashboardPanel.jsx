@@ -18,6 +18,7 @@ export default function DashboardPanel({
   activeState,
   evalMetrics,
   submitResult,
+  recommendation,
   problems = [],
   selectProblem,
   setCurrentTab,
@@ -151,14 +152,14 @@ export default function DashboardPanel({
       {/* Recommended Next Step Card */}
       <div className="recommendation-card">
         <div className="recommendation-content">
-          <h4>🎯 Recommended Next Learning Step: {submitResult?.recommendation?.topic || 'Python Foundations'}</h4>
-          <p>{submitResult?.recommendation?.reason || 'Build and solidify your foundational programming concepts through active practice.'}</p>
+          <h4>🎯 Recommended Next Learning Step: {recommendation?.topic || submitResult?.recommendation?.topic || 'Python Foundations'}</h4>
+          <p>{recommendation?.reason || submitResult?.recommendation?.reason || 'Build and solidify your foundational programming concepts through active practice.'}</p>
         </div>
         <button
           className="btn-primary"
           style={{ width: 'auto', padding: '10px 20px' }}
           onClick={() => {
-            const targetId = submitResult?.recommendation?.next_problem_id;
+            const targetId = recommendation?.next_problem_id || submitResult?.recommendation?.next_problem_id;
             const target = problems.find(p => p.id === targetId) || problems[0];
             if (target) selectProblem(target);
             setCurrentTab('practice');

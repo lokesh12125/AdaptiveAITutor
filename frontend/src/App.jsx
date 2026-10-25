@@ -51,6 +51,8 @@ export default function App() {
   const [historyList, setHistoryList] = useState([]);
   const [evalMetrics, setEvalMetrics] = useState(null);
   const [satisfactionRating, setSatisfactionRating] = useState(0);
+  const [recommendation, setRecommendation] = useState(null);
+  const [sessionId, setSessionId] = useState(null);
 
   const [chatMessages, setChatMessages] = useState([]);
 
@@ -132,6 +134,11 @@ export default function App() {
       })
       .catch(() => {});
 
+    fetch(`${API}/learner/${learnerId}/recommendation`, { headers: authHeaders })
+      .then(r => r.json())
+      .then(rec => setRecommendation(rec))
+      .catch(() => {});
+
     fetch(`${API}/chat/${learnerId}`, { headers: authHeaders })
       .then(r => r.json())
       .then(msgs => setChatMessages(msgs))
@@ -143,6 +150,35 @@ export default function App() {
       refreshUserData(user.id);
     }
   }, [user]);
+
+  // --- 2b. LEARNING SESSION LIFECYCLE ---
+  useEffect(() => {
+    if (user?.id && token && !sessionId) {
+      fetch(`${API}/sessions/start`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ learner_id: user.id })
+      })
+        .then(r => r.json())
+        .then(sess => {
+          if (sess?.id) setSessionId(sess.id);
+        })
+        .catch(() => {});
+    }
+  }, [user, token, sessionId]);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (sessionId && token) {
+        navigator.sendBeacon(`${API}/sessions/${sessionId}/end`);
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [sessionId, token]);
 
   // --- 3. RESPONSE TIME STOPWATCH ---
   useEffect(() => {
@@ -171,11 +207,19 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    if (sessionId && token) {
+      fetch(`${API}/sessions/${sessionId}/end`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      }).catch(() => {});
+    }
     localStorage.removeItem('adaptive_tutor_token');
     localStorage.removeItem('adaptive_tutor_user');
     setUser(null);
     setToken('');
+    setSessionId(null);
     setSubmitResult(null);
+    setRecommendation(null);
   };
 
   const handleRunCode = async () => {
@@ -225,7 +269,8 @@ export default function App() {
           learner_id: user.id,
           problem_id: problem.id,
           code,
-          response_time: responseTime
+          response_time: responseTime,
+          session_id: sessionId
         })
       });
       const data = await res.json();
@@ -301,6 +346,7 @@ export default function App() {
             activeState={activeState}
             evalMetrics={evalMetrics}
             submitResult={submitResult}
+            recommendation={recommendation}
             problems={problems}
             selectProblem={selectProblem}
             setCurrentTab={setCurrentTab}

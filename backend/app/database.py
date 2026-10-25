@@ -353,13 +353,26 @@ def create_custom_problem(creator_id: str, title: str, description: str, concept
     now = datetime.now(timezone.utc).isoformat()
     test_cases_json = json.dumps(test_cases)
     with connection() as conn:
-        cursor = conn.execute(
-            """INSERT INTO custom_questions 
-               (creator_id, title, description, concept_id, difficulty, starter_code, test_cases_json, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (creator_id, title, description, concept_id, difficulty, starter_code, test_cases_json, now)
-        )
-        custom_id = cursor.lastrowid
+        existing = conn.execute(
+            "SELECT id FROM custom_questions WHERE creator_id = ? AND title = ?",
+            (creator_id, title)
+        ).fetchone()
+        if existing:
+            custom_id = existing["id"]
+            conn.execute(
+                """UPDATE custom_questions 
+                   SET description = ?, concept_id = ?, difficulty = ?, starter_code = ?, test_cases_json = ?, created_at = ?
+                   WHERE id = ?""",
+                (description, concept_id, difficulty, starter_code, test_cases_json, now, custom_id)
+            )
+        else:
+            cursor = conn.execute(
+                """INSERT INTO custom_questions 
+                   (creator_id, title, description, concept_id, difficulty, starter_code, test_cases_json, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (creator_id, title, description, concept_id, difficulty, starter_code, test_cases_json, now)
+            )
+            custom_id = cursor.lastrowid
         # Map custom question to problem space
         problem_id = 10000 + custom_id
         conn.execute(

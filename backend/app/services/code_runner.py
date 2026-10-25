@@ -21,20 +21,39 @@ BUILTIN_TESTS = {
 
 FORBIDDEN_MODULES = {
     "os", "sys", "subprocess", "shutil", "socket", "pty", "commands",
-    "posix", "winreg", "ctypes", "multiprocessing", "threading"
+    "posix", "winreg", "ctypes", "multiprocessing", "threading",
+    "urllib", "requests", "http", "asyncio", "select", "fcntl", "pwd", "grp", "signal",
+    "pathlib", "tempfile"
 }
 
 FORBIDDEN_CALLS = {
-    "eval", "exec", "__import__", "compile", "open", "getattr", "setattr", "delattr", "vars", "dir", "breakpoint"
+    "eval", "exec", "__import__", "compile", "open", "getattr", "setattr", "delattr",
+    "vars", "dir", "breakpoint", "help", "input"
 }
 
 FORBIDDEN_ATTRIBUTES = {
-    "__subclasses__", "__bases__", "__base__", "__mro__", "__globals__", "__builtins__", "__class__", "__code__",
-    "system", "popen", "spawn"
+    "__subclasses__", "__bases__", "__base__", "__mro__", "__globals__", "__builtins__",
+    "__class__", "__code__", "__reduce__", "__reduce_ex__",
+    "system", "popen", "spawn", "execv", "execve"
 }
 
 
 HARNESS_HEADER = """import sys
+import builtins
+
+# Layer 2: Runtime in-harness defense neutering network and file system access
+def _blocked_open(*args, **kwargs):
+    raise PermissionError("Direct file system access is prohibited in the code execution sandbox.")
+
+builtins.open = _blocked_open
+
+try:
+    import socket
+    def _blocked_socket(*args, **kwargs):
+        raise PermissionError("Network socket creation is prohibited in the code execution sandbox.")
+    socket.socket = _blocked_socket
+except Exception:
+    pass
 
 def _assert_equal(fn_name, fn, args, expected):
     try:
@@ -63,6 +82,34 @@ def _assert_equal(fn_name, fn, args, expected):
         print(msg, file=sys.stderr)
         raise AssertionError(msg)
 """
+
+
+def _set_subprocess_limits():
+    """Apply OS-level limits within the child process before executing user code."""
+    try:
+        import resource
+        # CPU limit: 2s soft, 3s hard (triggers SIGXCPU/SIGKILL)
+        resource.setrlimit(resource.RLIMIT_CPU, (2, 3))
+    except Exception:
+        pass
+    try:
+        import resource
+        # File creation size: max 512 KB
+        resource.setrlimit(resource.RLIMIT_FSIZE, (512 * 1024, 512 * 1024))
+    except Exception:
+        pass
+    try:
+        import resource
+        # Open file descriptors: max 32
+        resource.setrlimit(resource.RLIMIT_NOFILE, (32, 32))
+    except Exception:
+        pass
+    try:
+        import os
+        # Create a new session / process group so all child forks can be killed together
+        os.setsid()
+    except Exception:
+        pass
 
 
 def validate_ast_safety(code: str) -> tuple[bool, str]:
@@ -144,8 +191,19 @@ def build_test_script(code: str, problem_id: int) -> str:
     return f"{code}\n\nprint('__ALL_TESTS_PASSED__')"
 
 
-def evaluate(code: str, problem_id: int) -> dict:
-    """Layered evaluator: AST validation + isolated subprocess with strict 3-second timeout."""
+def evaluate(code: str, problem_id: int, timeout: float = 3.0) -> dict:
+    """
+    Multi-layered code evaluation engine:
+    Layer 1: Static AST validation (blocking forbidden modules, calls, and reflection attributes).
+    Layer 2: In-harness runtime neutering of filesystem and socket APIs.
+    Layer 3: OS process-group isolation (os.setsid), resource limits, empty PATH, and SIGKILL timeout cleanup.
+    
+    ENVIRONMENT NOTE:
+    For production enterprise deployment, student execution should be hosted in unprivileged
+    containerized runtimes (e.g., Docker/gVisor/Firecracker with --net=none and read-only rootfs).
+    In this local development environment, defense-in-depth isolation is strictly enforced via
+    the 3-layer architecture described above.
+    """
     is_safe, safety_error = validate_ast_safety(code)
     if not is_safe:
         return {
@@ -160,46 +218,71 @@ def evaluate(code: str, problem_id: int) -> dict:
         source_path = Path(temp_dir) / "submission.py"
         source_path.write_text(script, encoding="utf-8")
 
-        # Layer 3: Restricted environment execution
+        # Layer 3: Restricted environment execution (empty PATH blocks external tools)
         safe_env = {
             "PYTHONPATH": "",
             "SYSTEMROOT": os.environ.get("SYSTEMROOT", "C:\\Windows"),
-            "PATH": os.environ.get("PATH", ""),
+            "PATH": "",
             "TEMP": temp_dir,
             "TMP": temp_dir
         }
 
+        proc = None
+        raw_stdout = ""
+        raw_stderr = ""
         try:
-            result = subprocess.run(
+            import signal
+            proc = subprocess.Popen(
                 [sys.executable, "-I", "-S", str(source_path)],
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                timeout=3,
                 cwd=temp_dir,
-                env=safe_env
+                env=safe_env,
+                preexec_fn=_set_subprocess_limits if hasattr(os, "setsid") else None
             )
+            raw_stdout, raw_stderr = proc.communicate(timeout=timeout)
+            returncode = proc.returncode
         except subprocess.TimeoutExpired:
+            if proc:
+                try:
+                    import signal
+                    if hasattr(os, "killpg") and hasattr(os, "getpgid"):
+                        os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                    else:
+                        proc.kill()
+                except Exception:
+                    pass
+                try:
+                    proc.communicate(timeout=1)
+                except Exception:
+                    pass
             return {
                 "passed": False,
                 "error_type": "timeout",
-                "output": "Execution timed out after 3.0 seconds. Check for infinite loops or deep recursion."
+                "output": f"Execution timed out after {timeout:.1f} seconds. Check for infinite loops or deep recursion."
             }
         except Exception as e:
+            if proc:
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
             return {
                 "passed": False,
                 "error_type": "runtime",
                 "output": f"Subprocess runner error: {str(e)[:300]}"
             }
 
-    if result.returncode == 0 and "__ALL_TESTS_PASSED__" in result.stdout:
+    if returncode == 0 and "__ALL_TESTS_PASSED__" in raw_stdout:
         return {
             "passed": True,
             "error_type": "none",
             "output": "All test assertions passed successfully."
         }
 
-    raw_stderr = (result.stderr or "").strip()
-    raw_stdout = (result.stdout or "").strip()
+    raw_stderr = (raw_stderr or "").strip()
+    raw_stdout = (raw_stdout or "").strip()
     combined_output = f"{raw_stderr}\n{raw_stdout}".strip()
 
     # 1. Check for specific harness assertion or run error
