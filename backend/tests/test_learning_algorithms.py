@@ -167,6 +167,8 @@ def test_scaffolding_bounds():
 from app.learning.scaffolding import (
     calculate_csi_score,
     determine_base_level,
+    calculate_escalated_level,
+    select_guidance_focus,
     evaluate_dsda_v2,
     calculate_time_stress as dsda_time_stress,
     FALLBACK_MATRIX
@@ -307,3 +309,136 @@ def test_dsda_fallback_matrix_completeness():
         for foc in ["Conceptual", "Tracing", "Algorithmic", "Structural"]:
             assert (lvl, foc) in FALLBACK_MATRIX
             assert len(FALLBACK_MATRIX[(lvl, foc)]) > 20
+
+
+def test_dsda_exact_formula_verification():
+    """
+    Verify exact hand-calculated CSI formula values:
+    U = exp(-3/3) = exp(-1) ≈ 0.3678794
+    Phi_F = min(1, 4/9) ≈ 0.4444444
+    H_sat = min(1, 1/3) ≈ 0.3333333
+    T_stress = (60 - 30) / 90 = 30/90 ≈ 0.3333333
+    Raw = 0.25(0.60) + 0.25(4/9) + 0.20(0.50) + 0.15(0.30) + 0.10(1/3) + 0.05(1/3) = 0.4561111
+    CSI = (1 - U) * Raw + U * 0.35 ≈ 0.417074
+    """
+    csi, raw, u = calculate_csi_score(
+        mastery=0.40,
+        consecutive_fails=2,
+        confidence=0.50,
+        cognitive_load=0.30,
+        hints_used=1,
+        response_time=60.0,
+        baseline_time=60.0,
+        observations_count=3
+    )
+    assert abs(raw - 0.4561) < 0.001
+    assert abs(u - 0.3679) < 0.001
+    assert abs(csi - 0.4171) < 0.001
+
+
+def test_dsda_non_finite_and_extreme_inputs():
+    """Verify robustness against NaN, Inf, None, negative, and out-of-range inputs."""
+    res = evaluate_dsda_v2(
+        diagnostic={"error_type": "assertion"},
+        learner_state={
+            "mastery": float("nan"),
+            "confidence": float("inf"),
+            "cognitive_load": -5.0,
+            "confusion": 2.5
+        },
+        problem_hints=[],
+        consecutive_fails=-10,
+        response_time=float("nan"),
+        baseline_time=None,
+        observations_count=-3,
+        code="def solve(x):\n  return x",
+        passed=False
+    )
+    assert 0.0 <= res["csi"] <= 1.0
+    assert 0.0 <= res["raw_csi"] <= 1.0
+    assert 0.0 <= res["uncertainty"] <= 1.0
+    assert 1 <= res["level"] <= 4
+    assert res["focus"] in ["Conceptual", "Tracing", "Algorithmic", "Structural"]
+
+
+@pytest.mark.parametrize("p_lvl", [1, 2, 3, 4])
+@pytest.mark.parametrize("b_lvl", [1, 2, 3, 4])
+def test_dsda_escalation_all_16_pairs(p_lvl, b_lvl):
+    """
+    Verify escalation invariant across all 16 (L_prev, L_base) pairs:
+    1. L_next >= L_prev (never decreases on repeated failure).
+    2. L_next <= L_prev + 1 (increases by at most 1).
+    3. L_next <= 4 (never exceeds 4).
+    4. Exact match: L_next == min(4, max(L_prev, min(L_base, L_prev + 1))).
+    """
+    l_next = calculate_escalated_level(prev_level=p_lvl, base_level=b_lvl, consecutive_fails=2)
+    assert l_next >= p_lvl, f"Decreased from {p_lvl} to {l_next} with base {b_lvl}"
+    assert l_next <= p_lvl + 1, f"Jumped more than 1 level from {p_lvl} to {l_next} with base {b_lvl}"
+    assert l_next <= 4, f"Exceeded level 4: {l_next}"
+    expected = min(4, max(p_lvl, min(b_lvl, p_lvl + 1)))
+    assert l_next == expected
+
+
+@pytest.mark.parametrize("b_lvl", [1, 2, 3, 4])
+def test_dsda_initial_hint_cap(b_lvl):
+    """First hint must be capped at min(2, L_base) to prevent premature depth."""
+    l_init = calculate_escalated_level(prev_level=0, base_level=b_lvl, consecutive_fails=1)
+    assert l_init <= 2
+    assert l_init == min(2, b_lvl)
+
+
+def test_dsda_focus_selection_categories():
+    """Verify diagnostic mapping to appropriate pedagogical guidance focus."""
+    assert select_guidance_focus("syntax") == "Structural"
+    assert select_guidance_focus("indentationerror") == "Structural"
+    assert select_guidance_focus("security") == "Structural"
+    assert select_guidance_focus("assertion") == "Tracing"
+    assert select_guidance_focus("indexerror") == "Tracing"
+    assert select_guidance_focus("timeout") == "Algorithmic"
+    assert select_guidance_focus("recursionerror") == "Algorithmic"
+    assert select_guidance_focus("typeerror") == "Conceptual"
+    assert select_guidance_focus("nameerror") == "Conceptual"
+
+
+def test_dsda_remediation_flag_conditions():
+    """Verify remediation triggers on ZPD saturation or extreme persistent confusion."""
+    # Persistent failure at Level 4
+    sat = evaluate_dsda_v2(
+        diagnostic={"error_type": "assertion"},
+        learner_state={},
+        problem_hints=[{"level": 4, "focus": "Algorithmic"}],
+        consecutive_fails=4,
+        code="def solve(x):\n  return x",
+        passed=False
+    )
+    assert sat["remediation_flag"] is True
+
+    # High confusion with persistent failure
+    conf = evaluate_dsda_v2(
+        diagnostic={"error_type": "assertion"},
+        learner_state={"confusion": 0.75},
+        problem_hints=[{"level": 3, "focus": "Tracing"}],
+        consecutive_fails=3,
+        code="def solve(x):\n  return x",
+        passed=False
+    )
+    assert conf["remediation_flag"] is True
+
+    # Moderate struggle without streak does not trigger remediation
+    mod = evaluate_dsda_v2(
+        diagnostic={"error_type": "assertion"},
+        learner_state={"confusion": 0.20},
+        problem_hints=[],
+        consecutive_fails=1,
+        code="def solve(x):\n  return x",
+        passed=False
+    )
+    assert mod["remediation_flag"] is False
+
+
+def test_dsda_zero_and_invalid_baseline_time():
+    """Ensure safe baseline handling without division by zero."""
+    assert dsda_time_stress(5.0, 0.0) == 0.0  # t_base defaults to 15.0, 5s is <= 7.5s (0.5 * t_base)
+    assert dsda_time_stress(30.0, -20.0) == 1.0  # t_base defaults to 15.0, 30s is 2x baseline
+    assert dsda_time_stress(10.0, None) == 0.0  # t_base defaults to 60.0, 10s is <= 30s
+

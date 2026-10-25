@@ -71,10 +71,7 @@ class LearnerStateAgent:
                 else:
                     break
 
-        # 1. Mastery: Bayesian Knowledge Tracing
-        updated_mastery = update_mastery(prior_mastery, passed)
-
-        # 2. Confidence: EWMA
+        # Compute concept-scoped consecutive fails from recent history
         consecutive_fails = 0
         if not passed:
             consecutive_fails = 1
@@ -84,14 +81,7 @@ class LearnerStateAgent:
                 else:
                     break
 
-        conf_ev = calculate_confidence_evidence(passed, current_hints_used, consecutive_fails)
-        updated_conf = update_confidence(prior_conf, conf_ev)
-
-        # 3. Confusion: EWMA
-        conf_sig = calculate_confusion_signal(passed, consecutive_fails, current_hints_used)
-        updated_confusion = update_confusion(prior_confusion, conf_sig)
-
-        # 4. Cognitive Load: EWMA
+        # Compute baseline response time from past interactions
         past_times = [
             h.get("response_time", 0.0)
             for h in recent_history
@@ -102,20 +92,40 @@ class LearnerStateAgent:
             past_times.sort()
             baseline_rt = past_times[len(past_times) // 2]  # Median
 
-        time_stress = calculate_time_stress(response_time, baseline_rt)
-        attempt_stress = calculate_attempt_stress(attempts)
+        # 1. Mastery & Cognitive State: Bayesian Knowledge Tracing and EWMA
+        # Security violations represent policy blocks, not pedagogical failure: preserve prior measurements
+        is_security_event = (error_type == "security" or state.get("diagnostic", {}).get("error_type") == "security")
+        if is_security_event:
+            updated_mastery = prior_mastery
+            updated_conf = prior_conf
+            updated_confusion = prior_confusion
+            updated_cog_load = prior_load
+        else:
+            updated_mastery = update_mastery(prior_mastery, passed)
 
-        recent_errors = sum(1 for h in recent_history if not h.get("passed"))
-        if not passed:
-            recent_errors += 1
+            # 2. Confidence: EWMA
+            conf_ev = calculate_confidence_evidence(passed, current_hints_used, consecutive_fails)
+            updated_conf = update_confidence(prior_conf, conf_ev)
 
-        error_stress = calculate_error_stress(recent_errors)
-        hint_stress = calculate_hint_stress(current_hints_used)
+            # 3. Confusion: EWMA
+            conf_sig = calculate_confusion_signal(passed, consecutive_fails, current_hints_used)
+            updated_confusion = update_confusion(prior_confusion, conf_sig)
 
-        load_sig = calculate_load_signal(
-            time_stress, attempt_stress, error_stress, hint_stress
-        )
-        updated_cog_load = update_cognitive_load(prior_load, load_sig)
+            # 4. Cognitive Load: EWMA
+            time_stress = calculate_time_stress(response_time, baseline_rt)
+            attempt_stress = calculate_attempt_stress(attempts)
+
+            recent_errors = sum(1 for h in recent_history if not h.get("passed"))
+            if not passed:
+                recent_errors += 1
+
+            error_stress = calculate_error_stress(recent_errors)
+            hint_stress = calculate_hint_stress(current_hints_used)
+
+            load_sig = calculate_load_signal(
+                time_stress, attempt_stress, error_stress, hint_stress
+            )
+            updated_cog_load = update_cognitive_load(prior_load, load_sig)
 
         # Persist updated concept state to DB
         try:

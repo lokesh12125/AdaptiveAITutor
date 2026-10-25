@@ -1,5 +1,5 @@
-"""Comprehensive test suite covering authentication, 6-agent LangGraph workflow, BKT mastery, custom questions, CodeNet, and evaluation metrics."""
 import unittest
+import uuid
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -425,7 +425,130 @@ class ComprehensiveTutorApiTests(unittest.TestCase):
             self.assertIn("level", hints[0])
             self.assertIn("hint_text", hints[0])
 
+    def test_14_security_event_does_not_penalize_mastery(self):
+        with TestClient(app) as client:
+            learner_id = f"sec-penalize-{uuid.uuid4().hex[:8]}"
+            # 1. Establish baseline mastery with a correct submission
+            res_pass = client.post("/api/submit", json={
+                "learner_id": learner_id,
+                "problem_id": 1,
+                "code": "def sum_array(numbers):\n    return sum(numbers)",
+                "response_time": 10.0
+            })
+            self.assertEqual(res_pass.status_code, 200)
+            baseline_mastery = res_pass.json()["learner_state"]["mastery"]
+            self.assertGreater(baseline_mastery, 0.20)
+
+            # 2. Submit security violation code
+            res_sec = client.post("/api/submit", json={
+                "learner_id": learner_id,
+                "problem_id": 1,
+                "code": "import os\ndef sum_array(numbers):\n    return 0",
+                "response_time": 5.0
+            })
+            self.assertEqual(res_sec.status_code, 200)
+            body_sec = res_sec.json()
+            self.assertEqual(body_sec["execution"]["error_type"], "security")
+            # Mastery must NOT decrease on security violation
+            self.assertEqual(body_sec["learner_state"]["mastery"], baseline_mastery)
+
+            # 3. Submit normal pedagogical failure (logic error)
+            res_fail = client.post("/api/submit", json={
+                "learner_id": learner_id,
+                "problem_id": 1,
+                "code": "def sum_array(numbers):\n    return 999999",
+                "response_time": 12.0
+            })
+            self.assertEqual(res_fail.status_code, 200)
+            # Normal logic failure DOES penalize BKT mastery
+            self.assertLess(res_fail.json()["learner_state"]["mastery"], baseline_mastery)
+
+    def test_15_problem_scoped_vs_concept_scoped_counters(self):
+        with TestClient(app) as client:
+            learner_id = f"counter-sep-{uuid.uuid4().hex[:8]}"
+            # Fail Problem 1 twice (concept: variables)
+            client.post("/api/submit", json={
+                "learner_id": learner_id,
+                "problem_id": 1,
+                "code": "def sum_array(numbers):\n    return 0",
+                "response_time": 10.0
+            })
+            sub2 = client.post("/api/submit", json={
+                "learner_id": learner_id,
+                "problem_id": 1,
+                "code": "def sum_array(numbers):\n    return 1",
+                "response_time": 10.0
+            })
+            state_p1 = sub2.json()["learner_state"]
+            self.assertEqual(state_p1["problem_consecutive_fails"], 2)
+            self.assertEqual(state_p1["consecutive_fails"], 2)
+
+            # Now submit failure on Problem 2 (same concept: variables)
+            sub3 = client.post("/api/submit", json={
+                "learner_id": learner_id,
+                "problem_id": 2,
+                "code": "def find_max(numbers):\n    return 0",
+                "response_time": 10.0
+            })
+            state_p2 = sub3.json()["learner_state"]
+            # Problem 2's failure streak is only 1!
+            self.assertEqual(state_p2["problem_consecutive_fails"], 1)
+            # Concept failure streak is 3 (cumulative on concept)
+            self.assertEqual(state_p2["consecutive_fails"], 3)
+
+    def test_16_success_resets_scaffolding_and_preserves_history(self):
+        with TestClient(app) as client:
+            learner_id = f"success-reset-{uuid.uuid4().hex[:8]}"
+            # 1. Failing attempt generates scaffolding
+            sub_fail = client.post("/api/submit", json={
+                "learner_id": learner_id,
+                "problem_id": 1,
+                "code": "def sum_array(numbers):\n    return 42",
+                "response_time": 15.0
+            })
+            self.assertGreater(sub_fail.json()["scaffolding"]["level"], 0)
+
+            # 2. Passing attempt clears scaffolding to Level 0
+            sub_pass = client.post("/api/submit", json={
+                "learner_id": learner_id,
+                "problem_id": 1,
+                "code": "def sum_array(numbers):\n    return sum(numbers)",
+                "response_time": 10.0
+            })
+            scaff = sub_pass.json()["scaffolding"]
+            self.assertEqual(scaff["level"], 0)
+            self.assertEqual(scaff["focus"], "None")
+            self.assertFalse(scaff["remediation_flag"])
+
+            # 3. Historical attempts and hints are preserved
+            hist_res = client.get(f"/api/learner/{learner_id}/history")
+            self.assertEqual(hist_res.status_code, 200)
+            attempts = hist_res.json()
+            self.assertGreaterEqual(len(attempts), 2)
+            # Ensure both failed (0) and passed (1) attempts exist in history
+            passed_flags = [a["passed"] for a in attempts]
+            self.assertIn(1, passed_flags)
+            self.assertIn(0, passed_flags)
+
+    def test_17_llm_unavailable_deterministic_fallback(self):
+        with TestClient(app) as client:
+            learner_id = f"fallback-test-{uuid.uuid4().hex[:8]}"
+            # Submitting syntax failure produces deterministic structural hint without LLM crash
+            sub = client.post("/api/submit", json={
+                "learner_id": learner_id,
+                "problem_id": 1,
+                "code": "def sum_array(numbers):\n    return 1 +",
+                "response_time": 8.0
+            })
+            self.assertEqual(sub.status_code, 200)
+            data = sub.json()
+            scaff = data["scaffolding"]
+            self.assertIn(scaff["level"], [1, 2])
+            self.assertEqual(scaff["focus"], "Structural")
+            self.assertTrue(len(scaff["hint"]) > 10)
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
