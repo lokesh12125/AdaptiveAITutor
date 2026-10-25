@@ -52,7 +52,15 @@ export default function App() {
   const [evalMetrics, setEvalMetrics] = useState(null);
   const [satisfactionRating, setSatisfactionRating] = useState(0);
   const [recommendation, setRecommendation] = useState(null);
-  const [sessionId, setSessionId] = useState(null);
+  const [sessionId, setSessionId] = useState(() => {
+    try {
+      const stored = sessionStorage.getItem('adaptive_tutor_session_id');
+      return stored ? parseInt(stored, 10) : null;
+    } catch {
+      return null;
+    }
+  });
+  const sessionStartingRef = useRef(false);
 
   const [chatMessages, setChatMessages] = useState([]);
 
@@ -153,32 +161,87 @@ export default function App() {
 
   // --- 2b. LEARNING SESSION LIFECYCLE ---
   useEffect(() => {
-    if (user?.id && token && !sessionId) {
-      fetch(`${API}/sessions/start`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ learner_id: user.id })
+    if (!user?.id || !token || sessionId || sessionStartingRef.current) return;
+
+    // Check if there is already a stored session for this user
+    try {
+      const storedUserId = sessionStorage.getItem('adaptive_tutor_session_user');
+      const storedSessionId = sessionStorage.getItem('adaptive_tutor_session_id');
+      if (storedUserId === user.id && storedSessionId) {
+        setSessionId(parseInt(storedSessionId, 10));
+        return;
+      }
+    } catch {}
+
+    sessionStartingRef.current = true;
+    fetch(`${API}/sessions/start`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ learner_id: user.id })
+    })
+      .then(r => r.json())
+      .then(sess => {
+        if (sess?.id) {
+          setSessionId(sess.id);
+          try {
+            sessionStorage.setItem('adaptive_tutor_session_id', sess.id.toString());
+            sessionStorage.setItem('adaptive_tutor_session_user', user.id);
+          } catch {}
+        }
       })
-        .then(r => r.json())
-        .then(sess => {
-          if (sess?.id) setSessionId(sess.id);
-        })
-        .catch(() => {});
-    }
-  }, [user, token, sessionId]);
+      .catch((err) => {
+        console.warn('Session start error:', err);
+      })
+      .finally(() => {
+        sessionStartingRef.current = false;
+      });
+  }, [user?.id, token, sessionId]);
 
   useEffect(() => {
-    const handleBeforeUnload = () => {
+    const handleUnload = () => {
       if (sessionId && token) {
-        navigator.sendBeacon(`${API}/sessions/${sessionId}/end`);
+        try {
+          fetch(`${API}/sessions/${sessionId}/end`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            keepalive: true
+          });
+        } catch {
+          navigator.sendBeacon?.(`${API}/sessions/${sessionId}/end`);
+        }
       }
     };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handleUnload);
+    window.addEventListener('beforeunload', handleUnload);
+    return () => {
+      window.removeEventListener('pagehide', handleUnload);
+      window.removeEventListener('beforeunload', handleUnload);
+    };
   }, [sessionId, token]);
+
+  const handleEndSession = async () => {
+    if (!sessionId || !token) return;
+    try {
+      await fetch(`${API}/sessions/${sessionId}/end`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+    } catch (e) {
+      console.warn('Error ending session:', e);
+    } finally {
+      try {
+        sessionStorage.removeItem('adaptive_tutor_session_id');
+        sessionStorage.removeItem('adaptive_tutor_session_user');
+      } catch {}
+      setSessionId(null);
+    }
+  };
 
   // --- 3. RESPONSE TIME STOPWATCH ---
   useEffect(() => {
@@ -213,6 +276,10 @@ export default function App() {
         headers: { 'Authorization': `Bearer ${token}` }
       }).catch(() => {});
     }
+    try {
+      sessionStorage.removeItem('adaptive_tutor_session_id');
+      sessionStorage.removeItem('adaptive_tutor_session_user');
+    } catch {}
     localStorage.removeItem('adaptive_tutor_token');
     localStorage.removeItem('adaptive_tutor_user');
     setUser(null);
@@ -335,6 +402,8 @@ export default function App() {
         systemHealth={systemHealth}
         handleLogout={handleLogout}
         setIsTimerRunning={setIsTimerRunning}
+        sessionId={sessionId}
+        handleEndSession={handleEndSession}
       />
 
       <div className="container">

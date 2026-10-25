@@ -17,7 +17,9 @@ export default function TopHeader({
   user, 
   systemHealth, 
   handleLogout, 
-  setIsTimerRunning 
+  setIsTimerRunning,
+  sessionId,
+  handleEndSession
 }) {
   return (
     <header className="navbar">
@@ -54,6 +56,29 @@ export default function TopHeader({
       </nav>
 
       <div className="nav-right">
+        {sessionId && (
+          <div className="session-badge" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '4px 10px', borderRadius: '16px', fontSize: '0.8rem', color: '#10b981' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} />
+            <span>Session #{sessionId}</span>
+            <button
+              onClick={handleEndSession}
+              title="Explicitly end current session"
+              style={{
+                background: 'rgba(239, 68, 68, 0.2)',
+                border: '1px solid rgba(239, 68, 68, 0.4)',
+                color: '#ef4444',
+                borderRadius: '8px',
+                padding: '2px 6px',
+                cursor: 'pointer',
+                fontSize: '0.75rem',
+                fontWeight: 600
+              }}
+            >
+              End
+            </button>
+          </div>
+        )}
+
         <div className={`mode-tag ${systemHealth.llm === 'live' ? 'live' : 'demo'}`}>
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: systemHealth.llm === 'live' ? '#10b981' : '#f59e0b' }} />
           {systemHealth.llm === 'live' ? 'OpenAI Live' : 'Demo Mode (Fallback Active)'}

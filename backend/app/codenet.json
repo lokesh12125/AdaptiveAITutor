@@ -1,0 +1,303 @@
+[
+  {
+    "id": 201,
+    "codenet_id": "p00000",
+    "title": "QQ (Multiplication Table)",
+    "difficulty": "easy",
+    "topic": "for-loops",
+    "concept_id": "for-loops",
+    "source": "IBM-Project-CodeNet",
+    "description": "### Problem Statement\nWrite a function `generate_multiplication_table()` that outputs the standard 9x9 multiplication table as a list of formatted strings in the format `f\"{i}x{j}={i*j}\"` for all $1 \\le i \\le 9$ and $1 \\le j \\le 9$.\n\n### Input / Output Specifications\n- **Input**: None.\n- **Output**: A list of 81 strings from `\"1x1=1\"` to `\"9x9=81\"`.\n\n### Constraints\n- Total entries: exactly 81 strings.\n\n### Examples\n- Entry 0: `\"1x1=1\"`\n- Entry 8: `\"1x9=9\"`\n- Entry 80: `\"9x9=81\"`",
+    "starter_code": "def generate_multiplication_table():\n    # Generate list of 'ixj=val' for i in 1..9, j in 1..9\n    pass",
+    "expected_behavior": "Returns 81 multiplication entries starting with '1x1=1' and ending with '9x9=81'",
+    "test_cases": [
+      {
+        "test_script": "table = generate_multiplication_table()\nassert len(table) == 81\nassert table[0] == '1x1=1'\nassert table[-1] == '9x9=81'\nassert table[8] == '1x9=9'\nassert table[9] == '2x1=2'\n"
+      }
+    ],
+    "accepted_solution": "def generate_multiplication_table():\n    return [f'{i}x{j}={i*j}' for i in range(1, 10) for j in range(1, 10)]",
+    "common_incorrect_submission": "def generate_multiplication_table():\n    # Off-by-one: range(1, 9) instead of range(1, 10)\n    return [f'{i}x{j}={i*j}' for i in range(1, 9) for j in range(1, 9)]",
+    "misconception": "Range upper bound off-by-one omission (range(1, 9) stops at 8)."
+  },
+  {
+    "id": 202,
+    "codenet_id": "p00001",
+    "title": "List of Top 3 Hills",
+    "difficulty": "easy",
+    "topic": "sorting",
+    "concept_id": "sorting",
+    "source": "IBM-Project-CodeNet",
+    "description": "### Problem Statement\nWrite a function `top_three_heights(heights)` that takes a list of hill heights and returns the top 3 highest hills in descending order.\n\n### Input / Output Specifications\n- **Input**: `heights` (list of positive integers, length $\\ge 3$).\n- **Output**: A list containing the 3 greatest numbers from `heights` sorted in descending order.\n\n### Constraints\n- $3 \\le \\text{len}(heights) \\le 10^4$\n- $1 \\le heights[i] \\le 10^5$\n\n### Examples\n- `top_three_heights([1819, 2003, 876, 2840, 1720])` $\\to$ `[2840, 2003, 1819]`\n- `top_three_heights([100, 200, 300])` $\\to$ `[300, 200, 100]`",
+    "starter_code": "def top_three_heights(heights):\n    # Return top 3 heights in descending order\n    pass",
+    "expected_behavior": "top_three_heights([1819, 2003, 876, 2840, 1720]) returns [2840, 2003, 1819]",
+    "test_cases": [
+      {
+        "input": [
+          [
+            1819,
+            2003,
+            876,
+            2840,
+            1720
+          ]
+        ],
+        "expected": [
+          2840,
+          2003,
+          1819
+        ]
+      },
+      {
+        "input": [
+          [
+            100,
+            200,
+            300
+          ]
+        ],
+        "expected": [
+          300,
+          200,
+          100
+        ]
+      },
+      {
+        "input": [
+          [
+            50,
+            40,
+            30,
+            20,
+            10
+          ]
+        ],
+        "expected": [
+          50,
+          40,
+          30
+        ]
+      }
+    ],
+    "accepted_solution": "def top_three_heights(heights):\n    return sorted(heights, reverse=True)[:3]",
+    "common_incorrect_submission": "def top_three_heights(heights):\n    return sorted(heights)[:3]",
+    "misconception": "Sorting in ascending rather than descending order."
+  },
+  {
+    "id": 203,
+    "codenet_id": "p00002",
+    "title": "Digit Number of Sum",
+    "difficulty": "easy",
+    "topic": "strings",
+    "concept_id": "strings",
+    "source": "IBM-Project-CodeNet",
+    "description": "### Problem Statement\nWrite a function `sum_digit_count(a, b)` that computes the sum of two non-negative integers $a$ and $b$, and returns the number of digits in that sum.\n\n### Input / Output Specifications\n- **Input**: `a` (integer $\\ge 0$), `b` (integer $\\ge 0$).\n- **Output**: An integer representing the number of digits of $a + b$.\n\n### Constraints\n- $0 \\le a, b \\le 10^9$\n\n### Examples\n- `sum_digit_count(5, 7)` $\\to$ `2` (since $5+7=12$, which has 2 digits)\n- `sum_digit_count(200, 300)` $\\to$ `3` (since $200+300=500$, which has 3 digits)\n- `sum_digit_count(0, 0)` $\\to$ `1`",
+    "starter_code": "def sum_digit_count(a, b):\n    # Return the number of digits in a + b\n    pass",
+    "expected_behavior": "sum_digit_count(5, 7) returns 2",
+    "test_cases": [
+      {
+        "input": [
+          5,
+          7
+        ],
+        "expected": 2
+      },
+      {
+        "input": [
+          200,
+          300
+        ],
+        "expected": 3
+      },
+      {
+        "input": [
+          0,
+          0
+        ],
+        "expected": 1
+      },
+      {
+        "input": [
+          99,
+          1
+        ],
+        "expected": 3
+      }
+    ],
+    "accepted_solution": "def sum_digit_count(a, b):\n    return len(str(a + b))",
+    "common_incorrect_submission": "def sum_digit_count(a, b):\n    return len(str(a)) + len(str(b))",
+    "misconception": "Summing digit counts of inputs rather than finding the digit count of the sum."
+  },
+  {
+    "id": 204,
+    "codenet_id": "p02256",
+    "title": "Greatest Common Divisor (Euclid)",
+    "difficulty": "medium",
+    "topic": "recursion",
+    "concept_id": "recursion",
+    "source": "IBM-Project-CodeNet",
+    "description": "### Problem Statement\nWrite a function `gcd_euclid(x, y)` computing the greatest common divisor of two positive integers `x` and `y` using the Euclidean algorithm ($gcd(x, y) = gcd(y, x \\pmod y)$).\n\n### Input / Output Specifications\n- **Input**: `x` (integer $> 0$), `y` (integer $> 0$).\n- **Output**: Positive integer representing the greatest common divisor.\n\n### Constraints\n- $1 \\le x, y \\le 10^9$\n\n### Examples\n- `gcd_euclid(147, 105)` $\\to$ `21`\n- `gcd_euclid(54, 24)` $\\to$ `6`\n- `gcd_euclid(13, 7)` $\\to$ `1`",
+    "starter_code": "def gcd_euclid(x, y):\n    # Euclidean algorithm\n    pass",
+    "expected_behavior": "gcd_euclid(147, 105) returns 21",
+    "test_cases": [
+      {
+        "input": [
+          147,
+          105
+        ],
+        "expected": 21
+      },
+      {
+        "input": [
+          54,
+          24
+        ],
+        "expected": 6
+      },
+      {
+        "input": [
+          13,
+          7
+        ],
+        "expected": 1
+      },
+      {
+        "input": [
+          100,
+          25
+        ],
+        "expected": 25
+      }
+    ],
+    "accepted_solution": "def gcd_euclid(x, y):\n    while y:\n        x, y = y, x % y\n    return x",
+    "common_incorrect_submission": "def gcd_euclid(x, y):\n    if y == 0: return x\n    return gcd_euclid(x, x % y)",
+    "misconception": "Passing wrong arguments to recursive call (x, x % y instead of y, x % y)."
+  },
+  {
+    "id": 205,
+    "codenet_id": "p02257",
+    "title": "Prime Numbers Count",
+    "difficulty": "medium",
+    "topic": "searching",
+    "concept_id": "searching",
+    "source": "IBM-Project-CodeNet",
+    "description": "### Problem Statement\nWrite a function `count_primes(numbers)` that takes a list of integers and returns the count of prime numbers contained in the list. Recall that a prime number is an integer strictly greater than 1 with no positive divisors other than 1 and itself.\n\n### Input / Output Specifications\n- **Input**: `numbers` (list of integers).\n- **Output**: Integer representing how many numbers in the list are prime.\n\n### Constraints\n- $0 \\le \\text{len}(numbers) \\le 10^4$\n- $-10^5 \\le numbers[i] \\le 10^5$\n\n### Examples\n- `count_primes([2, 3, 4, 5, 6, 7])` $\\to$ `4`\n- `count_primes([1, 4, 6, 8, 9])` $\\to$ `0`\n- `count_primes([0, -5, 11, 13])` $\\to$ `2`",
+    "starter_code": "def count_primes(numbers):\n    # Return count of prime numbers in numbers\n    pass",
+    "expected_behavior": "count_primes([2, 3, 4, 5, 6, 7]) returns 4",
+    "test_cases": [
+      {
+        "input": [
+          [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ]
+        ],
+        "expected": 4
+      },
+      {
+        "input": [
+          [
+            1,
+            4,
+            6,
+            8,
+            9
+          ]
+        ],
+        "expected": 0
+      },
+      {
+        "input": [
+          [
+            0,
+            -5,
+            11,
+            13
+          ]
+        ],
+        "expected": 2
+      },
+      {
+        "input": [
+          []
+        ],
+        "expected": 0
+      }
+    ],
+    "accepted_solution": "def count_primes(numbers):\n    def is_prime(n):\n        if n < 2: return False\n        for i in range(2, int(n**0.5) + 1):\n            if n % i == 0: return False\n        return True\n    return sum(1 for n in numbers if is_prime(n))\n",
+    "common_incorrect_submission": "def count_primes(numbers):\n    # Treats 1 as prime\n    return sum(1 for n in numbers if n > 0 and (n == 2 or n % 2 != 0))",
+    "misconception": "Assuming 1 is prime or odd numbers are always prime."
+  },
+  {
+    "id": 206,
+    "codenet_id": "p00003",
+    "title": "Right Triangle Identifier",
+    "difficulty": "easy",
+    "topic": "conditionals",
+    "concept_id": "conditionals",
+    "source": "IBM-Project-CodeNet",
+    "description": "### Problem Statement\nWrite a function `is_right_triangle(a, b, c)` that determines whether three positive integers can form the side lengths of a right-angled triangle by the Pythagorean Theorem ($x^2 + y^2 = z^2$ where $z$ is the longest side).\n\n### Input / Output Specifications\n- **Input**: `a`, `b`, `c` (positive integers).\n- **Output**: Boolean `True` if they form a right triangle, `False` otherwise.\n\n### Constraints\n- $1 \\le a, b, c \\le 1000$\n\n### Examples\n- `is_right_triangle(3, 4, 5)` $\\to$ `True`\n- `is_right_triangle(5, 3, 4)` $\\to$ `True`\n- `is_right_triangle(4, 5, 6)` $\\to$ `False`",
+    "starter_code": "def is_right_triangle(a, b, c):\n    # Return True if a, b, c can form a right triangle\n    pass",
+    "expected_behavior": "is_right_triangle(3, 4, 5) returns True",
+    "test_cases": [
+      {
+        "input": [
+          3,
+          4,
+          5
+        ],
+        "expected": true
+      },
+      {
+        "input": [
+          5,
+          3,
+          4
+        ],
+        "expected": true
+      },
+      {
+        "input": [
+          4,
+          5,
+          6
+        ],
+        "expected": false
+      },
+      {
+        "input": [
+          5,
+          12,
+          13
+        ],
+        "expected": true
+      }
+    ],
+    "accepted_solution": "def is_right_triangle(a, b, c):\n    sides = sorted([a, b, c])\n    return sides[0]**2 + sides[1]**2 == sides[2]**2\n",
+    "common_incorrect_submission": "def is_right_triangle(a, b, c):\n    # Bug: assumes c is always the hypotenuse\n    return a**2 + b**2 == c**2\n",
+    "misconception": "Assuming the third argument is always the hypotenuse."
+  },
+  {
+    "id": 207,
+    "codenet_id": "p00004",
+    "title": "Bank Account Class",
+    "difficulty": "medium",
+    "topic": "classes",
+    "concept_id": "classes",
+    "source": "IBM-Project-CodeNet",
+    "description": "### Problem Statement\nImplement a class `BankAccount` with:\n- An initializer `__init__(self, owner, balance=0)` that sets `self.owner = owner` and `self.balance = balance`.\n- `deposit(self, amount)`: adds `amount` to `balance` if `amount > 0` and returns `self.balance`.\n- `withdraw(self, amount)`: if $0 < amount \\le balance$, deducts `amount` and returns `True`; otherwise leaves balance unchanged and returns `False`.\n- `get_balance(self)`: returns current balance.\n\n### Input / Output Specifications\n- Method calls on `BankAccount` instance.\n\n### Constraints\n- All transaction amounts are positive numbers.\n\n### Examples\n- `acc = BankAccount(\"Alice\", 100)`\n- `acc.deposit(50)` $\\to$ `150`\n- `acc.withdraw(70)` $\\to$ `True` (balance becomes 80)\n- `acc.withdraw(100)` $\\to$ `False` (insufficient funds)",
+    "starter_code": "class BankAccount:\n    def __init__(self, owner, balance=0):\n        pass\n    def deposit(self, amount):\n        pass\n    def withdraw(self, amount):\n        pass\n    def get_balance(self):\n        pass",
+    "expected_behavior": "Models bank account transactions with balance validation",
+    "test_cases": [
+      {
+        "test_script": "acc = BankAccount('Alice', 100)\nassert acc.get_balance() == 100\nassert acc.deposit(50) == 150\nassert acc.withdraw(70) is True\nassert acc.get_balance() == 80\nassert acc.withdraw(100) is False\nassert acc.get_balance() == 80\n"
+      }
+    ],
+    "accepted_solution": "class BankAccount:\n    def __init__(self, owner, balance=0):\n        self.owner = owner\n        self.balance = balance\n    def deposit(self, amount):\n        if amount > 0:\n            self.balance += amount\n        return self.balance\n    def withdraw(self, amount):\n        if 0 < amount <= self.balance:\n            self.balance -= amount\n            return True\n        return False\n    def get_balance(self):\n        return self.balance\n",
+    "common_incorrect_submission": "class BankAccount:\n    def __init__(self, owner, balance=0):\n        self.owner = owner\n        self.balance = balance\n    def deposit(self, amount):\n        self.balance += amount\n        return self.balance\n    def withdraw(self, amount):\n        # Bug: allows overdrafts\n        self.balance -= amount\n        return True\n    def get_balance(self):\n        return self.balance\n",
+    "misconception": "Neglecting boundary checks allowing negative balance overdrafts."
+  }
+]

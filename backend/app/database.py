@@ -1,7 +1,7 @@
 """Authoritative SQLite database layer for structured tutoring platform data."""
 import json
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -10,11 +10,76 @@ from .curriculum import CURRICULUM_CONCEPTS
 from .codenet import get_codenet_subset
 
 INITIAL_PROBLEMS = [
-    (1, "Sum of an Array", "Write sum_array(numbers) that returns the sum of all numbers.", "easy", "lists", "def sum_array(numbers):\n    # write your code here\n    pass", "sum_array([2, 3, 5]) returns 10", "lists", json.dumps([{"input": [[2, 3, 5]], "expected": 10}, {"input": [[]], "expected": 0}]), 0, None, "builtin"),
-    (2, "Maximum Element", "Write find_max(numbers) that returns the largest number in a non-empty list.", "easy", "lists", "def find_max(numbers):\n    # write your code here\n    pass", "find_max([4, 1, 9]) returns 9", "lists", json.dumps([{"input": [[4, 1, 9]], "expected": 9}, {"input": [[-5, -2, -8]], "expected": -2}]), 0, None, "builtin"),
-    (3, "Count Vowels", "Write count_vowels(text) that counts a, e, i, o, and u regardless of case.", "easy", "strings", "def count_vowels(text):\n    # write your code here\n    pass", "count_vowels('Education') returns 5", "strings", json.dumps([{"input": ["Education"], "expected": 5}, {"input": ["sky"], "expected": 0}]), 0, None, "builtin"),
-    (4, "Check Palindrome", "Write is_palindrome(text) that ignores case and spaces.", "medium", "strings", "def is_palindrome(text):\n    # write your code here\n    pass", "is_palindrome('Never odd or even') returns True", "strings", json.dumps([{"input": ["Never odd or even"], "expected": True}, {"input": ["Python"], "expected": False}]), 0, None, "builtin"),
-    (5, "Two Sum", "Write two_sum(numbers, target) returning indices of two values that add to target.", "medium", "arrays", "def two_sum(numbers, target):\n    # write your code here\n    pass", "two_sum([2, 7, 11, 15], 9) returns [0, 1]", "hash-map-problems", json.dumps([{"input": [[2, 7, 11, 15], 9], "expected": [0, 1]}]), 0, None, "builtin"),
+    (
+        1,
+        "Sum of an Array",
+        "### Problem Statement\nWrite a function `sum_array(numbers)` that calculates and returns the arithmetic sum of all numbers in the given list.\n\n### Input / Output Specifications\n- **Input:** `numbers` (List[int | float]) — A list of numeric values.\n- **Output:** (int | float) — The sum of all elements. Returns 0 if the list is empty.\n\n### Constraints\n- `0 <= len(numbers) <= 10^4`\n- `-10^6 <= numbers[i] <= 10^6`\n\n### Examples\n**Example 1:**\n- Input: `[2, 3, 5]`\n- Output: `10`\n\n**Example 2:**\n- Input: `[]`\n- Output: `0`",
+        "easy",
+        "lists",
+        "def sum_array(numbers):\n    # write your code here\n    pass",
+        "sum_array([2, 3, 5]) returns 10",
+        "lists",
+        json.dumps([{"input": [[2, 3, 5]], "expected": 10}, {"input": [[]], "expected": 0}, {"input": [[-1, 1, 0]], "expected": 0}, {"input": [[42]], "expected": 42}]),
+        0,
+        None,
+        "builtin"
+    ),
+    (
+        2,
+        "Maximum Element",
+        "### Problem Statement\nWrite a function `find_max(numbers)` that returns the largest numeric value in a non-empty list.\n\n### Input / Output Specifications\n- **Input:** `numbers` (List[int | float]) — A non-empty list of numbers.\n- **Output:** (int | float) — The maximum value in the list.\n\n### Constraints\n- `1 <= len(numbers) <= 10^5`\n- `-10^6 <= numbers[i] <= 10^6`\n\n### Examples\n**Example 1:**\n- Input: `[4, 1, 9]`\n- Output: `9`\n\n**Example 2:**\n- Input: `[-5, -2, -8]`\n- Output: `-2`",
+        "easy",
+        "lists",
+        "def find_max(numbers):\n    # write your code here\n    pass",
+        "find_max([4, 1, 9]) returns 9",
+        "lists",
+        json.dumps([{"input": [[4, 1, 9]], "expected": 9}, {"input": [[-5, -2, -8]], "expected": -2}, {"input": [[100]], "expected": 100}, {"input": [[3, 3, 3]], "expected": 3}]),
+        0,
+        None,
+        "builtin"
+    ),
+    (
+        3,
+        "Count Vowels",
+        "### Problem Statement\nWrite a function `count_vowels(text)` that counts the total occurrences of vowels (`a`, `e`, `i`, `o`, `u`, case-insensitive) in the given string `text`.\n\n### Input / Output Specifications\n- **Input:** `text` (str) — An input string.\n- **Output:** (int) — Number of vowels found.\n\n### Constraints\n- `0 <= len(text) <= 10^5`\n\n### Examples\n**Example 1:**\n- Input: `'Education'`\n- Output: `5`\n\n**Example 2:**\n- Input: `'sky'`\n- Output: `0`",
+        "easy",
+        "strings",
+        "def count_vowels(text):\n    # write your code here\n    pass",
+        "count_vowels('Education') returns 5",
+        "strings",
+        json.dumps([{"input": ["Education"], "expected": 5}, {"input": ["sky"], "expected": 0}, {"input": [""], "expected": 0}, {"input": ["AEIOUaeiou"], "expected": 10}]),
+        0,
+        None,
+        "builtin"
+    ),
+    (
+        4,
+        "Check Palindrome",
+        "### Problem Statement\nWrite a function `is_palindrome(text)` that checks whether a given string is a palindrome, ignoring differences in casing and spaces.\n\n### Input / Output Specifications\n- **Input:** `text` (str) — An input string.\n- **Output:** (bool) — `True` if palindrome, `False` otherwise.\n\n### Constraints\n- `0 <= len(text) <= 10^5`\n\n### Examples\n**Example 1:**\n- Input: `'Never odd or even'`\n- Output: `True`\n\n**Example 2:**\n- Input: `'Python'`\n- Output: `False`",
+        "medium",
+        "strings",
+        "def is_palindrome(text):\n    # write your code here\n    pass",
+        "is_palindrome('Never odd or even') returns True",
+        "strings",
+        json.dumps([{"input": ["Never odd or even"], "expected": True}, {"input": ["Python"], "expected": False}, {"input": ["Racecar"], "expected": True}, {"input": [""], "expected": True}]),
+        0,
+        None,
+        "builtin"
+    ),
+    (
+        5,
+        "Two Sum",
+        "### Problem Statement\nWrite a function `two_sum(numbers, target)` returning the 0-based indices `[i, j]` ($i < j$) of two distinct numbers in `numbers` that add up to `target`. If no such pair exists, return `None`.\n\n### Input / Output Specifications\n- **Input:** `numbers` (List[int]), `target` (int)\n- **Output:** (List[int] | None) — Two indices `[i, j]` or `None`.\n\n### Constraints\n- `2 <= len(numbers) <= 10^4`\n\n### Examples\n**Example 1:**\n- Input: `[2, 7, 11, 15]`, target: `9`\n- Output: `[0, 1]`\n\n**Example 2:**\n- Input: `[3, 2, 4]`, target: `6`\n- Output: `[1, 2]`",
+        "medium",
+        "arrays",
+        "def two_sum(numbers, target):\n    # write your code here\n    pass",
+        "two_sum([2, 7, 11, 15], 9) returns [0, 1]",
+        "hash-map-problems",
+        json.dumps([{"input": [[2, 7, 11, 15], 9], "expected": [0, 1]}, {"input": [[3, 2, 4], 6], "expected": [1, 2]}, {"input": [[1, 2, 3], 10], "expected": None}, {"input": [[3, 3], 6], "expected": [0, 1]}]),
+        0,
+        None,
+        "builtin"
+    ),
 ]
 
 
@@ -180,7 +245,7 @@ def initialize_database() -> None:
 
         # Seed initial built-in problems if missing
         conn.executemany("""
-            INSERT OR IGNORE INTO problems 
+            INSERT OR REPLACE INTO problems 
             (id, title, description, difficulty, topic, starter_code, expected_behavior, concept_id, test_cases_json, is_custom, creator_id, source)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, INITIAL_PROBLEMS)
@@ -223,7 +288,7 @@ def initialize_database() -> None:
         # Seed IBM Project CodeNet subset problems
         for cp in get_codenet_subset():
             conn.execute("""
-                INSERT OR IGNORE INTO problems
+                INSERT OR REPLACE INTO problems
                 (id, title, description, difficulty, topic, starter_code, expected_behavior, concept_id, test_cases_json, is_custom, creator_id, source)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?)
             """, (
@@ -608,15 +673,68 @@ def get_recent_problem_attempts(learner_id: str, problem_id: int, limit: int = 1
 
 # --- SESSION TRACKING QUERIES ---
 
-def start_learning_session(learner_id: str) -> dict:
-    now = datetime.now(timezone.utc).isoformat()
+def get_session_by_id(session_id: int) -> Optional[dict]:
     with connection() as conn:
+        row = conn.execute("SELECT * FROM learning_sessions WHERE id = ?", (session_id,)).fetchone()
+    if not row:
+        return None
+    d = dict(row)
+    if d.get("started_at"):
+        try:
+            start_dt = datetime.fromisoformat(d["started_at"])
+            end_dt = datetime.fromisoformat(d["ended_at"]) if d.get("ended_at") else datetime.now(timezone.utc)
+            d["duration_seconds"] = max(0, int((end_dt - start_dt).total_seconds()))
+        except Exception:
+            d["duration_seconds"] = 0
+    else:
+        d["duration_seconds"] = 0
+    d["status"] = "completed" if d.get("ended_at") else "active"
+    return d
+
+
+def start_learning_session(learner_id: str) -> dict:
+    now_dt = datetime.now(timezone.utc)
+    now = now_dt.isoformat()
+    with connection() as conn:
+        # Check for active (unended) session for this learner
+        active_row = conn.execute(
+            "SELECT * FROM learning_sessions WHERE learner_id = ? AND ended_at IS NULL ORDER BY id DESC LIMIT 1",
+            (learner_id,)
+        ).fetchone()
+        if active_row:
+            active_sess = dict(active_row)
+            try:
+                started_dt = datetime.fromisoformat(active_sess["started_at"])
+                age = (now_dt - started_dt).total_seconds()
+            except Exception:
+                age = 0
+            if age < 7200:  # Within 2 hours, reuse idempotently
+                active_sess["duration_seconds"] = int(age)
+                active_sess["status"] = "active"
+                return active_sess
+            else:
+                # Reconcile stale session (> 2 hours old)
+                reconciled_end = (started_dt + timedelta(minutes=45)).isoformat()
+                conn.execute(
+                    "UPDATE learning_sessions SET ended_at = ? WHERE id = ?",
+                    (reconciled_end, active_sess["id"])
+                )
+
         cursor = conn.execute(
             "INSERT INTO learning_sessions (learner_id, started_at, problems_attempted, problems_solved) VALUES (?, ?, 0, 0)",
             (learner_id, now)
         )
         sess_id = cursor.lastrowid
-    return {"id": sess_id, "learner_id": learner_id, "started_at": now, "problems_attempted": 0, "problems_solved": 0}
+    return {
+        "id": sess_id,
+        "learner_id": learner_id,
+        "started_at": now,
+        "ended_at": None,
+        "duration_seconds": 0,
+        "status": "active",
+        "problems_attempted": 0,
+        "problems_solved": 0
+    }
 
 
 def update_learning_session(session_id: int, attempted: bool = True, solved: bool = False) -> None:
@@ -630,10 +748,11 @@ def update_learning_session(session_id: int, attempted: bool = True, solved: boo
         )
 
 
-def end_learning_session(session_id: int) -> None:
+def end_learning_session(session_id: int) -> Optional[dict]:
     now = datetime.now(timezone.utc).isoformat()
     with connection() as conn:
-        conn.execute("UPDATE learning_sessions SET ended_at = ? WHERE id = ?", (now, session_id))
+        conn.execute("UPDATE learning_sessions SET ended_at = ? WHERE id = ? AND ended_at IS NULL", (now, session_id))
+    return get_session_by_id(session_id)
 
 
 def get_learning_sessions(learner_id: str, limit: int = 10) -> list[dict]:
@@ -642,7 +761,22 @@ def get_learning_sessions(learner_id: str, limit: int = 10) -> list[dict]:
             "SELECT * FROM learning_sessions WHERE learner_id = ? ORDER BY id DESC LIMIT ?",
             (learner_id, limit)
         ).fetchall()
-    return [dict(r) for r in rows]
+    now_dt = datetime.now(timezone.utc)
+    sessions = []
+    for r in rows:
+        d = dict(r)
+        if d.get("started_at"):
+            try:
+                start_dt = datetime.fromisoformat(d["started_at"])
+                end_dt = datetime.fromisoformat(d["ended_at"]) if d.get("ended_at") else now_dt
+                d["duration_seconds"] = max(0, int((end_dt - start_dt).total_seconds()))
+            except Exception:
+                d["duration_seconds"] = 0
+        else:
+            d["duration_seconds"] = 0
+        d["status"] = "completed" if d.get("ended_at") else "active"
+        sessions.append(d)
+    return sessions
 
 
 # --- RECOMMENDATIONS PERSISTENCE ---

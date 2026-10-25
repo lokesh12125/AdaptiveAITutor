@@ -155,15 +155,16 @@ def extract_function_name(code: str, default: str = "") -> str:
     return default
 
 
-def build_test_script(code: str, problem_id: int) -> str:
+def build_test_script(code: str, problem_id: int, test_cases: list = None) -> str:
     """Construct an assertion verification script from database problem test cases or fallback map."""
-    problem = get_problem(problem_id)
-    test_cases = []
-    if problem and problem.get("test_cases_json"):
-        try:
-            test_cases = json.loads(problem["test_cases_json"])
-        except Exception:
-            test_cases = []
+    if test_cases is None:
+        problem = get_problem(problem_id)
+        test_cases = []
+        if problem and problem.get("test_cases_json"):
+            try:
+                test_cases = json.loads(problem["test_cases_json"])
+            except Exception:
+                test_cases = []
 
     fn_name = extract_function_name(code)
 
@@ -191,7 +192,7 @@ def build_test_script(code: str, problem_id: int) -> str:
     return f"{code}\n\nprint('__ALL_TESTS_PASSED__')"
 
 
-def evaluate(code: str, problem_id: int, timeout: float = 3.0) -> dict:
+def evaluate(code: str, problem_id: int, timeout: float = 3.0, test_cases: list = None) -> dict:
     """
     Multi-layered code evaluation engine:
     Layer 1: Static AST validation (blocking forbidden modules, calls, and reflection attributes).
@@ -212,7 +213,7 @@ def evaluate(code: str, problem_id: int, timeout: float = 3.0) -> dict:
             "output": safety_error
         }
 
-    script = build_test_script(code, problem_id)
+    script = build_test_script(code, problem_id, test_cases=test_cases)
 
     with tempfile.TemporaryDirectory() as temp_dir:
         source_path = Path(temp_dir) / "submission.py"

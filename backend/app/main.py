@@ -42,6 +42,7 @@ from .database import (
     update_learning_session,
     end_learning_session,
     get_learning_sessions,
+    get_session_by_id,
 )
 from .graph.tutor_graph import tutor_graph
 from .services.code_runner import evaluate
@@ -463,8 +464,16 @@ def session_end(session_id: int, current_user: Optional[dict] = Depends(get_opti
             detail="Authentication required: Ending a learning session requires a valid Bearer token.",
             headers={"WWW-Authenticate": "Bearer"}
         )
-    end_learning_session(session_id)
-    return {"status": "ok", "session_id": session_id}
+    session = get_session_by_id(session_id)
+    if not session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found.")
+    if current_user.get("role") != "teacher" and current_user.get("uid") != session["learner_id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You cannot end another learner's session."
+        )
+    res = end_learning_session(session_id)
+    return {"status": "ok", "session_id": session_id, "session": res}
 
 
 @app.get("/api/sessions/{learner_id}")
