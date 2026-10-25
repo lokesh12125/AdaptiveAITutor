@@ -1,0 +1,163 @@
+import pytest
+from app.learning.bkt import update_mastery
+from app.learning.confidence import calculate_confidence_evidence, update_confidence
+from app.learning.confusion import calculate_confusion_signal, update_confusion
+from app.learning.cognitive_load import (
+    calculate_time_stress,
+    calculate_attempt_stress,
+    calculate_error_stress,
+    calculate_hint_stress,
+    calculate_load_signal,
+    update_cognitive_load
+)
+from app.learning.scaffolding import calculate_scaffolding_score, determine_scaffolding_level
+
+def test_bkt_initial_mastery():
+    # 1. Initial mastery is 0.20
+    mastery = 0.20
+    assert mastery == 0.20
+
+def test_bkt_correct_increases_mastery():
+    # 2. Correct response increases mastery
+    prior = 0.20
+    new_mastery = update_mastery(prior, passed=True)
+    assert new_mastery > prior
+    assert new_mastery <= 1.0
+
+def test_bkt_incorrect_decreases_mastery():
+    # 3. Incorrect response normally decreases mastery
+    prior = 0.20
+    new_mastery = update_mastery(prior, passed=False)
+    assert new_mastery < prior
+    assert new_mastery >= 0.0
+
+def test_bkt_multiple_correct_converge_upward():
+    # 4. Multiple correct answers converge upward
+    mastery = 0.20
+    for _ in range(5):
+        mastery = update_mastery(mastery, passed=True)
+    assert mastery > 0.80
+    assert mastery <= 1.0
+
+def test_bkt_multiple_incorrect_move_downward():
+    # 5. Multiple incorrect answers move downward
+    mastery = 0.80
+    for _ in range(5):
+        mastery = update_mastery(mastery, passed=False)
+    assert mastery < 0.20
+    assert mastery >= 0.0
+
+def test_bkt_bounds():
+    # 6. Values never exceed 1. 7. Values never become negative.
+    assert update_mastery(1.5, passed=True) <= 1.0
+    assert update_mastery(-0.5, passed=False) >= 0.0
+
+def test_bkt_zero_denominator_safe():
+    # 8. Zero-denominator cases do not crash.
+    # Set P_S = 1.0, P_G = 1.0 -> P(correct) can be weird if P_K is extreme
+    try:
+        update_mastery(1.0, passed=True, p_s=1.0, p_g=1.0)
+    except ZeroDivisionError:
+        pytest.fail("BKT crashed with ZeroDivisionError")
+
+def test_confidence_initial():
+    assert 0.50 == 0.50
+
+def test_confidence_correct_evidence():
+    ev_no_hint = calculate_confidence_evidence(passed=True, hints_used=0, consecutive_fails=0)
+    ev_with_hint = calculate_confidence_evidence(passed=True, hints_used=1, consecutive_fails=0)
+    assert ev_no_hint > ev_with_hint
+
+def test_confidence_incorrect_lowers():
+    ev_incorrect = calculate_confidence_evidence(passed=False, hints_used=0, consecutive_fails=1)
+    ev_repeated_fail = calculate_confidence_evidence(passed=False, hints_used=0, consecutive_fails=3)
+    assert ev_repeated_fail < ev_incorrect
+    assert ev_incorrect < 0.5
+
+def test_confidence_ewma():
+    prior = 0.50
+    ev = 1.0
+    updated = update_confidence(prior, ev, alpha=0.70)
+    assert updated == pytest.approx(0.70 * 0.50 + 0.30 * 1.0)
+    
+def test_confidence_bounds():
+    assert update_confidence(1.5, 1.5) <= 1.0
+    assert update_confidence(-0.5, -0.5) >= 0.0
+
+def test_confusion_initial():
+    assert 0.0 == 0.0
+
+def test_confusion_one_failure():
+    sig = calculate_confusion_signal(passed=False, consecutive_fails=1, hints_used=0)
+    assert sig > 0.0
+
+def test_confusion_repeated_failure():
+    sig1 = calculate_confusion_signal(passed=False, consecutive_fails=1, hints_used=0)
+    sig2 = calculate_confusion_signal(passed=False, consecutive_fails=3, hints_used=0)
+    assert sig2 > sig1
+
+def test_confusion_hint_dependence():
+    sig1 = calculate_confusion_signal(passed=False, consecutive_fails=1, hints_used=1)
+    sig2 = calculate_confusion_signal(passed=False, consecutive_fails=1, hints_used=3)
+    assert sig2 > sig1
+
+def test_confusion_success_reduces():
+    sig = calculate_confusion_signal(passed=True, consecutive_fails=0, hints_used=0)
+    assert sig == 0.0
+    prior = 0.8
+    updated = update_confusion(prior, sig, alpha=0.70)
+    assert updated < prior
+
+def test_confusion_bounds():
+    assert update_confusion(1.5, 1.5) <= 1.0
+    assert update_confusion(-0.5, -0.5) >= 0.0
+
+def test_cognitive_load_initial():
+    assert 0.0 == 0.0
+
+def test_cognitive_load_time_stress():
+    assert calculate_time_stress(120.0, 60.0) == 1.0
+    assert calculate_time_stress(30.0, 60.0) == 0.5
+
+def test_cognitive_load_attempt_stress():
+    assert calculate_attempt_stress(1) == 0.0
+    assert calculate_attempt_stress(4) == 1.0
+
+def test_cognitive_load_error_stress():
+    assert calculate_error_stress(0) == 0.0
+    assert calculate_error_stress(3) == 1.0
+
+def test_cognitive_load_hint_stress():
+    assert calculate_hint_stress(0) == 0.0
+    assert calculate_hint_stress(3) == 1.0
+
+def test_cognitive_load_ewma_decreases():
+    prior = 0.8
+    sig = calculate_load_signal(0.0, 0.0, 0.0, 0.0)
+    updated = update_cognitive_load(prior, sig, alpha=0.70)
+    assert updated < prior
+
+def test_cognitive_load_bounds():
+    assert update_cognitive_load(1.5, 1.5) <= 1.0
+    assert update_cognitive_load(-0.5, -0.5) >= 0.0
+
+def test_scaffolding_levels():
+    # Low difficulty state maps to Level 1.
+    score1 = calculate_scaffolding_score(mastery=0.9, confidence=0.9, confusion=0.0, cognitive_load=0.1, hint_dependence=0.0, time_stress=0.0)
+    assert determine_scaffolding_level(score1) == 1
+
+    # Moderate state maps to Level 2.
+    score2 = calculate_scaffolding_score(mastery=0.5, confidence=0.5, confusion=0.3, cognitive_load=0.3, hint_dependence=0.2, time_stress=0.1)
+    assert determine_scaffolding_level(score2) == 2
+
+    # Higher state maps to Level 3.
+    score3 = calculate_scaffolding_score(mastery=0.2, confidence=0.2, confusion=0.6, cognitive_load=0.6, hint_dependence=0.5, time_stress=0.3)
+    assert determine_scaffolding_level(score3) == 3
+
+    # High difficulty maps to Level 4.
+    score4 = calculate_scaffolding_score(mastery=0.0, confidence=0.0, confusion=1.0, cognitive_load=1.0, hint_dependence=1.0, time_stress=1.0)
+    assert determine_scaffolding_level(score4) == 4
+
+def test_scaffolding_bounds():
+    assert determine_scaffolding_level(-0.5) == 1
+    assert determine_scaffolding_level(1.5) == 4

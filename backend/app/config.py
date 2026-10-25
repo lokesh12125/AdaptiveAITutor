@@ -2,6 +2,7 @@
 from pathlib import Path
 import os
 
+# pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]

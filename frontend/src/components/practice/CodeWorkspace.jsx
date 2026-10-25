@@ -18,6 +18,14 @@ export default function CodeWorkspace({
   submitResult,
   setSubmitResult
 }) {
+  const formatActiveTime = (secs) => {
+    if (!secs) return '0s';
+    if (secs < 60) return `${secs}s`;
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}m ${s}s`;
+  };
+
   return (
     <section className="workspace-center">
       {problem && (
@@ -50,7 +58,7 @@ export default function CodeWorkspace({
           </div>
           <div className="timer-tag">
             <Timer size={15} />
-            <span>Active Time: {activeSeconds}s</span>
+            <span>Active Time: {formatActiveTime(activeSeconds)}</span>
           </div>
         </div>
 
@@ -63,6 +71,9 @@ export default function CodeWorkspace({
             setCode(val || '');
             setSubmitResult(null);
             setRunResult(null);
+            if (setIsTimerRunning) {
+              setIsTimerRunning(true);
+            }
           }}
           options={{
             minimap: { enabled: false },

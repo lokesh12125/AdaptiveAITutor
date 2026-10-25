@@ -61,24 +61,43 @@ export default function App() {
       .then(data => setSystemHealth(data))
       .catch(() => setSystemHealth({ backend: 'offline', llm: 'demo' }));
 
-    fetch(`${API}/concepts`)
-      .then(r => r.json())
-      .then(data => {
-        setConcepts(data);
-        if (data.length > 0) setSelectedConcept(data[0]);
-      })
-      .catch(() => {});
+    const loadConcepts = () => {
+      fetch(`${API}/concepts`)
+        .then(r => r.json())
+        .then(data => {
+          if (Array.isArray(data) && data.length > 0) {
+            setConcepts(data);
+            setSelectedConcept(prev => prev || data[0]);
+          }
+        })
+        .catch(() => {});
+    };
 
-    fetch(`${API}/problems`)
-      .then(r => r.json())
-      .then(data => {
-        setProblems(data);
-        if (data.length > 0 && !problem) {
-          setProblem(data[0]);
-          setCode(data[0].starter_code);
-        }
-      })
-      .catch(() => {});
+    const loadProblems = () => {
+      fetch(`${API}/problems`)
+        .then(r => r.json())
+        .then(data => {
+          if (Array.isArray(data) && data.length > 0) {
+            setProblems(data);
+            setProblem(prev => {
+              if (prev) return prev;
+              setCode(data[0].starter_code);
+              return data[0];
+            });
+            // Auto-expand all topics so practice problems are immediately visible
+            const topicsMap = {};
+            data.forEach(p => {
+              const topicKey = p.concept_id || p.topic || 'general';
+              topicsMap[topicKey] = true;
+            });
+            setExpandedTopics(topicsMap);
+          }
+        })
+        .catch(() => {});
+    };
+
+    loadConcepts();
+    loadProblems();
   }, []);
 
   // --- 2. USER DATA REFRESH ---
@@ -134,6 +153,12 @@ export default function App() {
     }
     return () => clearInterval(timerRef.current);
   }, [isTimerRunning]);
+
+  useEffect(() => {
+    if (currentTab === 'practice' && problem && !submitLoading) {
+      setIsTimerRunning(true);
+    }
+  }, [currentTab, problem, submitLoading]);
 
   const selectProblem = (prob) => {
     setProblem(prob);
@@ -279,6 +304,7 @@ export default function App() {
             setSelectedConcept={setSelectedConcept}
             satisfactionRating={satisfactionRating}
             setSatisfactionRating={handleRateSatisfaction}
+            historyList={historyList}
           />
         )}
 

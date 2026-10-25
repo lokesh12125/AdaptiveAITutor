@@ -29,6 +29,37 @@ FORBIDDEN_CALLS = {
 }
 
 
+HARNESS_HEADER = """import sys
+
+def _assert_equal(fn_name, fn, args, expected):
+    try:
+        actual = fn(*args)
+    except Exception as e:
+        err_type = type(e).__name__
+        tb = sys.exc_info()[2]
+        lineno = '?'
+        while tb:
+            if tb.tb_next is None:
+                lineno = tb.tb_lineno
+                break
+            tb = tb.tb_next
+        print(f"RUN_ERROR:{err_type}: {e} (line {lineno})", file=sys.stderr)
+        raise
+
+    # Normalize list/tuple comparison (e.g., tuple (2, 1) vs list [2, 1])
+    is_match = False
+    if actual == expected:
+        is_match = True
+    elif isinstance(actual, (tuple, list)) and isinstance(expected, (tuple, list)):
+        is_match = list(actual) == list(expected)
+
+    if not is_match:
+        msg = f"AssertionError: Test failed for {fn_name}({', '.join(repr(a) for a in args)}). Expected {expected!r}, got {actual!r}"
+        print(msg, file=sys.stderr)
+        raise AssertionError(msg)
+"""
+
+
 def validate_ast_safety(code: str) -> tuple[bool, str]:
     """Layer 1 security: Inspect AST for prohibited modules, function calls, and dangerous operations."""
     try:
@@ -80,9 +111,10 @@ def build_test_script(code: str, problem_id: int) -> str:
         except Exception:
             test_cases = []
 
+    fn_name = extract_function_name(code)
+
     if test_cases:
         assertions = []
-        fn_name = extract_function_name(code)
         for tc in test_cases:
             if "test_script" in tc:
                 assertions.append(tc["test_script"])
@@ -90,15 +122,16 @@ def build_test_script(code: str, problem_id: int) -> str:
                 args = tc["input"]
                 expected = tc["expected"]
                 if fn_name:
-                    assertions.append(f"assert {fn_name}(*{args!r}) == {expected!r}")
+                    assertions.append(f"_assert_equal({fn_name!r}, {fn_name}, {args!r}, {expected!r})")
         if assertions:
-            return f"{code}\n\n# --- AUTOMATED TEST HARNESS ---\n" + "\n".join(assertions) + "\nprint('__ALL_TESTS_PASSED__')"
+            return f"{HARNESS_HEADER}\n\n{code}\n\n# --- AUTOMATED TEST HARNESS ---\n" + "\n".join(assertions) + "\nprint('__ALL_TESTS_PASSED__')"
 
     # Fallback to BUILTIN_TESTS if available
     if problem_id in BUILTIN_TESTS:
-        fn_name, cases = BUILTIN_TESTS[problem_id]
-        assertions = "\n".join(f"assert {fn_name}(*{args!r}) == {expected!r}" for args, expected in cases)
-        return f"{code}\n\n{assertions}\nprint('__ALL_TESTS_PASSED__')"
+        fn_name_fallback, cases = BUILTIN_TESTS[problem_id]
+        target_fn = fn_name or fn_name_fallback
+        assertions = "\n".join(f"_assert_equal({target_fn!r}, {target_fn}, {args!r}, {expected!r})" for args, expected in cases)
+        return f"{HARNESS_HEADER}\n\n{code}\n\n# --- AUTOMATED TEST HARNESS ---\n{assertions}\nprint('__ALL_TESTS_PASSED__')"
 
     # If no specific tests are defined, perform syntax & smoke check
     return f"{code}\n\nprint('__ALL_TESTS_PASSED__')"
@@ -110,7 +143,7 @@ def evaluate(code: str, problem_id: int) -> dict:
     if not is_safe:
         return {
             "passed": False,
-            "error_type": "security" if "Security Violation" in safety_error else "syntax",
+            "error_type": "syntax" if "SyntaxError" in safety_error else "security",
             "output": safety_error
         }
 
@@ -121,7 +154,6 @@ def evaluate(code: str, problem_id: int) -> dict:
         source_path.write_text(script, encoding="utf-8")
 
         # Layer 3: Restricted environment execution
-        # Scrub sensitive environment variables (e.g. API keys) from child process environment
         safe_env = {
             "PYTHONPATH": "",
             "SYSTEMROOT": os.environ.get("SYSTEMROOT", "C:\\Windows"),
@@ -159,21 +191,63 @@ def evaluate(code: str, problem_id: int) -> dict:
             "output": "All test assertions passed successfully."
         }
 
-    raw_output = (result.stderr or result.stdout).strip()
-    lines = [line for line in raw_output.splitlines() if line.strip()]
-    last_line = lines[-1] if lines else "Non-zero exit code"
+    raw_stderr = (result.stderr or "").strip()
+    raw_stdout = (result.stdout or "").strip()
+    combined_output = f"{raw_stderr}\n{raw_stdout}".strip()
 
-    if "AssertionError" in raw_output:
-        error_type = "assertion"
-    elif "SyntaxError" in raw_output:
-        error_type = "syntax"
-    elif "RecursionError" in raw_output:
-        error_type = "recursion"
-    else:
-        error_type = "runtime"
+    # 1. Check for specific harness assertion or run error
+    for line in combined_output.splitlines():
+        line_s = line.strip()
+        if line_s.startswith("AssertionError:"):
+            return {
+                "passed": False,
+                "error_type": "assertion",
+                "output": line_s
+            }
+        if line_s.startswith("RUN_ERROR:"):
+            cleaned_err = line_s.replace("RUN_ERROR:", "").strip()
+            err_type = cleaned_err.split(":")[0].lower() if ":" in cleaned_err else "runtime"
+            return {
+                "passed": False,
+                "error_type": err_type,
+                "output": cleaned_err
+            }
+
+    # 2. Check for standard Python exceptions in traceback
+    lines = [l.strip() for l in combined_output.splitlines() if l.strip()]
+    if lines:
+        last_line = lines[-1]
+        # Match pattern like NameError: name 'x' is not defined or SyntaxError: ...
+        if ":" in last_line:
+            exc_class = last_line.split(":")[0].strip()
+            if exc_class in ("SyntaxError", "NameError", "TypeError", "ValueError", "IndexError", "KeyError", "AttributeError", "ZeroDivisionError", "RecursionError", "AssertionError"):
+                err_type_map = {
+                    "SyntaxError": "syntax",
+                    "AssertionError": "assertion",
+                    "RecursionError": "recursion"
+                }
+                # Try to extract line number from traceback lines
+                lineno_str = ""
+                for line in lines:
+                    m = re.search(r'line (\d+)', line)
+                    if m:
+                        lineno_str = f" (line {m.group(1)})"
+                
+                output_msg = f"{last_line}{lineno_str}" if lineno_str and lineno_str not in last_line else last_line
+                return {
+                    "passed": False,
+                    "error_type": err_type_map.get(exc_class, "runtime"),
+                    "output": output_msg[:400]
+                }
+
+        return {
+            "passed": False,
+            "error_type": "runtime",
+            "output": last_line[:400]
+        }
 
     return {
         "passed": False,
-        "error_type": error_type,
-        "output": last_line[:400]
+        "error_type": "runtime",
+        "output": "Execution failed with non-zero exit code."
     }

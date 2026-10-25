@@ -172,6 +172,10 @@ def initialize_database() -> None:
         _safe_add_column(conn, "attempts", "response_time REAL DEFAULT 0")
         _safe_add_column(conn, "attempts", "scaffolding_level INTEGER DEFAULT 1")
         _safe_add_column(conn, "attempts", "hints_used INTEGER DEFAULT 0")
+        _safe_add_column(conn, "concept_progress", "confidence REAL DEFAULT 0.5")
+        _safe_add_column(conn, "concept_progress", "confusion REAL DEFAULT 0.0")
+        _safe_add_column(conn, "concept_progress", "cognitive_load REAL DEFAULT 0.0")
+        _safe_add_column(conn, "concept_progress", "hints_used INTEGER DEFAULT 0")
 
         # Seed initial built-in problems if missing
         conn.executemany("""
@@ -200,7 +204,7 @@ def initialize_database() -> None:
             ))
             for prob in concept.get("problems", []):
                 conn.execute("""
-                    INSERT OR IGNORE INTO problems
+                    INSERT OR REPLACE INTO problems
                     (id, title, description, difficulty, topic, starter_code, expected_behavior, concept_id, test_cases_json, is_custom, creator_id, source)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, 'curriculum')
                 """, (
@@ -312,7 +316,7 @@ def create_custom_problem(creator_id: str, title: str, description: str, concept
         # Map custom question to problem space
         problem_id = 10000 + custom_id
         conn.execute(
-            """INSERT INTO problems 
+            """INSERT OR REPLACE INTO problems 
                (id, title, description, difficulty, topic, starter_code, expected_behavior, concept_id, test_cases_json, is_custom, creator_id, source)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 'custom')""",
             (problem_id, title, description, difficulty, concept_id, starter_code, expected_behavior or description, concept_id, test_cases_json, creator_id)
@@ -361,10 +365,57 @@ def get_concept_progress(learner_id: str) -> dict[str, dict]:
     """Retrieve concept-wise progress map for learner."""
     with connection() as conn:
         rows = conn.execute("SELECT * FROM concept_progress WHERE learner_id = ?", (learner_id,)).fetchall()
-    return {row["concept_id"]: dict(row) for row in rows}
+    res = {}
+    for row in rows:
+        d = dict(row)
+        m = d.get("mastery", 0.35)
+        d["progress_pct"] = int(round(m * 100))
+        res[d["concept_id"]] = d
+    return res
 
 
-def update_concept_progress_db(learner_id: str, concept_id: str, mastery: float, passed: bool) -> dict:
+def get_concept_state(learner_id: str, concept_id: str) -> dict:
+    """Fetch concept state with default BKT and EWMA priors if missing."""
+    with connection() as conn:
+        row = conn.execute(
+            "SELECT * FROM concept_progress WHERE learner_id = ? AND concept_id = ?",
+            (learner_id, concept_id)
+        ).fetchone()
+    if row:
+        return dict(row)
+    return {
+        "learner_id": learner_id,
+        "concept_id": concept_id,
+        "mastery": 0.20,
+        "confidence": 0.50,
+        "confusion": 0.00,
+        "cognitive_load": 0.00,
+        "attempts_count": 0,
+        "success_count": 0,
+        "hints_used": 0
+    }
+
+def get_recent_concept_history(learner_id: str, concept_id: str, limit: int = 5) -> list[dict]:
+    """Fetch recent interaction attempts for a specific concept to compute repeat errors and behavioral signals."""
+    with connection() as conn:
+        rows = conn.execute(
+            """SELECT * FROM attempts 
+               WHERE learner_id = ? AND concept_id = ? 
+               ORDER BY id DESC LIMIT ?""",
+            (learner_id, concept_id, limit)
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+def update_concept_progress_db(
+    learner_id: str, 
+    concept_id: str, 
+    mastery: float, 
+    confidence: float, 
+    confusion: float, 
+    cognitive_load: float, 
+    passed: bool, 
+    hints: int
+) -> dict:
     now = datetime.now(timezone.utc).isoformat()
     with connection() as conn:
         row = conn.execute(
@@ -374,22 +425,34 @@ def update_concept_progress_db(learner_id: str, concept_id: str, mastery: float,
         if row:
             attempts_count = row["attempts_count"] + 1
             success_count = row["success_count"] + (1 if passed else 0)
+            hints_used_total = row.get("hints_used", 0) + hints
             conn.execute(
                 """UPDATE concept_progress 
-                   SET mastery = ?, attempts_count = ?, success_count = ?, last_attempt_at = ?, status = 'in_progress'
+                   SET mastery = ?, confidence = ?, confusion = ?, cognitive_load = ?, 
+                       attempts_count = ?, success_count = ?, hints_used = ?, last_attempt_at = ?, status = 'in_progress'
                    WHERE learner_id = ? AND concept_id = ?""",
-                (mastery, attempts_count, success_count, now, learner_id, concept_id)
+                (mastery, confidence, confusion, cognitive_load, attempts_count, success_count, hints_used_total, now, learner_id, concept_id)
             )
         else:
             attempts_count = 1
             success_count = 1 if passed else 0
+            hints_used_total = hints
             conn.execute(
                 """INSERT INTO concept_progress 
-                   (learner_id, concept_id, mastery, attempts_count, success_count, last_attempt_at, status)
-                   VALUES (?, ?, ?, ?, ?, ?, 'in_progress')""",
-                (learner_id, concept_id, mastery, attempts_count, success_count, now)
+                   (learner_id, concept_id, mastery, confidence, confusion, cognitive_load, attempts_count, success_count, hints_used, last_attempt_at, status)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'in_progress')""",
+                (learner_id, concept_id, mastery, confidence, confusion, cognitive_load, attempts_count, success_count, hints_used_total, now)
             )
-    return {"concept_id": concept_id, "mastery": mastery, "attempts_count": attempts_count, "success_count": success_count}
+    return {
+        "concept_id": concept_id, 
+        "mastery": mastery, 
+        "confidence": confidence, 
+        "confusion": confusion, 
+        "cognitive_load": cognitive_load, 
+        "attempts_count": attempts_count, 
+        "success_count": success_count,
+        "hints_used": hints_used_total
+    }
 
 
 def save_attempt_and_state(
