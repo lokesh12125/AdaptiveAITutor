@@ -246,6 +246,52 @@ def initialize_database() -> None:
         ]
         conn.executemany("INSERT OR REPLACE INTO historical_learners VALUES (?, ?, ?)", [(k, json.dumps(v), inter) for k, v, inter in default_demos])
 
+        # Seed default student and teacher demo accounts
+        from .auth import hash_password
+        default_accounts = [
+            ("user-demo-student", "Demo Student", "demo@student.edu", "demo123", "student"),
+            ("user-demo-teacher", "Demo Teacher", "teacher@adaptive.edu", "teacher123", "teacher")
+        ]
+        now = datetime.now(timezone.utc).isoformat()
+        for u_id, u_name, u_email, u_pwd, u_role in default_accounts:
+            existing = conn.execute("SELECT id FROM users WHERE email = ?", (u_email,)).fetchone()
+            if not existing:
+                conn.execute(
+                    "INSERT INTO users (id, name, email, password_hash, role, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                    (u_id, u_name, u_email, hash_password(u_pwd), u_role, now)
+                )
+                conn.execute("INSERT OR IGNORE INTO learners VALUES (?, ?)", (u_id, u_name))
+            else:
+                conn.execute(
+                    "UPDATE users SET password_hash = ?, role = ? WHERE email = ?",
+                    (hash_password(u_pwd), u_role, u_email)
+                )
+
+        # Seed initial demo state and metrics if missing
+        demo_student_state = conn.execute("SELECT learner_id FROM learner_states WHERE learner_id = 'user-demo-student'").fetchone()
+        if not demo_student_state:
+            initial_state = {
+                "mastery": 0.42,
+                "confidence": 0.65,
+                "confusion": 0.12,
+                "cognitive_load": 0.28,
+                "progress": 0.25,
+                "hints_used": 1
+            }
+            conn.execute(
+                "INSERT INTO learner_states (learner_id, state_json, updated_at) VALUES (?, ?, ?)",
+                ("user-demo-student", json.dumps(initial_state), now)
+            )
+
+        demo_metric = conn.execute("SELECT id FROM evaluation_metrics WHERE learner_id = 'user-demo-student'").fetchone()
+        if not demo_metric:
+            conn.execute(
+                """INSERT INTO evaluation_metrics 
+                   (learner_id, learning_gain, hint_efficiency, avg_hints_per_problem, task_completion_rate, time_to_completion, satisfaction_score, recorded_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                ("user-demo-student", 0.45, 0.78, 1.2, 0.80, 42.5, 5, now)
+            )
+
 
 # --- USER AUTHENTICATION QUERIES ---
 

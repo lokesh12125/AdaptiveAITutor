@@ -58,6 +58,115 @@ class ComprehensiveTutorApiTests(unittest.TestCase):
             self.assertEqual(me_res.status_code, 200)
             self.assertEqual(me_res.json()["email"], email)
 
+    def test_02b_seeded_demo_accounts(self):
+        with TestClient(app) as client:
+            # 1. Student demo login
+            student_res = client.post("/api/auth/login", json={
+                "email": "demo@student.edu",
+                "password": "demo123"
+            })
+            self.assertEqual(student_res.status_code, 200)
+            s_data = student_res.json()
+            self.assertEqual(s_data["user"]["role"], "student")
+            self.assertTrue(bool(s_data["token"]))
+
+            # 2. Teacher demo login
+            teacher_res = client.post("/api/auth/login", json={
+                "email": "teacher@adaptive.edu",
+                "password": "teacher123"
+            })
+            self.assertEqual(teacher_res.status_code, 200)
+            t_data = teacher_res.json()
+            self.assertEqual(t_data["user"]["role"], "teacher")
+            self.assertTrue(bool(t_data["token"]))
+
+            # 3. Invalid credentials
+            bad_res = client.post("/api/auth/login", json={
+                "email": "demo@student.edu",
+                "password": "wrongpassword"
+            })
+            self.assertEqual(bad_res.status_code, 401)
+
+    def test_02c_auth_registration_contract(self):
+        with TestClient(app) as client:
+            import uuid
+            uid_suffix = uuid.uuid4().hex[:6]
+
+            # 1. Registration with 'full_name' (UI contract)
+            ui_email = f"ui_test_{uid_suffix}@adaptive.edu"
+            ui_res = client.post("/api/auth/register", json={
+                "full_name": "UI Tester",
+                "email": ui_email,
+                "password": "securePassword1"
+            })
+            self.assertEqual(ui_res.status_code, 200)
+            self.assertEqual(ui_res.json()["user"]["name"], "UI Tester")
+
+            # 2. Registration with standard 'name'
+            api_email = f"api_test_{uid_suffix}@adaptive.edu"
+            api_res = client.post("/api/auth/register", json={
+                "name": "API Tester",
+                "email": api_email,
+                "password": "securePassword2"
+            })
+            self.assertEqual(api_res.status_code, 200)
+            self.assertEqual(api_res.json()["user"]["name"], "API Tester")
+
+            # 3. Duplicate email fails with 400
+            dup_res = client.post("/api/auth/register", json={
+                "name": "Duplicate Tester",
+                "email": api_email,
+                "password": "securePassword3"
+            })
+            self.assertEqual(dup_res.status_code, 400)
+
+            # 4. Password too short (< 4 chars) fails with 422
+            short_res = client.post("/api/auth/register", json={
+                "name": "Short Pwd",
+                "email": f"short_{uid_suffix}@adaptive.edu",
+                "password": "abc"
+            })
+            self.assertEqual(short_res.status_code, 422)
+
+    def test_02d_role_based_access_control(self):
+        with TestClient(app) as client:
+            # Login as student
+            s_res = client.post("/api/auth/login", json={
+                "email": "demo@student.edu",
+                "password": "demo123"
+            })
+            s_token = s_res.json()["token"]
+            s_id = s_res.json()["user"]["id"]
+
+            # Login as teacher
+            t_res = client.post("/api/auth/login", json={
+                "email": "teacher@adaptive.edu",
+                "password": "teacher123"
+            })
+            t_token = t_res.json()["token"]
+
+            # 1. Student attempting teacher endpoint gets 403 Forbidden
+            forbidden_res = client.get("/api/admin/students", headers={"Authorization": f"Bearer {s_token}"})
+            self.assertEqual(forbidden_res.status_code, 403)
+
+            # 2. Teacher accessing teacher endpoint gets 200 OK
+            allowed_res = client.get("/api/admin/students", headers={"Authorization": f"Bearer {t_token}"})
+            self.assertEqual(allowed_res.status_code, 200)
+            students = allowed_res.json()
+            self.assertIsInstance(students, list)
+
+            # 3. Student accessing their own state gets 200 OK
+            own_state_res = client.get(f"/api/learner/{s_id}", headers={"Authorization": f"Bearer {s_token}"})
+            self.assertEqual(own_state_res.status_code, 200)
+
+            # 4. Student accessing another student's state gets 403 Forbidden
+            other_state_res = client.get("/api/learner/other-student-id", headers={"Authorization": f"Bearer {s_token}"})
+            self.assertEqual(other_state_res.status_code, 403)
+
+            # 5. Teacher accessing student's state gets 200 OK
+            teacher_inspect_res = client.get(f"/api/learner/{s_id}", headers={"Authorization": f"Bearer {t_token}"})
+            self.assertEqual(teacher_inspect_res.status_code, 200)
+
     def test_03_curriculum_and_problems(self):
         with TestClient(app) as client:
             # Check 49 concepts

@@ -5,7 +5,7 @@ from typing import Annotated, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Security, status
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from .auth import (
     create_access_token,
@@ -63,10 +63,20 @@ app.add_middleware(
 # --- REQUEST & RESPONSE SCHEMAS ---
 
 class RegisterRequest(BaseModel):
-    name: str = Field(min_length=2, max_length=100)
+    name: Optional[str] = None
+    full_name: Optional[str] = None
     email: str = Field(min_length=5, max_length=120)
     password: str = Field(min_length=4, max_length=100)
     role: str = Field(default="student")
+
+    @model_validator(mode="before")
+    def resolve_name(cls, data):
+        if isinstance(data, dict):
+            name = data.get("name") or data.get("full_name")
+            if not name or len(str(name).strip()) < 2:
+                raise ValueError("Name must be at least 2 characters.")
+            data["name"] = str(name).strip()
+        return data
 
 
 class LoginRequest(BaseModel):
@@ -233,7 +243,11 @@ def run_code(payload: Submission) -> dict:
 
 
 @app.post("/api/submit")
-def submit(payload: Submission) -> dict:
+def submit(payload: Submission, current_user: Optional[dict] = Depends(get_optional_user)) -> dict:
+    if current_user and current_user.get("role") != "teacher":
+        if current_user.get("uid") != payload.learner_id:
+            raise HTTPException(status_code=403, detail="Forbidden: You cannot submit work on behalf of another learner.")
+
     item = get_problem(payload.problem_id)
     if not item:
         raise HTTPException(status_code=404, detail="Problem not found.")
@@ -283,18 +297,27 @@ def submit(payload: Submission) -> dict:
 
 # --- 5. LEARNER PROFILE, HISTORY & DASHBOARD ---
 
+def check_learner_access(learner_id: str, current_user: Optional[dict]) -> None:
+    if current_user and current_user.get("role") != "teacher":
+        if current_user.get("uid") != learner_id:
+            raise HTTPException(status_code=403, detail="Forbidden: Access to another learner's records is restricted.")
+
+
 @app.get("/api/learner/{learner_id}")
-def learner(learner_id: str) -> dict:
+def learner(learner_id: str, current_user: Optional[dict] = Depends(get_optional_user)) -> dict:
+    check_learner_access(learner_id, current_user)
     return get_state(learner_id)
 
 
 @app.get("/api/learner/{learner_id}/progress")
-def learner_concept_progress(learner_id: str) -> dict:
+def learner_concept_progress(learner_id: str, current_user: Optional[dict] = Depends(get_optional_user)) -> dict:
+    check_learner_access(learner_id, current_user)
     return get_concept_progress(learner_id)
 
 
 @app.get("/api/progress/concepts/{learner_id}")
-def learner_concept_progress_alias(learner_id: str) -> list[dict]:
+def learner_concept_progress_alias(learner_id: str, current_user: Optional[dict] = Depends(get_optional_user)) -> list[dict]:
+    check_learner_access(learner_id, current_user)
     prog = get_concept_progress(learner_id)
     concepts_list = list_concepts()
     result = []
@@ -313,17 +336,20 @@ def learner_concept_progress_alias(learner_id: str) -> list[dict]:
 
 
 @app.get("/api/learner/{learner_id}/history")
-def learner_history(learner_id: str) -> list[dict]:
+def learner_history(learner_id: str, current_user: Optional[dict] = Depends(get_optional_user)) -> list[dict]:
+    check_learner_access(learner_id, current_user)
     return history(learner_id)
 
 
 @app.get("/api/history/{learner_id}")
-def learner_history_alias(learner_id: str) -> list[dict]:
+def learner_history_alias(learner_id: str, current_user: Optional[dict] = Depends(get_optional_user)) -> list[dict]:
+    check_learner_access(learner_id, current_user)
     return history(learner_id)
 
 
 @app.get("/api/learner/{learner_id}/recommendation")
-def recommendation(learner_id: str) -> dict:
+def recommendation(learner_id: str, current_user: Optional[dict] = Depends(get_optional_user)) -> dict:
+    check_learner_access(learner_id, current_user)
     state = get_state(learner_id)
     concepts = list_concepts()
     # Find lowest mastery concept or first concept with incomplete progress
@@ -355,12 +381,14 @@ def recommendation(learner_id: str) -> dict:
 # --- 6. MULTI-TURN CONVERSATIONAL AI TUTOR ---
 
 @app.get("/api/chat/{learner_id}")
-def chat_history(learner_id: str) -> list[dict]:
+def chat_history(learner_id: str, current_user: Optional[dict] = Depends(get_optional_user)) -> list[dict]:
+    check_learner_access(learner_id, current_user)
     return get_chat_history(learner_id)
 
 
 @app.post("/api/chat")
-def chat(payload: ChatRequest) -> dict:
+def chat(payload: ChatRequest, current_user: Optional[dict] = Depends(get_optional_user)) -> dict:
+    check_learner_access(payload.learner_id, current_user)
     # Save student message
     save_chat_message(
         learner_id=payload.learner_id,

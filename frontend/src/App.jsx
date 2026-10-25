@@ -103,7 +103,9 @@ export default function App() {
   // --- 2. USER DATA REFRESH ---
   const refreshUserData = (learnerId) => {
     if (!learnerId) return;
-    fetch(`${API}/learner/${learnerId}`)
+    const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+    fetch(`${API}/learner/${learnerId}`, { headers: authHeaders })
       .then(r => r.json())
       .then(st => {
         if (submitResult) {
@@ -112,17 +114,17 @@ export default function App() {
       })
       .catch(() => {});
 
-    fetch(`${API}/learner/${learnerId}/progress`)
+    fetch(`${API}/learner/${learnerId}/progress`, { headers: authHeaders })
       .then(r => r.json())
       .then(p => setConceptProgress(p))
       .catch(() => {});
 
-    fetch(`${API}/learner/${learnerId}/history`)
+    fetch(`${API}/learner/${learnerId}/history`, { headers: authHeaders })
       .then(r => r.json())
       .then(h => setHistoryList(h))
       .catch(() => {});
 
-    fetch(`${API}/metrics/${learnerId}`)
+    fetch(`${API}/metrics/${learnerId}`, { headers: authHeaders })
       .then(r => r.json())
       .then(m => {
         setEvalMetrics(m);
@@ -130,7 +132,7 @@ export default function App() {
       })
       .catch(() => {});
 
-    fetch(`${API}/chat/${learnerId}`)
+    fetch(`${API}/chat/${learnerId}`, { headers: authHeaders })
       .then(r => r.json())
       .then(msgs => setChatMessages(msgs))
       .catch(() => {});
@@ -242,7 +244,10 @@ export default function App() {
     try {
       await fetch(`${API}/metrics/satisfaction`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ learner_id: user.id, score: rating })
       });
       refreshUserData(user.id);

@@ -20,7 +20,7 @@ export default function AuthForm({ onLogin }) {
 
     const endpoint = authMode === 'register' ? `${API}/auth/register` : `${API}/auth/login`;
     const payload = authMode === 'register' 
-      ? { email: authEmail, password: authPassword, full_name: authName, role: authRole }
+      ? { email: authEmail, password: authPassword, name: authName, full_name: authName, role: authRole }
       : { email: authEmail, password: authPassword };
 
     try {
@@ -44,7 +44,12 @@ export default function AuthForm({ onLogin }) {
     setAuthEmail('demo@student.edu');
     setAuthPassword('demo123');
     setAuthMode('login');
-    // We don't automatically submit here to let them see it, or we could trigger login
+  };
+
+  const handleTeacherDemoLogin = () => {
+    setAuthEmail('teacher@adaptive.edu');
+    setAuthPassword('teacher123');
+    setAuthMode('login');
   };
 
   return (
@@ -124,9 +129,14 @@ export default function AuthForm({ onLogin }) {
           </button>
         </form>
 
-        <button className="btn-demo-login" onClick={handleDemoLogin}>
-          ⚡ Fast 1-Click Demo Login (Demo Student)
-        </button>
+        <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
+          <button className="btn-demo-login" type="button" onClick={handleDemoLogin} style={{ flex: 1, marginTop: 0 }}>
+            ⚡ Student Demo
+          </button>
+          <button className="btn-demo-login" type="button" onClick={handleTeacherDemoLogin} style={{ flex: 1, marginTop: 0 }}>
+            🎓 Teacher Demo
+          </button>
+        </div>
       </div>
     </main>
   );
