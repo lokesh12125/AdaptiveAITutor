@@ -161,3 +161,149 @@ def test_scaffolding_levels():
 def test_scaffolding_bounds():
     assert determine_scaffolding_level(-0.5) == 1
     assert determine_scaffolding_level(1.5) == 4
+
+
+# --- DSDA v2.1 ALGORITHM TESTS ---
+from app.learning.scaffolding import (
+    calculate_csi_score,
+    determine_base_level,
+    evaluate_dsda_v2,
+    calculate_time_stress as dsda_time_stress,
+    FALLBACK_MATRIX
+)
+
+
+def test_dsda_safe_time_stress():
+    # Response time <= 0.5 * baseline -> 0.0
+    assert dsda_time_stress(10.0, 60.0) == 0.0
+    # Safe minimum baseline floor of 15.0s
+    assert dsda_time_stress(15.0, 0.0) > 0.0
+    # Response time = 2.0 * baseline -> 1.0 (clamped)
+    assert dsda_time_stress(150.0, 60.0) == 1.0
+
+
+def test_dsda_csi_continuous_bounds_and_uncertainty():
+    # Cold start (n=0): uncertainty dominates, attenuates toward prior 0.35
+    csi_0, raw_0, u_0 = calculate_csi_score(mastery=0.0, consecutive_fails=3, confidence=0.0, cognitive_load=1.0, hints_used=2, response_time=60.0, observations_count=0)
+    assert 0.0 <= csi_0 <= 1.0
+    assert u_0 == 1.0
+    assert csi_0 == 0.35
+
+    # High observations (n=10): uncertainty near 0, raw score dominates
+    csi_10, raw_10, u_10 = calculate_csi_score(mastery=0.9, consecutive_fails=0, confidence=0.9, cognitive_load=0.1, hints_used=0, response_time=10.0, observations_count=10)
+    assert u_10 < 0.05
+    assert csi_10 < 0.25
+
+
+def test_dsda_gate_1_success():
+    res = evaluate_dsda_v2(diagnostic={}, learner_state={}, problem_hints=[], passed=True)
+    assert res["level"] == 0
+    assert res["focus"] == "None"
+    assert res["csi"] == 0.0
+    assert res["remediation_flag"] is False
+    assert res["gate_triggered"] == "Success"
+
+
+def test_dsda_gate_2_security():
+    res = evaluate_dsda_v2(diagnostic={"error_type": "security"}, learner_state={}, problem_hints=[], code="import os\ndef f(): pass", passed=False)
+    assert res["level"] == 1
+    assert res["focus"] == "Structural"
+    assert res["gate_triggered"] == "Security"
+
+
+def test_dsda_gate_3_stub_code():
+    res = evaluate_dsda_v2(diagnostic={"error_type": "assertion"}, learner_state={}, problem_hints=[], code="x = 1", passed=False)
+    assert res["level"] == 1
+    assert res["focus"] == "Structural"
+    assert res["gate_triggered"] == "StubCode"
+
+
+def test_dsda_gate_4_syntax_error():
+    # First syntax failure -> Level 1
+    res1 = evaluate_dsda_v2(diagnostic={"error_type": "syntax"}, learner_state={}, problem_hints=[], consecutive_fails=1, code="def solve():\n  return 1 +", passed=False)
+    assert res1["level"] == 1
+    assert res1["focus"] == "Structural"
+    assert res1["gate_triggered"] == "SyntaxError"
+
+    # Repeat syntax failure -> Level 2
+    res2 = evaluate_dsda_v2(diagnostic={"error_type": "syntax"}, learner_state={}, problem_hints=[], consecutive_fails=3, code="def solve():\n  return 1 +", passed=False)
+    assert res2["level"] == 2
+    assert res2["focus"] == "Structural"
+
+
+def test_dsda_gate_5_zpd_saturation():
+    hints = [{"level": 4, "focus": "Algorithmic"}]
+    res = evaluate_dsda_v2(diagnostic={"error_type": "assertion"}, learner_state={}, problem_hints=hints, consecutive_fails=4, code="def solve(x):\n  return x", passed=False)
+    assert res["level"] == 4
+    assert res["remediation_flag"] is True
+    assert res["gate_triggered"] == "ZpdSaturation"
+
+
+def test_dsda_gate_6_expert_blindspot():
+    res = evaluate_dsda_v2(diagnostic={"error_type": "assertion"}, learner_state={"mastery": 0.85}, problem_hints=[], consecutive_fails=1, code="def solve(x):\n  return x * 2", passed=False)
+    assert res["level"] == 2
+    assert res["focus"] == "Tracing"
+    assert res["gate_triggered"] == "ExpertBlindspot"
+
+
+def test_dsda_monotonic_escalation():
+    # Attempt 1 with high struggle: capped at Level 2 (prevents premature Level 3/4)
+    res_att1 = evaluate_dsda_v2(
+        diagnostic={"error_type": "assertion"},
+        learner_state={"mastery": 0.1, "confidence": 0.1, "cognitive_load": 0.9},
+        problem_hints=[],
+        consecutive_fails=1,
+        observations_count=5,
+        code="def solve(x):\n  return x",
+        passed=False
+    )
+    assert res_att1["level"] <= 2
+
+    # Repeat failure with previous level 1: escalates by 1 to Level 2
+    hints_l1 = [{"level": 1, "focus": "Tracing"}]
+    res_att2 = evaluate_dsda_v2(
+        diagnostic={"error_type": "assertion"},
+        learner_state={"mastery": 0.1, "confidence": 0.1, "cognitive_load": 0.9},
+        problem_hints=hints_l1,
+        consecutive_fails=2,
+        observations_count=5,
+        code="def solve(x):\n  return x",
+        passed=False
+    )
+    assert res_att2["level"] == 2
+
+    # Repeat failure with previous level 2: escalates to Level 3
+    hints_l2 = [{"level": 2, "focus": "Tracing"}]
+    res_att3 = evaluate_dsda_v2(
+        diagnostic={"error_type": "assertion"},
+        learner_state={"mastery": 0.1, "confidence": 0.1, "cognitive_load": 0.9},
+        problem_hints=hints_l2,
+        consecutive_fails=3,
+        observations_count=5,
+        code="def solve(x):\n  return x",
+        passed=False
+    )
+    assert res_att3["level"] == 3
+
+
+def test_dsda_strategy_pivot():
+    # If student is at Level 2 with Tracing focus and fails again, focus rotates to Algorithmic
+    hints_l2 = [{"level": 2, "focus": "Tracing"}]
+    res = evaluate_dsda_v2(
+        diagnostic={"error_type": "assertion"},
+        learner_state={"mastery": 0.4, "confidence": 0.5, "cognitive_load": 0.3},
+        problem_hints=hints_l2,
+        consecutive_fails=2,
+        observations_count=5,
+        code="def solve(x):\n  return x",
+        passed=False
+    )
+    assert res["focus"] != "Tracing"
+    assert res["focus"] == "Algorithmic"
+
+
+def test_dsda_fallback_matrix_completeness():
+    for lvl in [1, 2, 3, 4]:
+        for foc in ["Conceptual", "Tracing", "Algorithmic", "Structural"]:
+            assert (lvl, foc) in FALLBACK_MATRIX
+            assert len(FALLBACK_MATRIX[(lvl, foc)]) > 20

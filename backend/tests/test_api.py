@@ -334,6 +334,85 @@ class ComprehensiveTutorApiTests(unittest.TestCase):
             self.assertIn("concept_name", progress[0])
             self.assertIn("progress_pct", progress[0])
 
+    def test_11_dsda_scaffolding_response_structure(self):
+        with TestClient(app) as client:
+            learner_id = "dsda-eval-student"
+            # 1. First failure submission
+            sub1 = client.post("/api/submit", json={
+                "learner_id": learner_id,
+                "problem_id": 1,
+                "code": "def sum_array(numbers):\n    return -1",
+                "response_time": 20.0
+            })
+            self.assertEqual(sub1.status_code, 200)
+            data1 = sub1.json()
+            scaff1 = data1["scaffolding"]
+            self.assertIn(scaff1["level"], [1, 2, 3, 4])
+            self.assertIn("focus", scaff1)
+            self.assertIn("score", scaff1)
+            self.assertIn("hint", scaff1)
+            self.assertIn("rationale", scaff1)
+            self.assertIn("remediation_flag", scaff1)
+
+            # 2. Success submission clears scaffolding to Level 0
+            sub2 = client.post("/api/submit", json={
+                "learner_id": learner_id,
+                "problem_id": 1,
+                "code": "def sum_array(numbers):\n    return sum(numbers)",
+                "response_time": 10.0
+            })
+            self.assertEqual(sub2.status_code, 200)
+            data2 = sub2.json()
+            scaff2 = data2["scaffolding"]
+            self.assertEqual(scaff2["level"], 0)
+            self.assertFalse(scaff2["remediation_flag"])
+
+    def test_12_session_lifecycle_and_recommendation_persistence(self):
+        with TestClient(app) as client:
+            learner_id = "session-student"
+            # 1. Start session
+            start_res = client.post("/api/sessions/start", json={"learner_id": learner_id})
+            self.assertEqual(start_res.status_code, 200)
+            sess = start_res.json()
+            sess_id = sess["id"]
+            self.assertEqual(sess["learner_id"], learner_id)
+
+            # 2. List sessions
+            list_res = client.get(f"/api/sessions/{learner_id}")
+            self.assertEqual(list_res.status_code, 200)
+            sessions = list_res.json()
+            self.assertGreaterEqual(len(sessions), 1)
+
+            # 3. End session
+            end_res = client.post(f"/api/sessions/{sess_id}/end")
+            self.assertEqual(end_res.status_code, 200)
+
+            # 4. Verify recommendations endpoint
+            rec_res = client.get(f"/api/learner/{learner_id}/recommendation")
+            self.assertEqual(rec_res.status_code, 200)
+            rec_data = rec_res.json()
+            self.assertIn("next_problem_id", rec_data)
+            self.assertIn("reason", rec_data)
+
+    def test_13_problem_hints_history(self):
+        with TestClient(app) as client:
+            learner_id = "hints-history-student"
+            # Submit failure to trigger hint generation
+            client.post("/api/submit", json={
+                "learner_id": learner_id,
+                "problem_id": 1,
+                "code": "def sum_array(numbers):\n    return 42",
+                "response_time": 15.0
+            })
+
+            # Retrieve problem hints history
+            h_res = client.get(f"/api/learner/{learner_id}/hints/1")
+            self.assertEqual(h_res.status_code, 200)
+            hints = h_res.json()
+            self.assertGreaterEqual(len(hints), 1)
+            self.assertIn("level", hints[0])
+            self.assertIn("hint_text", hints[0])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -5,6 +5,8 @@ from ..database import (
     get_concept_progress,
     get_concept_state,
     get_recent_concept_history,
+    get_problem_hints,
+    get_recent_problem_attempts,
     update_concept_progress_db,
 )
 from ..graph.state import TutorState
@@ -53,8 +55,21 @@ class LearnerStateAgent:
         attempts = concept_prior.get("attempts_count", 0) + 1
         solved_count = concept_prior.get("success_count", 0) + (1 if passed else 0)
 
-        # Hints used in current interaction
-        current_hints_used = old.get("hints_used", 0)
+        # Synchronize hints delivered for this specific problem from database
+        problem_id = int(problem.get("id", 1))
+        problem_hints = get_problem_hints(learner_id, problem_id)
+        current_hints_used = len(problem_hints)
+
+        # Problem-scoped consecutive failure streak
+        problem_attempts = get_recent_problem_attempts(learner_id, problem_id, limit=10)
+        problem_consecutive_fails = 0
+        if not passed:
+            problem_consecutive_fails = 1
+            for pa in problem_attempts:
+                if not pa.get("passed"):
+                    problem_consecutive_fails += 1
+                else:
+                    break
 
         # 1. Mastery: Bayesian Knowledge Tracing
         updated_mastery = update_mastery(prior_mastery, passed)
@@ -142,7 +157,9 @@ class LearnerStateAgent:
             "attempts": attempts,
             "solved_count": solved_count,
             "hints_used": current_hints_used,
+            "problem_consecutive_fails": problem_consecutive_fails,
             "consecutive_fails": consecutive_fails,
+            "baseline_time": baseline_rt,
             "response_time": response_time,
             "concept_id": concept_id,
         }

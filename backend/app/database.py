@@ -176,6 +176,7 @@ def initialize_database() -> None:
         _safe_add_column(conn, "concept_progress", "confusion REAL DEFAULT 0.0")
         _safe_add_column(conn, "concept_progress", "cognitive_load REAL DEFAULT 0.0")
         _safe_add_column(conn, "concept_progress", "hints_used INTEGER DEFAULT 0")
+        _safe_add_column(conn, "hints", "focus TEXT DEFAULT 'Conceptual'")
 
         # Seed initial built-in problems if missing
         conn.executemany("""
@@ -565,13 +566,90 @@ def get_chat_history(learner_id: str, limit: int = 50) -> list[dict]:
     return [dict(r) for r in rows]
 
 
-def save_hint(learner_id: str, problem_id: int, level: int, hint_text: str) -> None:
+def save_hint(learner_id: str, problem_id: int, level: int, hint_text: str, focus: str = "Conceptual") -> None:
     now = datetime.now(timezone.utc).isoformat()
     with connection() as conn:
         conn.execute(
-            "INSERT INTO hints (learner_id, problem_id, level, hint_text, created_at) VALUES (?, ?, ?, ?, ?)",
-            (learner_id, problem_id, level, hint_text, now)
+            "INSERT INTO hints (learner_id, problem_id, level, hint_text, created_at, focus) VALUES (?, ?, ?, ?, ?, ?)",
+            (learner_id, problem_id, level, hint_text, now, focus)
         )
+
+
+def get_problem_hints(learner_id: str, problem_id: int) -> list[dict]:
+    with connection() as conn:
+        rows = conn.execute(
+            "SELECT * FROM hints WHERE learner_id = ? AND problem_id = ? ORDER BY id ASC",
+            (learner_id, problem_id)
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_recent_problem_attempts(learner_id: str, problem_id: int, limit: int = 10) -> list[dict]:
+    with connection() as conn:
+        rows = conn.execute(
+            "SELECT * FROM attempts WHERE learner_id = ? AND problem_id = ? ORDER BY id DESC LIMIT ?",
+            (learner_id, problem_id, limit)
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+# --- SESSION TRACKING QUERIES ---
+
+def start_learning_session(learner_id: str) -> dict:
+    now = datetime.now(timezone.utc).isoformat()
+    with connection() as conn:
+        cursor = conn.execute(
+            "INSERT INTO learning_sessions (learner_id, started_at, problems_attempted, problems_solved) VALUES (?, ?, 0, 0)",
+            (learner_id, now)
+        )
+        sess_id = cursor.lastrowid
+    return {"id": sess_id, "learner_id": learner_id, "started_at": now, "problems_attempted": 0, "problems_solved": 0}
+
+
+def update_learning_session(session_id: int, attempted: bool = True, solved: bool = False) -> None:
+    with connection() as conn:
+        conn.execute(
+            """UPDATE learning_sessions 
+               SET problems_attempted = problems_attempted + ?,
+                   problems_solved = problems_solved + ?
+               WHERE id = ?""",
+            (1 if attempted else 0, 1 if solved else 0, session_id)
+        )
+
+
+def end_learning_session(session_id: int) -> None:
+    now = datetime.now(timezone.utc).isoformat()
+    with connection() as conn:
+        conn.execute("UPDATE learning_sessions SET ended_at = ? WHERE id = ?", (now, session_id))
+
+
+def get_learning_sessions(learner_id: str, limit: int = 10) -> list[dict]:
+    with connection() as conn:
+        rows = conn.execute(
+            "SELECT * FROM learning_sessions WHERE learner_id = ? ORDER BY id DESC LIMIT ?",
+            (learner_id, limit)
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+# --- RECOMMENDATIONS PERSISTENCE ---
+
+def save_recommendation(learner_id: str, problem_id: Optional[int], concept_id: Optional[str], reason: str) -> None:
+    now = datetime.now(timezone.utc).isoformat()
+    with connection() as conn:
+        conn.execute(
+            "INSERT INTO recommendations (learner_id, problem_id, concept_id, reason, created_at) VALUES (?, ?, ?, ?, ?)",
+            (learner_id, problem_id, concept_id, reason, now)
+        )
+
+
+def get_latest_recommendation(learner_id: str) -> Optional[dict]:
+    with connection() as conn:
+        row = conn.execute(
+            "SELECT * FROM recommendations WHERE learner_id = ? ORDER BY id DESC LIMIT 1",
+            (learner_id,)
+        ).fetchone()
+    return dict(row) if row else None
 
 
 # --- EVALUATION METRICS QUERIES ---

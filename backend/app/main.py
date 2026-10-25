@@ -35,6 +35,13 @@ from .database import (
     save_chat_message,
     save_evaluation_metric,
     get_all_student_metrics,
+    get_problem_hints,
+    save_recommendation,
+    get_latest_recommendation,
+    start_learning_session,
+    update_learning_session,
+    end_learning_session,
+    get_learning_sessions,
 )
 from .graph.tutor_graph import tutor_graph
 from .services.code_runner import evaluate
@@ -268,7 +275,20 @@ def submit(payload: Submission, current_user: Optional[dict] = Depends(get_optio
     }
     result = tutor_graph.invoke(graph_input)
 
-    # 3. Persist attempt and updated state
+    # 3. Resolve scaffolding payload
+    if execution["passed"]:
+        scaffolding_data = {
+            "level": 0,
+            "score": 0.0,
+            "hint": "All test assertions passed successfully! Great work.",
+            "focus": "None",
+            "remediation_flag": False,
+            "rationale": "Solution passed all assertions."
+        }
+    else:
+        scaffolding_data = result.get("scaffolding", {})
+
+    # 4. Persist attempt and updated state
     save_attempt_and_state(
         learner_id=payload.learner_id,
         problem_id=payload.problem_id,
@@ -278,9 +298,22 @@ def submit(payload: Submission, current_user: Optional[dict] = Depends(get_optio
         state=result["learner_state"],
         concept_id=result.get("concept_id", item.get("concept_id")),
         response_time=payload.response_time,
-        scaffolding_level=result.get("scaffolding", {}).get("level", 1),
+        scaffolding_level=scaffolding_data.get("level", 0 if execution["passed"] else 1),
         hints_used=result["learner_state"].get("hints_used", 0)
     )
+
+    # 5. Persist learning recommendation if generated
+    rec = result.get("recommendation")
+    if rec and isinstance(rec, dict):
+        try:
+            save_recommendation(
+                learner_id=payload.learner_id,
+                problem_id=rec.get("next_problem_id"),
+                concept_id=rec.get("next_concept_id"),
+                reason=rec.get("reason", "")
+            )
+        except Exception:
+            pass
 
     return {
         "mode": llm.mode,
@@ -288,7 +321,7 @@ def submit(payload: Submission, current_user: Optional[dict] = Depends(get_optio
         "diagnostic": result["diagnostic"],
         "learner_state": result["learner_state"],
         "similar_learners": result.get("similar_learners", []),
-        "scaffolding": result.get("scaffolding", {}),
+        "scaffolding": scaffolding_data,
         "reflection": result.get("reflection", ""),
         "recommendation": result.get("recommendation", {}),
         "agent_activity": result.get("agent_activity", [])
@@ -378,7 +411,37 @@ def recommendation(learner_id: str, current_user: Optional[dict] = Depends(get_o
     }
 
 
-# --- 6. MULTI-TURN CONVERSATIONAL AI TUTOR ---
+@app.get("/api/learner/{learner_id}/hints/{problem_id}")
+def learner_problem_hints(learner_id: str, problem_id: int, current_user: Optional[dict] = Depends(get_optional_user)) -> list[dict]:
+    check_learner_access(learner_id, current_user)
+    return get_problem_hints(learner_id, problem_id)
+
+
+# --- 6. SESSION MANAGEMENT & TRACKING ---
+
+class SessionStartRequest(BaseModel):
+    learner_id: str
+
+
+@app.post("/api/sessions/start")
+def session_start(payload: SessionStartRequest, current_user: Optional[dict] = Depends(get_optional_user)) -> dict:
+    check_learner_access(payload.learner_id, current_user)
+    return start_learning_session(payload.learner_id)
+
+
+@app.post("/api/sessions/{session_id}/end")
+def session_end(session_id: int) -> dict:
+    end_learning_session(session_id)
+    return {"status": "ok", "session_id": session_id}
+
+
+@app.get("/api/sessions/{learner_id}")
+def session_list(learner_id: str, current_user: Optional[dict] = Depends(get_optional_user)) -> list[dict]:
+    check_learner_access(learner_id, current_user)
+    return get_learning_sessions(learner_id)
+
+
+# --- 7. MULTI-TURN CONVERSATIONAL AI TUTOR ---
 
 @app.get("/api/chat/{learner_id}")
 def chat_history(learner_id: str, current_user: Optional[dict] = Depends(get_optional_user)) -> list[dict]:

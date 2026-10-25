@@ -1,67 +1,84 @@
 """Adaptive Scaffolding Agent for calculating scaffolding levels (1-4) and generating Socratic hints."""
 from typing import Any, Dict
 
-from ..database import save_hint
+from ..database import get_problem_hints, save_hint
 from ..graph.state import TutorState
-from ..learning.scaffolding import (
-    calculate_scaffolding_score,
-    determine_scaffolding_level,
-)
+from ..learning.scaffolding import evaluate_dsda_v2, FALLBACK_MATRIX
 from ..services.llm_service import llm
 
 
 class AdaptiveScaffoldingAgent:
     """Agent responsible for computing multi-dimensional scaffolding scores (levels 1-4),
-
     selecting hint templates, generating LLM Socratic prompts, and persisting hint records.
     """
 
     def execute(self, state: TutorState) -> Dict[str, Any]:
-        """Determine appropriate scaffolding level and generate Socratic guidance hint."""
+        """Determine appropriate scaffolding level and generate Socratic guidance hint using DSDA v2.1."""
         learner = state.get("learner_state", {})
         problem = state.get("problem", {})
+        problem_id = int(problem.get("id", 1))
+        learner_id = state.get("learner_id", "demo-student")
+        execution = state.get("execution", {})
+        passed = execution.get("passed", False)
         intervention = state.get("active_intervention", "")
         code = state.get("code", "")
         diagnostic_info = state.get("diagnostic", {})
         error_type = diagnostic_info.get("error_type", "assertion")
         misconception = diagnostic_info.get("misconception", "")
 
-        # Calculate Scaffolding Level (1 to 4)
-        mastery = learner.get("mastery", 0.2)
-        confidence = learner.get("confidence", 0.5)
-        confusion = learner.get("confusion", 0.0)
-        cognitive_load = learner.get("cognitive_load", 0.0)
-        hints_used = learner.get("hints_used", 0)
-        response_time = learner.get("response_time", 0.0)
+        # Fetch problem hint history
+        problem_hints = get_problem_hints(learner_id, problem_id)
 
-        hint_dependence = min(hints_used / 3.0, 1.0)
-        time_stress = min(response_time / 60.0, 1.0)
-
-        score = calculate_scaffolding_score(
-            mastery,
-            confidence,
-            confusion,
-            cognitive_load,
-            hint_dependence,
-            time_stress,
+        # Run DSDA v2.1 decision algorithm
+        decision = evaluate_dsda_v2(
+            diagnostic=diagnostic_info,
+            learner_state=learner,
+            problem_hints=problem_hints,
+            current_attempt_count=learner.get("attempts", 1),
+            consecutive_fails=learner.get("problem_consecutive_fails", learner.get("consecutive_fails", 0)),
+            response_time=float(state.get("response_time", 0.0)),
+            baseline_time=float(learner.get("baseline_time", 60.0)),
+            observations_count=learner.get("attempts", 1),
+            code=code,
+            passed=passed
         )
-        level = determine_scaffolding_level(score)
 
-        level_templates = {
-            1: f"What happens if you trace this function on the smallest valid input? Notice the requirement: {problem.get('expected_behavior', '')}.",
-            2: f"Check your assumptions regarding {misconception}. Strategy: {intervention}",
-            3: f"Inspect the return value and loop boundary. Intervention cue: {intervention}. Trace each iteration step-by-step.",
-            4: f"Structure guidance: 1. Initialize result accumulator. 2. Iterate carefully over input. 3. Ensure proper return statement outside loop. Note: {intervention}",
-        }
-        fallback_hint = level_templates.get(level, level_templates[2])
+        level = decision["level"]
+        focus = decision["focus"]
+        csi_score = decision["csi"]
+        remediation_flag = decision["remediation_flag"]
+        rationale = decision["rationale"]
+
+        if level == 0 or passed:
+            return {
+                "scaffolding": {
+                    "level": 0,
+                    "score": 0.0,
+                    "hint": "All test assertions passed successfully! Great work.",
+                    "focus": "None",
+                    "remediation_flag": False,
+                    "rationale": "Solution passed all assertions."
+                },
+                "agent_activity": ["Adaptive Scaffolding Agent"]
+            }
+
+        # Select deterministic fallback template for (level, focus)
+        fallback_hint = FALLBACK_MATRIX.get(
+            (level, focus),
+            f"Inspect your logic around {misconception or 'the return statement'}. Review: {problem.get('expected_behavior', '')}."
+        )
 
         prompt = (
             f"Problem: {problem.get('title', '')} - {problem.get('description', '')}\n"
+            f"Expected Behavior: {problem.get('expected_behavior', '')}\n"
             f"Student's Code:\n{code[:400]}\n"
             f"Error Encountered: {error_type} - {diagnostic_info.get('output', '')}\n"
             f"Identified Misconception: {misconception}\n"
-            f"Pedagogical Intervention Strategy: {intervention}\n"
-            f"Generate a Level {level} Socratic hint (Level 1=guiding question, Level 2=conceptual clue, Level 3=pseudocode guidance, Level 4=step-by-step breakdown). "
+            f"Scaffolding Level: Level {level} of 4\n"
+            f"Pedagogical Focus: {focus}\n"
+            f"Intervention Cue: {intervention}\n"
+            f"Rationale: {rationale}\n"
+            f"Generate a targeted Level {level} Socratic hint focusing on {focus} (Level 1=guiding question, Level 2=conceptual clue, Level 3=pseudocode guidance, Level 4=step-by-step breakdown). "
             "Do NOT write the complete solution code."
         )
         hint_text = llm.tutor_reply(prompt, fallback_hint)
@@ -69,10 +86,11 @@ class AdaptiveScaffoldingAgent:
         # Persist hint to SQLite
         try:
             save_hint(
-                learner_id=state.get("learner_id", "demo-student"),
-                problem_id=problem.get("id", 1),
+                learner_id=learner_id,
+                problem_id=problem_id,
                 level=level,
                 hint_text=hint_text,
+                focus=focus
             )
         except Exception:
             pass
@@ -80,8 +98,11 @@ class AdaptiveScaffoldingAgent:
         return {
             "scaffolding": {
                 "level": level,
-                "score": round(score, 2),
+                "score": round(csi_score, 2),
                 "hint": hint_text,
+                "focus": focus,
+                "remediation_flag": remediation_flag,
+                "rationale": rationale,
                 "intervention_applied": intervention,
             },
             "agent_activity": ["Adaptive Scaffolding Agent"],
