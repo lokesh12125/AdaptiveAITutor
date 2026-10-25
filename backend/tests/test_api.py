@@ -201,6 +201,18 @@ class ComprehensiveTutorApiTests(unittest.TestCase):
             self.assertFalse(body["execution"]["passed"])
             self.assertEqual(body["execution"]["error_type"], "security")
 
+            # Exploit attempt using __subclasses__ reflection
+            res_exploit = client.post("/api/submit", json={
+                "learner_id": "security-tester",
+                "problem_id": 1,
+                "code": "def sum_array(numbers):\n    x = ().__class__.__base__.__subclasses__()\n    return len(x)",
+                "response_time": 5.0
+            })
+            self.assertEqual(res_exploit.status_code, 200)
+            body_exploit = res_exploit.json()
+            self.assertFalse(body_exploit["execution"]["passed"])
+            self.assertEqual(body_exploit["execution"]["error_type"], "security")
+
     def test_05_six_agent_workflow_and_bkt_updates(self):
         with TestClient(app) as client:
             learner_id = "test-workflow-student"

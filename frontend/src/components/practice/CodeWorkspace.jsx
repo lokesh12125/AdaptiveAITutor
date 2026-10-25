@@ -1,6 +1,6 @@
 import React from 'react';
 import Editor from '@monaco-editor/react';
-import { Code2, Timer, Play, RefreshCw, CheckCircle2, XCircle, Lightbulb, BrainCircuit } from 'lucide-react';
+import { Code2, Timer, Play, RefreshCw, CheckCircle2, XCircle, Lightbulb, BrainCircuit, Sparkles } from 'lucide-react';
 
 export default function CodeWorkspace({
   problem,
@@ -162,15 +162,37 @@ export default function CodeWorkspace({
 
           {/* Card 2: Adaptive Scaffolding Agent */}
           <div className="agent-card scaffolding">
-            <div className="agent-card-header">
-              <Lightbulb size={18} color="#0d9488" />
-              <span>Adaptive Scaffolding Agent • Level {submitResult.scaffolding?.level || 1}</span>
+            <div className="agent-card-header" style={{ justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Lightbulb size={18} color="#0d9488" />
+                <span>
+                  Adaptive Scaffolding • {submitResult.scaffolding?.level === 0 ? 'Mastery Confirmed' : `Level ${submitResult.scaffolding?.level || 1}`}
+                </span>
+              </div>
+              {submitResult.scaffolding?.focus && submitResult.scaffolding?.focus !== 'None' && (
+                <span style={{ fontSize: 11, background: 'rgba(13, 148, 136, 0.15)', color: '#0d9488', padding: '2px 8px', borderRadius: 4, textTransform: 'none', fontWeight: 600 }}>
+                  {submitResult.scaffolding.focus} Focus
+                </span>
+              )}
             </div>
             <div className="agent-card-body">
-              <p style={{ margin: 0, fontWeight: 600 }}>{submitResult.scaffolding?.hint}</p>
+              <p style={{ margin: 0, fontWeight: 600 }}>
+                {submitResult.scaffolding?.hint || 'Review your code structure and logic.'}
+              </p>
+              {submitResult.scaffolding?.rationale && (
+                <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-muted)' }}>
+                  Pedagogical Rationale: {submitResult.scaffolding.rationale}
+                </div>
+              )}
+              {submitResult.scaffolding?.remediation_flag && (
+                <div style={{ marginTop: 8, fontSize: 11, color: '#b45309', background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '6px 10px', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>⚠️</span>
+                  <span><strong>Remediation Advisory:</strong> High cognitive struggle detected across multiple attempts. Consider reviewing prerequisite concepts.</span>
+                </div>
+              )}
               {submitResult.scaffolding?.intervention_applied && (
-                <div style={{ marginTop: 8, fontSize: 11, color: '#0369a1', background: '#f0f9ff', padding: '4px 8px', borderRadius: 4 }}>
-                  ChromaDB Intervention: {submitResult.scaffolding.intervention_applied}
+                <div style={{ marginTop: 8, fontSize: 11, color: '#0284c7', background: 'rgba(2, 132, 199, 0.1)', padding: '4px 8px', borderRadius: 4 }}>
+                  ChromaDB Peer Strategy: {submitResult.scaffolding.intervention_applied}
                 </div>
               )}
             </div>
@@ -183,9 +205,31 @@ export default function CodeWorkspace({
               <span>Reflection Agent</span>
             </div>
             <div className="agent-card-body">
-              <p style={{ margin: 0, fontSize: 14, color: '#1e293b' }}>{submitResult.reflection}</p>
+              <p style={{ margin: 0, fontSize: 14 }}>{submitResult.reflection}</p>
             </div>
           </div>
+
+          {/* Card 4: Learning Planner Recommendation */}
+          {submitResult.recommendation && submitResult.recommendation.reason && (
+            <div className="agent-card" style={{ gridColumn: 'span 2', borderLeft: '4px solid #10b981', background: 'rgba(16, 185, 129, 0.05)' }}>
+              <div className="agent-card-header" style={{ justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Sparkles size={18} color="#10b981" />
+                  <span>Learning Planner Agent • Next Step Recommendation</span>
+                </div>
+                {submitResult.recommendation.difficulty && (
+                  <span style={{ fontSize: 11, color: '#10b981', fontWeight: 600 }}>
+                    {submitResult.recommendation.difficulty.toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <div className="agent-card-body">
+                <p style={{ margin: 0, fontWeight: 500 }}>
+                  {submitResult.recommendation.reason}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </section>

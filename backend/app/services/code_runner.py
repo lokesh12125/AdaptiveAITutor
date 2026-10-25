@@ -25,7 +25,12 @@ FORBIDDEN_MODULES = {
 }
 
 FORBIDDEN_CALLS = {
-    "eval", "exec", "__import__", "compile", "open"
+    "eval", "exec", "__import__", "compile", "open", "getattr", "setattr", "delattr", "vars", "dir", "breakpoint"
+}
+
+FORBIDDEN_ATTRIBUTES = {
+    "__subclasses__", "__bases__", "__base__", "__mro__", "__globals__", "__builtins__", "__class__", "__code__",
+    "system", "popen", "spawn"
 }
 
 
@@ -83,8 +88,10 @@ def validate_ast_safety(code: str) -> tuple[bool, str]:
         elif isinstance(node, ast.Call):
             if isinstance(node.func, ast.Name) and node.func.id in FORBIDDEN_CALLS:
                 return False, f"Security Violation: Invocation of restricted function '{node.func.id}()' is disallowed."
-            elif isinstance(node.func, ast.Attribute) and node.func.attr in ("system", "popen", "spawn"):
-                return False, f"Security Violation: Access to system-level attribute '{node.func.attr}' is disallowed."
+        # Check forbidden attribute access or reflection
+        elif isinstance(node, ast.Attribute):
+            if node.attr in FORBIDDEN_ATTRIBUTES:
+                return False, f"Security Violation: Access to restricted reflection attribute '{node.attr}' is disallowed."
 
     return True, ""
 
