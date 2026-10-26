@@ -243,19 +243,40 @@ def initialize_database() -> None:
         _safe_add_column(conn, "concept_progress", "hints_used INTEGER DEFAULT 0")
         _safe_add_column(conn, "hints", "focus TEXT DEFAULT 'Conceptual'")
 
-        # Seed initial built-in problems if missing
+        # Seed initial built-in problems non-destructively
         conn.executemany("""
-            INSERT OR REPLACE INTO problems 
+            INSERT INTO problems 
             (id, title, description, difficulty, topic, starter_code, expected_behavior, concept_id, test_cases_json, is_custom, creator_id, source)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                title = excluded.title,
+                description = excluded.description,
+                difficulty = excluded.difficulty,
+                topic = excluded.topic,
+                starter_code = excluded.starter_code,
+                expected_behavior = excluded.expected_behavior,
+                concept_id = excluded.concept_id,
+                test_cases_json = excluded.test_cases_json,
+                source = excluded.source
+            WHERE problems.is_custom = 0 OR problems.is_custom IS NULL
         """, INITIAL_PROBLEMS)
 
-        # Seed 49 curriculum concepts and associated problems
+        # Seed 49 curriculum concepts and associated problems non-destructively
         for concept in CURRICULUM_CONCEPTS:
             conn.execute("""
-                INSERT OR REPLACE INTO concepts 
+                INSERT INTO concepts 
                 (id, title, category, difficulty, description, learning_objectives, explanation, examples_json, prerequisites_json, order_index)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    title = excluded.title,
+                    category = excluded.category,
+                    difficulty = excluded.difficulty,
+                    description = excluded.description,
+                    learning_objectives = excluded.learning_objectives,
+                    explanation = excluded.explanation,
+                    examples_json = excluded.examples_json,
+                    prerequisites_json = excluded.prerequisites_json,
+                    order_index = excluded.order_index
             """, (
                 concept["id"],
                 concept["title"],
@@ -270,9 +291,20 @@ def initialize_database() -> None:
             ))
             for prob in concept.get("problems", []):
                 conn.execute("""
-                    INSERT OR REPLACE INTO problems
+                    INSERT INTO problems
                     (id, title, description, difficulty, topic, starter_code, expected_behavior, concept_id, test_cases_json, is_custom, creator_id, source)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, 'curriculum')
+                    ON CONFLICT(id) DO UPDATE SET
+                        title = excluded.title,
+                        description = excluded.description,
+                        difficulty = excluded.difficulty,
+                        topic = excluded.topic,
+                        starter_code = excluded.starter_code,
+                        expected_behavior = excluded.expected_behavior,
+                        concept_id = excluded.concept_id,
+                        test_cases_json = excluded.test_cases_json,
+                        source = excluded.source
+                    WHERE problems.is_custom = 0 OR problems.is_custom IS NULL
                 """, (
                     prob["id"],
                     prob["title"],
@@ -285,12 +317,23 @@ def initialize_database() -> None:
                     json.dumps(prob.get("test_cases", []))
                 ))
 
-        # Seed IBM Project CodeNet subset problems
+        # Seed IBM Project CodeNet subset problems non-destructively
         for cp in get_codenet_subset():
             conn.execute("""
-                INSERT OR REPLACE INTO problems
+                INSERT INTO problems
                 (id, title, description, difficulty, topic, starter_code, expected_behavior, concept_id, test_cases_json, is_custom, creator_id, source)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    title = excluded.title,
+                    description = excluded.description,
+                    difficulty = excluded.difficulty,
+                    topic = excluded.topic,
+                    starter_code = excluded.starter_code,
+                    expected_behavior = excluded.expected_behavior,
+                    concept_id = excluded.concept_id,
+                    test_cases_json = excluded.test_cases_json,
+                    source = excluded.source
+                WHERE problems.is_custom = 0 OR problems.is_custom IS NULL
             """, (
                 cp["id"],
                 cp["title"],
@@ -304,13 +347,19 @@ def initialize_database() -> None:
                 cp.get("source", "IBM-Project-CodeNet")
             ))
 
-        # Seed default historical learners with consistent 8D vectors
+        # Seed default historical learners with consistent 8D vectors non-destructively
         default_demos = [
             ("synthetic-1", [0.25, 0.30, 0.75, 0.70, 0.15, 0.80, 0.70, 0.40], "Break down syntax rules, isolate the offending line, and check matching delimiters."),
             ("synthetic-2", [0.55, 0.50, 0.45, 0.40, 0.50, 0.40, 0.35, 0.30], "Provide pseudocode structure and prompt tracing on small sample inputs."),
             ("synthetic-3", [0.85, 0.80, 0.15, 0.20, 0.85, 0.10, 0.10, 0.20], "Challenge with edge cases and prompt explanation of algorithmic time complexity.")
         ]
-        conn.executemany("INSERT OR REPLACE INTO historical_learners VALUES (?, ?, ?)", [(k, json.dumps(v), inter) for k, v, inter in default_demos])
+        conn.executemany("""
+            INSERT INTO historical_learners (id, profile_json, intervention) 
+            VALUES (?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                profile_json = excluded.profile_json,
+                intervention = excluded.intervention
+        """, [(k, json.dumps(v), inter) for k, v, inter in default_demos])
 
         # Seed default student and teacher demo accounts
         from .auth import hash_password
@@ -441,9 +490,21 @@ def create_custom_problem(creator_id: str, title: str, description: str, concept
         # Map custom question to problem space
         problem_id = 10000 + custom_id
         conn.execute(
-            """INSERT OR REPLACE INTO problems 
+            """INSERT INTO problems 
                (id, title, description, difficulty, topic, starter_code, expected_behavior, concept_id, test_cases_json, is_custom, creator_id, source)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 'custom')""",
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 'custom')
+               ON CONFLICT(id) DO UPDATE SET
+                   title = excluded.title,
+                   description = excluded.description,
+                   difficulty = excluded.difficulty,
+                   topic = excluded.topic,
+                   starter_code = excluded.starter_code,
+                   expected_behavior = excluded.expected_behavior,
+                   concept_id = excluded.concept_id,
+                   test_cases_json = excluded.test_cases_json,
+                   is_custom = 1,
+                   creator_id = excluded.creator_id,
+                   source = 'custom'""",
             (problem_id, title, description, difficulty, concept_id, starter_code, expected_behavior or description, concept_id, test_cases_json, creator_id)
         )
     return get_problem(problem_id)

@@ -1,9 +1,12 @@
 """Comprehensive automated tests for curriculum content integrity and session lifecycle management."""
 import json
 import sqlite3
+import tempfile
 import unittest
 import uuid
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
+from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -15,7 +18,8 @@ from app.database import (
     start_learning_session,
     end_learning_session,
     get_session_by_id,
-    get_learning_sessions
+    get_learning_sessions,
+    get_problem
 )
 from app.services.code_runner import evaluate
 from app.auth import create_access_token
@@ -295,6 +299,192 @@ def invert_tree(root):
         t_res = self.client.post(f"/api/sessions/{sess_id}/end", headers=t_headers)
         self.assertEqual(t_res.status_code, 200)
         self.assertEqual(t_res.json()["session"]["status"], "completed")
+
+    # --- TASK 1: NON-DESTRUCTIVE MIGRATIONS & IDEMPOTENCY ---
+
+    def test_11_disposable_db_non_destructive_migration(self):
+        """Verify that running initialize_database is strictly non-destructive.
+        Attempts, hints, sessions, users, recommendations, and custom problems must never be deleted or overwritten.
+        Rerunning initialization multiple times must be strictly idempotent with zero row count drift."""
+        import app.database as db_mod
+
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
+            temp_db_path = Path(f.name)
+
+        try:
+            # 1. Initialize schema and initial curriculum on fresh disposable db
+            with patch.object(db_mod, "DATABASE_PATH", temp_db_path):
+                db_mod.initialize_database()
+
+                with db_mod.connection() as conn:
+                    # Seed learner, attempts, hints, sessions, and a custom problem
+                    conn.execute("INSERT INTO users (id, name, email, password_hash, created_at) VALUES ('u1', 'Learner One', 'u1@test.com', 'hash', '2026-10-26T00:00:00Z')")
+                    conn.execute("INSERT INTO learners (id, name) VALUES ('u1', 'Learner One')")
+                    conn.execute("INSERT INTO learning_sessions (learner_id, started_at, problems_attempted, problems_solved) VALUES ('u1', '2026-10-26T00:00:00Z', 1, 1)")
+                    conn.execute("INSERT INTO attempts (problem_id, learner_id, code, passed, error_type, created_at) VALUES (1, 'u1', 'def sum_array(n): return sum(n)', 1, NULL, '2026-10-26T00:01:00Z')")
+                    conn.execute("INSERT INTO hints (problem_id, learner_id, level, hint_text, created_at) VALUES (1, 'u1', 1, 'Use a loop or sum().', '2026-10-26T00:00:30Z')")
+                    conn.execute("INSERT INTO recommendations (learner_id, problem_id, concept_id, reason, created_at) VALUES ('u1', 2, 'lists', 'Reinforce lists', '2026-10-26T00:02:00Z')")
+
+                    # Create custom problem
+                    conn.execute("""
+                        INSERT INTO problems (id, title, description, difficulty, topic, starter_code, expected_behavior, concept_id, test_cases_json, is_custom, creator_id, source)
+                        VALUES (999, 'Custom Teacher Problem', 'Teacher description', 'medium', 'trees', 'pass', 'pass', 'recursion-problems', '[]', 1, 't1', 'teacher')
+                    """)
+                    conn.execute("INSERT INTO attempts (problem_id, learner_id, code, passed, error_type, created_at) VALUES (999, 'u1', 'custom attempt', 1, NULL, '2026-10-26T00:03:00Z')")
+                    conn.commit()
+
+                    # Record counts before second run
+                    counts_before = {}
+                    for table in ["users", "learners", "learning_sessions", "attempts", "hints", "recommendations", "problems", "concepts"]:
+                        counts_before[table] = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+
+                # 2. Run initialize_database again (migration simulation)
+                db_mod.initialize_database()
+
+                with db_mod.connection() as conn:
+                    counts_after_1 = {}
+                    for table in ["users", "learners", "learning_sessions", "attempts", "hints", "recommendations", "problems", "concepts"]:
+                        counts_after_1[table] = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+
+                    # Verify exact match
+                    self.assertEqual(counts_before, counts_after_1, "Row counts must be identical after re-running migration")
+
+                    # Verify custom problem wasn't overwritten
+                    custom_prob = conn.execute("SELECT title, is_custom FROM problems WHERE id = 999").fetchone()
+                    self.assertIsNotNone(custom_prob)
+                    self.assertEqual(custom_prob["title"], "Custom Teacher Problem")
+                    self.assertEqual(custom_prob["is_custom"], 1)
+
+                    # Verify learner attempts and foreign keys
+                    attempts = conn.execute("SELECT problem_id, code FROM attempts ORDER BY id ASC").fetchall()
+                    self.assertEqual(len(attempts), 2)
+                    self.assertEqual(attempts[0]["problem_id"], 1)
+                    self.assertEqual(attempts[1]["problem_id"], 999)
+
+                # 3. Run initialize_database a third time to verify strict idempotency
+                db_mod.initialize_database()
+                with db_mod.connection() as conn:
+                    counts_after_2 = {}
+                    for table in ["users", "learners", "learning_sessions", "attempts", "hints", "recommendations", "problems", "concepts"]:
+                        counts_after_2[table] = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                    self.assertEqual(counts_after_1, counts_after_2, "Initialization must be strictly idempotent")
+
+        finally:
+            if temp_db_path.exists():
+                temp_db_path.unlink()
+
+    # --- TASK 2: CODE RUNNER SANDBOX SECURITY BOUNDARY ---
+
+    def test_12_os_kernel_sandbox_enforcement(self):
+        """Verify code execution security boundary:
+        - Blocks host filesystem manipulation.
+        - Blocks unauthorized network sockets.
+        - Reports active isolation tier metadata."""
+        # 1. Attempt host filesystem write
+        evil_fs_code = "with open('/tmp/unauthorized_sandbox_write_test.txt', 'w') as f: f.write('breached')\ndef solve(): return 1"
+        res_fs = evaluate(evil_fs_code, problem_id=1, timeout=2.0, test_cases=[{"input": [], "expected": 1}])
+        self.assertFalse(res_fs["passed"])
+        self.assertEqual(res_fs["error_type"], "security")
+
+        # 2. Attempt unauthorized network socket
+        evil_net_code = "import socket\ndef solve():\n    s = socket.socket()\n    s.connect(('1.1.1.1', 80))\n    return 1"
+        res_net = evaluate(evil_net_code, problem_id=1, timeout=2.0, test_cases=[{"input": [], "expected": 1}])
+        self.assertFalse(res_net["passed"])
+        self.assertEqual(res_net["error_type"], "security")
+
+        # 3. Legitimate code execution succeeds and includes isolation_tier
+        safe_code = "def solve(x):\n    return x * 10"
+        res_safe = evaluate(safe_code, problem_id=1, timeout=2.0, test_cases=[{"input": [5], "expected": 50}])
+        self.assertTrue(res_safe["passed"])
+        self.assertIn("isolation_tier", res_safe)
+        self.assertIn(res_safe["isolation_tier"], ["macos-seatbelt-kernel", "subprocess-resource-limited", "static-ast-enforced"])
+
+    # --- TASK 3: TREE TOPOLOGY VALIDATION ---
+
+    def test_13_tree_problem_topologies(self):
+        """Verify Tree problem 150 (max_depth) and 151 (invert_tree) across all topologies:
+        empty, single-node, balanced, left-skewed, right-skewed, and asymmetric."""
+        # --- Problem 150: Binary Tree Maximum Depth ---
+        p150 = get_problem(150)
+        self.assertIsNotNone(p150)
+        test_cases_150 = json.loads(p150["test_cases_json"])
+
+        correct_150 = """class TreeNode:
+    def __init__(self, val=0, left=None, right=None):
+        self.val = val
+        self.left = left
+        self.right = right
+
+def max_depth(root):
+    if not root:
+        return 0
+    return 1 + max(max_depth(root.left), max_depth(root.right))
+"""
+        res_150_ok = evaluate(correct_150, problem_id=150, timeout=3.0, test_cases=test_cases_150)
+        self.assertTrue(res_150_ok["passed"], f"Reference max_depth failed: {res_150_ok.get('error')}")
+
+        # Flawed 150: Returns 1 on empty root
+        flawed_150_empty = """class TreeNode:
+    def __init__(self, val=0, left=None, right=None):
+        self.val = val
+        self.left = left
+        self.right = right
+
+def max_depth(root):
+    if not root:
+        return 1
+    return 1 + max(max_depth(root.left), max_depth(root.right))
+"""
+        res_150_fail = evaluate(flawed_150_empty, problem_id=150, timeout=3.0, test_cases=test_cases_150)
+        self.assertFalse(res_150_fail["passed"])
+
+        # Flawed 150: Omits + 1 for current node
+        flawed_150_depth = """class TreeNode:
+    def __init__(self, val=0, left=None, right=None):
+        self.val = val
+        self.left = left
+        self.right = right
+
+def max_depth(root):
+    if not root:
+        return 0
+    return max(max_depth(root.left), max_depth(root.right))
+"""
+        res_150_fail2 = evaluate(flawed_150_depth, problem_id=150, timeout=3.0, test_cases=test_cases_150)
+        self.assertFalse(res_150_fail2["passed"])
+
+        # --- Problem 151: Invert Binary Tree ---
+        p151 = get_problem(151)
+        self.assertIsNotNone(p151)
+        test_cases_151 = json.loads(p151["test_cases_json"])
+
+        correct_151 = """class TreeNode:
+    def __init__(self, val=0, left=None, right=None):
+        self.val = val
+        self.left = left
+        self.right = right
+
+def invert_tree(root):
+    if not root:
+        return None
+    root.left, root.right = invert_tree(root.right), invert_tree(root.left)
+    return root
+"""
+        res_151_ok = evaluate(correct_151, problem_id=151, timeout=3.0, test_cases=test_cases_151)
+        self.assertTrue(res_151_ok["passed"], f"Reference invert_tree failed: {res_151_ok.get('error')}")
+
+        # Flawed 151: Identity function (does not invert)
+        flawed_151_noop = """class TreeNode:
+    def __init__(self, val=0, left=None, right=None):
+        self.val = val
+        self.left = left
+        self.right = right
+
+def invert_tree(root):
+    return root
+"""
+        res_151_fail = evaluate(flawed_151_noop, problem_id=151, timeout=3.0, test_cases=test_cases_151)
+        self.assertFalse(res_151_fail["passed"])
 
 
 if __name__ == "__main__":

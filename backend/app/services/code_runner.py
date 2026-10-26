@@ -192,25 +192,65 @@ def build_test_script(code: str, problem_id: int, test_cases: list = None) -> st
     return f"{code}\n\nprint('__ALL_TESTS_PASSED__')"
 
 
+def get_sandbox_command(source_path: Path, temp_dir: str) -> tuple[list[str], str]:
+    """
+    Construct the isolated execution command based on available operating system mechanisms.
+    Tiers:
+    1. macOS Seatbelt kernel sandbox (/usr/bin/sandbox-exec) with strict profile denying
+       network access, foreign directory write access, and sensitive host credential reading.
+    2. Linux/POSIX process-group isolation with RLIMIT resource caps, empty PATH, and sterile environment.
+    """
+    sandbox_exec = Path("/usr/bin/sandbox-exec")
+    if sys.platform == "darwin" and sandbox_exec.exists():
+        home = str(Path.home())
+        seatbelt_profile = (
+            "(version 1)\n"
+            "(allow default)\n"
+            "(deny network*)\n"
+            "(deny file-write*)\n"
+            f'(allow file-write* (subpath "{temp_dir}"))\n'
+            '(allow file-write* (subpath "/dev/null"))\n'
+            '(allow file-write* (subpath "/dev/zero"))\n'
+            f'(deny file-read* (subpath "{home}/.ssh"))\n'
+            f'(deny file-read* (subpath "{home}/.aws"))\n'
+            f'(deny file-read* (subpath "{home}/.config/gcloud"))\n'
+        )
+        cmd = [
+            str(sandbox_exec),
+            "-p",
+            seatbelt_profile,
+            sys.executable,
+            "-I",
+            "-S",
+            str(source_path)
+        ]
+        return cmd, "macos-seatbelt-kernel"
+
+    cmd = [sys.executable, "-I", "-S", str(source_path)]
+    return cmd, "subprocess-resource-limited"
+
+
 def evaluate(code: str, problem_id: int, timeout: float = 3.0, test_cases: list = None) -> dict:
     """
     Multi-layered code evaluation engine:
     Layer 1: Static AST validation (blocking forbidden modules, calls, and reflection attributes).
     Layer 2: In-harness runtime neutering of filesystem and socket APIs.
-    Layer 3: OS process-group isolation (os.setsid), resource limits, empty PATH, and SIGKILL timeout cleanup.
+    Layer 3: OS Seatbelt kernel sandbox (macOS /usr/bin/sandbox-exec) blocking network & unauthorized writes.
+    Layer 4: OS process-group isolation (os.setsid), resource limits (RLIMIT_CPU, RLIMIT_FSIZE, RLIMIT_NOFILE), empty PATH, and SIGKILL timeout cleanup.
     
     ENVIRONMENT NOTE:
-    For production enterprise deployment, student execution should be hosted in unprivileged
-    containerized runtimes (e.g., Docker/gVisor/Firecracker with --net=none and read-only rootfs).
+    For production enterprise deployment on shared Linux clusters, student execution should be hosted in
+    unprivileged containerized runtimes (e.g., Docker/gVisor/Firecracker with --net=none and read-only rootfs).
     In this local development environment, defense-in-depth isolation is strictly enforced via
-    the 3-layer architecture described above.
+    the 4-layer architecture described above.
     """
     is_safe, safety_error = validate_ast_safety(code)
     if not is_safe:
         return {
             "passed": False,
             "error_type": "syntax" if "SyntaxError" in safety_error else "security",
-            "output": safety_error
+            "output": safety_error,
+            "isolation_tier": "static-ast-enforced"
         }
 
     script = build_test_script(code, problem_id, test_cases=test_cases)
@@ -219,7 +259,7 @@ def evaluate(code: str, problem_id: int, timeout: float = 3.0, test_cases: list 
         source_path = Path(temp_dir) / "submission.py"
         source_path.write_text(script, encoding="utf-8")
 
-        # Layer 3: Restricted environment execution (empty PATH blocks external tools)
+        # Layer 4: Restricted environment execution (empty PATH blocks external tools)
         safe_env = {
             "PYTHONPATH": "",
             "SYSTEMROOT": os.environ.get("SYSTEMROOT", "C:\\Windows"),
@@ -228,13 +268,14 @@ def evaluate(code: str, problem_id: int, timeout: float = 3.0, test_cases: list 
             "TMP": temp_dir
         }
 
+        cmd, isolation_tier = get_sandbox_command(source_path, temp_dir)
+
         proc = None
         raw_stdout = ""
         raw_stderr = ""
         try:
-            import signal
             proc = subprocess.Popen(
-                [sys.executable, "-I", "-S", str(source_path)],
+                cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
@@ -261,7 +302,8 @@ def evaluate(code: str, problem_id: int, timeout: float = 3.0, test_cases: list 
             return {
                 "passed": False,
                 "error_type": "timeout",
-                "output": f"Execution timed out after {timeout:.1f} seconds. Check for infinite loops or deep recursion."
+                "output": f"Execution timed out after {timeout:.1f} seconds. Check for infinite loops or deep recursion.",
+                "isolation_tier": isolation_tier
             }
         except Exception as e:
             if proc:
@@ -272,14 +314,16 @@ def evaluate(code: str, problem_id: int, timeout: float = 3.0, test_cases: list 
             return {
                 "passed": False,
                 "error_type": "runtime",
-                "output": f"Subprocess runner error: {str(e)[:300]}"
+                "output": f"Subprocess runner error: {str(e)[:300]}",
+                "isolation_tier": isolation_tier
             }
 
     if returncode == 0 and "__ALL_TESTS_PASSED__" in raw_stdout:
         return {
             "passed": True,
             "error_type": "none",
-            "output": "All test assertions passed successfully."
+            "output": "All test assertions passed successfully.",
+            "isolation_tier": isolation_tier
         }
 
     raw_stderr = (raw_stderr or "").strip()
@@ -289,25 +333,45 @@ def evaluate(code: str, problem_id: int, timeout: float = 3.0, test_cases: list 
     # 1. Check for specific harness assertion or run error
     for line in combined_output.splitlines():
         line_s = line.strip()
+        if "PermissionError" in line_s or "Operation not permitted" in line_s or "Security Violation" in line_s:
+            return {
+                "passed": False,
+                "error_type": "security",
+                "output": f"Security Violation: Restricted resource access prohibited ({line_s})",
+                "isolation_tier": isolation_tier
+            }
         if line_s.startswith("AssertionError:"):
             return {
                 "passed": False,
                 "error_type": "assertion",
-                "output": line_s
+                "output": line_s,
+                "isolation_tier": isolation_tier
             }
         if line_s.startswith("RUN_ERROR:"):
             cleaned_err = line_s.replace("RUN_ERROR:", "").strip()
             err_type = cleaned_err.split(":")[0].lower() if ":" in cleaned_err else "runtime"
+            if err_type == "permissionerror":
+                err_type = "security"
             return {
                 "passed": False,
                 "error_type": err_type,
-                "output": cleaned_err
+                "output": cleaned_err,
+                "isolation_tier": isolation_tier
             }
 
     # 2. Check for standard Python exceptions in traceback
     lines = [l.strip() for l in combined_output.splitlines() if l.strip()]
     if lines:
         last_line = lines[-1]
+        # Check for kernel seatbelt permission errors in traceback
+        if "PermissionError" in last_line or "Operation not permitted" in last_line:
+            return {
+                "passed": False,
+                "error_type": "security",
+                "output": f"Security Violation: Restricted resource access prohibited ({last_line})",
+                "isolation_tier": isolation_tier
+            }
+
         # Match pattern like NameError: name 'x' is not defined or SyntaxError: ...
         if ":" in last_line:
             exc_class = last_line.split(":")[0].strip()
@@ -328,17 +392,20 @@ def evaluate(code: str, problem_id: int, timeout: float = 3.0, test_cases: list 
                 return {
                     "passed": False,
                     "error_type": err_type_map.get(exc_class, "runtime"),
-                    "output": output_msg[:400]
+                    "output": output_msg[:400],
+                    "isolation_tier": isolation_tier
                 }
 
         return {
             "passed": False,
             "error_type": "runtime",
-            "output": last_line[:400]
+            "output": last_line[:400],
+            "isolation_tier": isolation_tier
         }
 
     return {
         "passed": False,
         "error_type": "runtime",
-        "output": "Execution failed with non-zero exit code."
+        "output": "Execution failed with non-zero exit code.",
+        "isolation_tier": isolation_tier
     }
