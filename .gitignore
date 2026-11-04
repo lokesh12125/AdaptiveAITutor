@@ -1,6 +1,9 @@
 .venv/
+venv/
 backend/.env
-backend/tutor.db
+backend/tutor.db*
+*.backup
+*.phase4_backup
 __pycache__/
 *.pyc
 frontend/node_modules/

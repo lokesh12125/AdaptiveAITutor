@@ -21,9 +21,10 @@ BUILTIN_TESTS = {
 
 FORBIDDEN_MODULES = {
     "os", "sys", "subprocess", "shutil", "socket", "pty", "commands",
-    "posix", "winreg", "ctypes", "multiprocessing", "threading",
+    "posix", "winreg", "ctypes", "multiprocessing", "threading", "_thread",
     "urllib", "requests", "http", "asyncio", "select", "fcntl", "pwd", "grp", "signal",
-    "pathlib", "tempfile"
+    "pathlib", "tempfile", "importlib", "io", "builtins", "inspect", "types",
+    "pickle", "gc", "code", "codeop", "marshal", "shelve", "dbm"
 }
 
 FORBIDDEN_CALLS = {
@@ -33,7 +34,7 @@ FORBIDDEN_CALLS = {
 
 FORBIDDEN_ATTRIBUTES = {
     "__subclasses__", "__bases__", "__base__", "__mro__", "__globals__", "__builtins__",
-    "__class__", "__code__", "__reduce__", "__reduce_ex__",
+    "__class__", "__code__", "__reduce__", "__reduce_ex__", "__loader__", "__spec__",
     "system", "popen", "spawn", "execv", "execve"
 }
 
@@ -85,7 +86,7 @@ def _assert_equal(fn_name, fn, args, expected):
 
 
 def _set_subprocess_limits():
-    """Apply OS-level limits within the child process before executing user code."""
+    """Apply OS-level limits within the child process before executing user code (P-04, P-06)."""
     try:
         import resource
         # CPU limit: 2s soft, 3s hard (triggers SIGXCPU/SIGKILL)
@@ -102,6 +103,20 @@ def _set_subprocess_limits():
         import resource
         # Open file descriptors: max 32
         resource.setrlimit(resource.RLIMIT_NOFILE, (32, 32))
+    except Exception:
+        pass
+    try:
+        import resource
+        # Memory cap: max 512 MB virtual memory (RLIMIT_AS)
+        mem_limit = 512 * 1024 * 1024
+        resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
+    except Exception:
+        pass
+    try:
+        import resource
+        if hasattr(resource, "RLIMIT_NPROC"):
+            # Process/thread fork cap: max 32 processes
+            resource.setrlimit(resource.RLIMIT_NPROC, (32, 32))
     except Exception:
         pass
     try:
@@ -139,6 +154,11 @@ def validate_ast_safety(code: str) -> tuple[bool, str]:
         elif isinstance(node, ast.Attribute):
             if node.attr in FORBIDDEN_ATTRIBUTES:
                 return False, f"Security Violation: Access to restricted reflection attribute '{node.attr}' is disallowed."
+        # Check access to sensitive file names or paths in constant string literals
+        elif isinstance(node, ast.Constant) and isinstance(node.value, str):
+            val_lower = node.value.lower()
+            if any(target in val_lower for target in [".auth_secret", "tutor.db", "/.ssh", "/.aws", "/etc/passwd", "/etc/shadow"]):
+                return False, "Security Violation: Access to sensitive system path or application secret is prohibited."
 
     return True, ""
 
@@ -192,16 +212,46 @@ def build_test_script(code: str, problem_id: int, test_cases: list = None) -> st
     return f"{code}\n\nprint('__ALL_TESTS_PASSED__')"
 
 
+_SEATBELT_PROBED = False
+_SEATBELT_FUNCTIONAL = False
+
+
+def _check_seatbelt_usable() -> bool:
+    """Probe if macOS kernel sandbox-exec is permitted in the current runtime environment."""
+    global _SEATBELT_PROBED, _SEATBELT_FUNCTIONAL
+    if _SEATBELT_PROBED:
+        return _SEATBELT_FUNCTIONAL
+    _SEATBELT_PROBED = True
+    if sys.platform != "darwin":
+        _SEATBELT_FUNCTIONAL = False
+        return False
+    sandbox_exec = Path("/usr/bin/sandbox-exec")
+    if not sandbox_exec.exists():
+        _SEATBELT_FUNCTIONAL = False
+        return False
+    try:
+        res = subprocess.run(
+            [str(sandbox_exec), "-p", "(version 1)\n(allow default)", sys.executable, "-c", "import sys; sys.exit(0)"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=1.0
+        )
+        _SEATBELT_FUNCTIONAL = (res.returncode == 0)
+    except Exception:
+        _SEATBELT_FUNCTIONAL = False
+    return _SEATBELT_FUNCTIONAL
+
+
 def get_sandbox_command(source_path: Path, temp_dir: str) -> tuple[list[str], str]:
     """
     Construct the isolated execution command based on available operating system mechanisms.
     Tiers:
     1. macOS Seatbelt kernel sandbox (/usr/bin/sandbox-exec) with strict profile denying
-       network access, foreign directory write access, and sensitive host credential reading.
-    2. Linux/POSIX process-group isolation with RLIMIT resource caps, empty PATH, and sterile environment.
+       network access, foreign directory write access, and sensitive host credential reading (SSH, AWS, GCloud, DB, Auth Secrets).
+    2. Linux/POSIX process-group isolation with RLIMIT resource caps (CPU, Memory/AS, Files, NPROC), empty PATH, and sterile environment.
     """
     sandbox_exec = Path("/usr/bin/sandbox-exec")
-    if sys.platform == "darwin" and sandbox_exec.exists():
+    if _check_seatbelt_usable():
         home = str(Path.home())
         seatbelt_profile = (
             "(version 1)\n"
@@ -214,6 +264,9 @@ def get_sandbox_command(source_path: Path, temp_dir: str) -> tuple[list[str], st
             f'(deny file-read* (subpath "{home}/.ssh"))\n'
             f'(deny file-read* (subpath "{home}/.aws"))\n'
             f'(deny file-read* (subpath "{home}/.config/gcloud"))\n'
+            '(deny file-read* (regex #".*\\.auth_secret$"))\n'
+            '(deny file-read* (regex #".*tutor\\.db$"))\n'
+            '(deny file-read* (regex #".*\\.env$"))\n'
         )
         cmd = [
             str(sandbox_exec),

@@ -1,9 +1,10 @@
 """FastAPI main application router for the Adaptive Multi-Agent AI Tutoring System."""
+import os
 import uuid
 from contextlib import asynccontextmanager
 from typing import Annotated, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Security, status
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Security, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, model_validator
 
@@ -43,8 +44,15 @@ from .database import (
     end_learning_session,
     get_learning_sessions,
     get_session_by_id,
+    get_state_history,
+    get_weakest_concepts,
+    get_learner_misconceptions,
+    get_student_drilldown,
+    save_reflection_response,
+    save_satisfaction_survey,
 )
 from .graph.tutor_graph import tutor_graph
+from .learning.assessment import evaluate_placement_answers, get_placement_quiz
 from .services.code_runner import evaluate
 from .services.llm_service import llm
 from .services.vector_store import vector_store
@@ -58,14 +66,34 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Adaptive Multi-Agent AI Tutoring Platform", lifespan=lifespan)
 
-# Standardized CORS permissions
+# P-08: Standardized CORS permissions with configurable origins and security headers
+cors_env = os.environ.get("CORS_ORIGINS", "*")
+if cors_env.strip() == "*":
+    allowed_origins = ["*"]
+else:
+    allowed_origins = [o.strip() for o in cors_env.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """P-08: Attach OWASP recommended baseline security headers to all HTTP responses."""
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
+
+
+TEACHER_INVITE_CODE = os.environ.get("TEACHER_INVITE_CODE", "TEACH-2026-ADAPTIVE")
 
 
 # --- REQUEST & RESPONSE SCHEMAS ---
@@ -76,6 +104,7 @@ class RegisterRequest(BaseModel):
     email: str = Field(min_length=5, max_length=120)
     password: str = Field(min_length=4, max_length=100)
     role: str = Field(default="student")
+    invite_code: Optional[str] = None
 
     @model_validator(mode="before")
     def resolve_name(cls, data):
@@ -122,6 +151,29 @@ class SatisfactionRequest(BaseModel):
     score: int = Field(ge=1, le=5)
 
 
+class ReflectionSubmitRequest(BaseModel):
+    learner_id: str
+    problem_id: int
+    prompt_text: str
+    response_text: str
+    session_id: Optional[int] = None
+
+
+class SurveySubmitRequest(BaseModel):
+    learner_id: str
+    session_id: Optional[int] = None
+    usefulness_score: int = Field(default=5, ge=1, le=5)
+    clarity_score: int = Field(default=5, ge=1, le=5)
+    hint_adequacy_score: int = Field(default=5, ge=1, le=5)
+    perceived_adaptivity_score: int = Field(default=5, ge=1, le=5)
+    comments: Optional[str] = ""
+
+
+class PlacementSubmitRequest(BaseModel):
+    learner_id: str
+    answers: dict[str, str]
+
+
 # --- 1. HEALTH CHECK ---
 
 @app.get("/api/health")
@@ -154,9 +206,20 @@ def register(payload: RegisterRequest) -> dict:
     existing = get_user_by_email(payload.email)
     if existing:
         raise HTTPException(status_code=400, detail="An account with this email already exists.")
+    
+    # P-02 role escalation defense: only allow teacher role with a valid invitation key
+    assigned_role = "student"
+    if payload.role == "teacher":
+        if payload.invite_code != TEACHER_INVITE_CODE:
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: Teacher registration requires a valid teacher invite code."
+            )
+        assigned_role = "teacher"
+
     user_id = f"user-{uuid.uuid4().hex[:8]}"
     pwd_hash = hash_password(payload.password)
-    user = create_user(user_id=user_id, name=payload.name, email=payload.email, password_hash=pwd_hash, role=payload.role)
+    user = create_user(user_id=user_id, name=payload.name, email=payload.email, password_hash=pwd_hash, role=assigned_role)
     token = create_access_token(user_id=user["id"], name=user["name"], email=user["email"], role=user.get("role", "student"))
     return {"token": token, "user": user}
 
@@ -187,6 +250,17 @@ def admin_students(current_user: dict = Depends(get_current_user)) -> list[dict]
     if current_user.get("role") != "teacher":
         raise HTTPException(status_code=403, detail="Forbidden: Teachers only.")
     return get_all_student_metrics()
+
+
+@app.get("/api/teacher/students/{student_id}/drilldown")
+def teacher_student_drilldown(student_id: str, current_user: dict = Depends(get_current_user)) -> dict:
+    """R-14: Detailed per-student longitudinal drilldown analytics, concept mastery breakdown, and at-risk alerts."""
+    if current_user.get("role") != "teacher":
+        raise HTTPException(status_code=403, detail="Forbidden: Teachers only.")
+    data = get_student_drilldown(student_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="Student not found.")
+    return data
 
 
 # --- 3. CURRICULUM & PROBLEMS ---
@@ -243,7 +317,10 @@ def get_custom_questions(creator_id: Optional[str] = None) -> list[dict]:
 # --- 4. CODE SUBMISSION & MULTI-AGENT WORKFLOW ---
 
 @app.post("/api/run")
-def run_code(payload: Submission) -> dict:
+def run_code(payload: Submission, current_user: dict = Depends(get_current_user)) -> dict:
+    """Execute code against problem tests in an isolated sandbox (P-01: requires authentication)."""
+    if len(payload.code) > 15000:
+        raise HTTPException(status_code=413, detail="Payload Too Large: Code exceeds 15,000 character cap.")
     item = get_problem(payload.problem_id)
     if not item:
         raise HTTPException(status_code=404, detail="Problem not found.")
@@ -270,6 +347,20 @@ def submit(payload: Submission, current_user: Optional[dict] = Depends(get_optio
     if not item:
         raise HTTPException(status_code=404, detail="Problem not found.")
 
+    # P-13: Validate response_time against client idle anomalies and non-finite values
+    raw_rt = payload.response_time
+    if raw_rt is None or str(raw_rt) in ("nan", "inf", "-inf"):
+        safe_response_time = 30.0
+    else:
+        try:
+            val = float(raw_rt)
+            if val < 0.0 or val > 7200.0:
+                safe_response_time = 30.0
+            else:
+                safe_response_time = max(0.5, min(val, 1800.0))
+        except (ValueError, TypeError):
+            safe_response_time = 30.0
+
     # 1. Evaluate code in isolated sandbox
     execution = evaluate(payload.code, payload.problem_id)
 
@@ -279,7 +370,7 @@ def submit(payload: Submission, current_user: Optional[dict] = Depends(get_optio
         "learner_id": payload.learner_id,
         "problem": item,
         "code": payload.code,
-        "response_time": payload.response_time,
+        "response_time": safe_response_time,
         "execution": execution,
         "prior_state": prior,
         "agent_activity": []
@@ -308,7 +399,7 @@ def submit(payload: Submission, current_user: Optional[dict] = Depends(get_optio
         error_type=result["diagnostic"]["error_type"],
         state=result["learner_state"],
         concept_id=result.get("concept_id", item.get("concept_id")),
-        response_time=payload.response_time,
+        response_time=safe_response_time,
         scaffolding_level=scaffolding_data.get("level", 0 if execution["passed"] else 1),
         hints_used=result["learner_state"].get("hints_used", 0)
     )
@@ -508,6 +599,19 @@ def chat(payload: ChatRequest, current_user: Optional[dict] = Depends(get_option
     # Check if this is problem-specific or general Python inquiry
     current_problem = get_problem(payload.problem_id) if payload.problem_id else None
 
+    # R-26: Fetch learner cognitive state and inject pedagogical profile into chat context
+    learner_st = get_state(payload.learner_id)
+    mastery_val = learner_st.get("mastery", 0.35)
+    conf_val = learner_st.get("confidence", 0.5)
+    load_val = learner_st.get("cognitive_load", 0.3)
+    fails_val = learner_st.get("consecutive_fails", 0)
+
+    learner_profile_instruction = (
+        f"Learner Profile Context: Mastery={mastery_val:.2f}, Confidence={conf_val:.2f}, "
+        f"Cognitive Load={load_val:.2f}, Consecutive Failures={fails_val}. "
+        f"Pedagogical Tone: {'The student is experiencing high difficulty or cognitive load. Provide extra encouragement, break concepts into small intuitive steps, and avoid technical jargon.' if (conf_val < 0.4 or fails_val >= 2 or load_val > 0.6) else 'The student is confident and progressing well. Challenge them with conceptual depth.'}\n"
+    )
+
     if current_problem:
         prob_context = f"Current Problem: {current_problem['title']} - {current_problem['description']}\nExpected: {current_problem.get('expected_behavior', '')}\n"
     else:
@@ -515,6 +619,7 @@ def chat(payload: ChatRequest, current_user: Optional[dict] = Depends(get_option
 
     system_prompt = (
         "You are an encouraging, expert Python AI tutor. "
+        f"{learner_profile_instruction}"
         "If the student asks a general Python question (e.g. explaining data types, loops, syntax, or concepts), provide a clear, insightful explanation with a short code example. "
         "If the student asks about solving their current coding problem, give a Socratic hint or guiding clue without writing the complete solution directly."
     )
@@ -564,12 +669,13 @@ def evaluation_metrics(learner_id: str, current_user: Optional[dict] = Depends(g
     avg_hints_per_problem = round(total_hints / max(1, len({a["problem_id"] for a in attempts})), 2) if attempts else 0.0
     hint_efficiency = round(solved / max(1, total_hints), 2) if total_hints else 1.0
 
-    # Calculate Learning Gain (G) = (Post - Pre) / (1 - Pre)
-    # Estimate Pre-test from initial attempts and Post-test from recent mastery
+    # Calculate Learning Gain: R-15 / C-07 resolution
+    # Grounded against the calibrated BKT prior P(L0)=0.20 rather than an arbitrary 0.35 constant
     st = get_state(learner_id)
-    current_mastery = float(st.get("mastery", 0.35))
-    pre_mastery = 0.35
-    learning_gain = round((current_mastery - pre_mastery) / max(0.05, 1.0 - pre_mastery), 2)
+    current_mastery = float(st.get("mastery", 0.20))
+    bkt_prior = 0.20
+    model_estimated_mastery_gain = round(max(0.0, current_mastery - bkt_prior) / (1.0 - bkt_prior), 2)
+    learning_gain = model_estimated_mastery_gain
 
     latest_db_metric = get_latest_metrics(learner_id)
     satisfaction = latest_db_metric.get("satisfaction_score") if latest_db_metric else None
@@ -588,6 +694,7 @@ def evaluation_metrics(learner_id: str, current_user: Optional[dict] = Depends(g
     return {
         "learner_id": learner_id,
         "learning_gain": learning_gain,
+        "model_estimated_mastery_gain": model_estimated_mastery_gain,
         "hint_efficiency": hint_efficiency,
         "avg_hints_per_problem": avg_hints_per_problem,
         "task_completion_rate": task_completion_rate,
@@ -612,3 +719,93 @@ def submit_satisfaction(payload: SatisfactionRequest, current_user: Optional[dic
         satisfaction_score=payload.score
     )
     return {"status": "ok", "satisfaction_score": payload.score}
+
+
+# --- 8. LONGITUDINAL ANALYTICS & REFLECTION (R-03, R-13, R-18, R-25) ---
+
+@app.get("/api/learner/{learner_id}/state-history")
+@app.get("/api/learner/{learner_id}/cognitive-history")
+def learner_state_history(learner_id: str, current_user: Optional[dict] = Depends(get_optional_user)) -> dict:
+    """R-13: Fetch longitudinal cognitive state history and ranked weak topics for student dashboard."""
+    check_learner_access(learner_id, current_user)
+    history_records = get_state_history(learner_id, limit=50)
+    weak_topics = get_weakest_concepts(learner_id, limit=5)
+    return {
+        "learner_id": learner_id,
+        "state_history": history_records,
+        "weak_topics": weak_topics
+    }
+
+
+@app.get("/api/learner/{learner_id}/misconceptions")
+def learner_misconceptions(learner_id: str, current_user: Optional[dict] = Depends(get_optional_user)) -> list[dict]:
+    """R-03: Retrieve recurring misconception pattern tracking for the learner."""
+    check_learner_access(learner_id, current_user)
+    return get_learner_misconceptions(learner_id)
+
+
+@app.post("/api/reflection/submit")
+def submit_reflection(payload: ReflectionSubmitRequest, current_user: Optional[dict] = Depends(get_optional_user)) -> dict:
+    """R-25: Capture and persist student metacognitive reflection answer."""
+    check_learner_access(payload.learner_id, current_user)
+    record = save_reflection_response(
+        learner_id=payload.learner_id,
+        problem_id=payload.problem_id,
+        prompt_text=payload.prompt_text,
+        response_text=payload.response_text,
+        session_id=payload.session_id
+    )
+    return {"status": "ok", "reflection": record}
+
+
+@app.post("/api/metrics/survey")
+def submit_survey(payload: SurveySubmitRequest, current_user: Optional[dict] = Depends(get_optional_user)) -> dict:
+    """R-18: Multi-item Likert survey evaluating usefulness, clarity, hint adequacy, and adaptivity."""
+    check_learner_access(payload.learner_id, current_user)
+    record = save_satisfaction_survey(
+        learner_id=payload.learner_id,
+        session_id=payload.session_id,
+        usefulness_score=payload.usefulness_score,
+        clarity_score=payload.clarity_score,
+        hint_adequacy_score=payload.hint_adequacy_score,
+        perceived_adaptivity_score=payload.perceived_adaptivity_score,
+        comments=payload.comments or ""
+    )
+    return {"status": "ok", "survey": record}
+
+
+# --- 9. DIAGNOSTIC PLACEMENT ASSESSMENT (R-24, F-01) ---
+
+@app.get("/api/assessment/placement")
+def placement_quiz() -> list[dict]:
+    """R-24: Retrieve diagnostic placement quiz questions for initial student onboarding."""
+    return get_placement_quiz()
+
+
+@app.post("/api/assessment/placement/submit")
+def submit_placement(payload: PlacementSubmitRequest, current_user: Optional[dict] = Depends(get_optional_user)) -> dict:
+    """R-24: Evaluate placement quiz and calibrate learner's initial BKT priors per concept area."""
+    check_learner_access(payload.learner_id, current_user)
+    result = evaluate_placement_answers(payload.answers)
+    
+    # Calibrate initial mastery priors in database
+    from .database import update_concept_progress_db
+    for concept_id, prior_val in result["concept_priors"].items():
+        try:
+            update_concept_progress_db(
+                learner_id=payload.learner_id,
+                concept_id=concept_id,
+                mastery=prior_val,
+                confidence=0.70 if prior_val > 0.5 else 0.40,
+                confusion=0.10 if prior_val > 0.5 else 0.40,
+                cognitive_load=0.20,
+                passed=(prior_val > 0.5),
+                hints=0
+            )
+        except Exception:
+            pass
+
+    return {
+        "status": "ok",
+        "result": result
+    }

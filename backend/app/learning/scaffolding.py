@@ -168,7 +168,7 @@ def calculate_csi_score(
 ) -> Tuple[float, float, float]:
     """
     Continuous Cognitive Struggle Index (CSI):
-    Raw = 0.25*(1-M) + 0.25*Phi(F) + 0.20*Conf + 0.15*L_cog + 0.10*H_sat + 0.05*T_stress
+    Raw = 0.25*(1-M) + 0.25*Phi(F) + 0.20*(1-Conf) + 0.15*L_cog + 0.10*H_sat + 0.05*T_stress
     Uncertainty U = exp(-N_obs / 3.0)
     CSI = (1 - U) * Raw + U * 0.35
     Returns (csi, raw, uncertainty) clamped strictly to [0.0, 1.0].
@@ -184,10 +184,11 @@ def calculate_csi_score(
     h_sat = min(1.0, h / 3.0)
     t_stress = calculate_time_stress(response_time, baseline_time)
 
+    # C-06 fix: Struggle increases with lack of confidence (1.0 - conf), not high confidence!
     raw = (
         0.25 * (1.0 - m) +
         0.25 * phi_f +
-        0.20 * conf +
+        0.20 * (1.0 - conf) +
         0.15 * load +
         0.10 * h_sat +
         0.05 * t_stress

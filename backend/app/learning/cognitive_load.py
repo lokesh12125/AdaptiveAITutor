@@ -1,9 +1,11 @@
 """
 Cognitive Load: Behavior-Based Cognitive Load Indicator
+Unified Time Stress calculations (C-05 reconciliation: ratio-form for cognitive load, piecewise-form for DSDA CSI).
 """
 
-def calculate_time_stress(response_time: float, baseline_response_time: float = 60.0) -> float:
+def calculate_time_stress_ratio(response_time: float, baseline_response_time: float = 60.0) -> float:
     """
+    Direct ratio form of time stress used in behavioral load estimation:
     TimeStress = min(response_time / baseline_response_time, 1.0)
     """
     if baseline_response_time <= 0:
@@ -12,6 +14,10 @@ def calculate_time_stress(response_time: float, baseline_response_time: float = 
         response_time = 0.0
         
     return min(response_time / baseline_response_time, 1.0)
+
+
+# Canonical alias for backward compatibility
+calculate_time_stress = calculate_time_stress_ratio
 
 
 def calculate_attempt_stress(attempt_count: int) -> float:

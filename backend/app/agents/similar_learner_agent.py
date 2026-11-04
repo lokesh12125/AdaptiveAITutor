@@ -24,6 +24,23 @@ class SimilarLearnerAgent:
             else "Provide structured Socratic guidance based on observable test evidence."
         )
 
+        # R-05: Dynamic experience store write-back when a struggle is resolved
+        execution = state.get("execution", {})
+        if execution.get("passed", False) and learner.get("attempts", 0) > 1:
+            learner_id = state.get("learner_id", "demo-student")
+            concept_id = state.get("concept_id") or "general"
+            try:
+                vector_store.record_learner_profile(
+                    profile_id=f"peer-{learner_id}-{concept_id}",
+                    vector=vector_8d,
+                    intervention=f"Successfully solved {concept_id} after targeted practice. Recommended strategy: trace edge-case inputs.",
+                    archetype="peer-successful-learner",
+                    concept=concept_id,
+                    outcome="resolved"
+                )
+            except Exception:
+                pass
+
         return {
             "similar_learners": retrieved,
             "active_intervention": active_intervention,

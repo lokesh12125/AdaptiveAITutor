@@ -94,6 +94,21 @@ class DiagnosticAgent:
         )
         explanation = llm.tutor_reply(prompt, fallback_expl)
 
+        # R-03: Longitudinal misconception tracking per learner
+        learner_id = state.get("learner_id", "demo-student")
+        concept_id = state.get("concept_id") or problem.get("concept_id") or "variables"
+        if error_type != "none" and misconception and "none" not in misconception.lower():
+            try:
+                from ..database import record_learner_misconception
+                record_learner_misconception(
+                    learner_id=learner_id,
+                    concept_id=concept_id,
+                    misconception_code=misconception,
+                    error_type=error_type
+                )
+            except Exception:
+                pass
+
         return {
             "diagnostic": {
                 "error_type": error_type,

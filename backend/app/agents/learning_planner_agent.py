@@ -1,19 +1,21 @@
 """Learning Planner Agent for adaptive pedagogical recommendations, concept-graph traversal, and curriculum planning."""
 from typing import Any, Dict, List, Optional
 
+from ..curriculum import CURRICULUM_CONCEPTS
 from ..database import list_concepts, list_problems
 from ..graph.state import TutorState
 
-# Canonical Concept Graph: Topological curriculum dependency sequence
+# C-01: Full 49-Concept Curriculum Graph with Topological Dependencies
 CONCEPT_GRAPH = [
-    {"id": "python-basics", "title": "Python Basics", "prerequisite": None},
-    {"id": "variables", "title": "Variables", "prerequisite": "python-basics"},
-    {"id": "if-else", "title": "If Else", "prerequisite": "variables"},
-    {"id": "loops", "title": "Loops", "prerequisite": "if-else"},
-    {"id": "functions", "title": "Functions", "prerequisite": "loops"},
-    {"id": "lists", "title": "Lists", "prerequisite": "functions"},
-    {"id": "dictionaries", "title": "Dictionaries", "prerequisite": "lists"},
-    {"id": "oop", "title": "OOP", "prerequisite": "dictionaries"},
+    {
+        "id": c["id"],
+        "title": c["title"],
+        "category": c.get("category", "Foundations"),
+        "prerequisite": c["prerequisites"][0] if c.get("prerequisites") and len(c["prerequisites"]) > 0 else (
+            CURRICULUM_CONCEPTS[i - 1]["id"] if i > 0 else None
+        )
+    }
+    for i, c in enumerate(sorted(CURRICULUM_CONCEPTS, key=lambda x: x.get("order_index", 0)))
 ]
 
 

@@ -7,11 +7,13 @@ User Modeling and User-Adapted Interaction, 1995.
 DOI: 10.1007/BF01099821
 """
 
-# Initial Engineering Parameters
-DEFAULT_P_L0 = 0.20
-DEFAULT_P_T = 0.15
-DEFAULT_P_G = 0.20
-DEFAULT_P_S = 0.10
+from ..config import BKT_P_G, BKT_P_L0, BKT_P_S, BKT_P_T
+
+# Initial Engineering Parameters (configured via app.config)
+DEFAULT_P_L0 = BKT_P_L0
+DEFAULT_P_T = BKT_P_T
+DEFAULT_P_G = BKT_P_G
+DEFAULT_P_S = BKT_P_S
 
 
 def update_mastery(
@@ -19,16 +21,22 @@ def update_mastery(
     passed: bool,
     p_t: float = DEFAULT_P_T,
     p_g: float = DEFAULT_P_G,
-    p_s: float = DEFAULT_P_S
+    p_s: float = DEFAULT_P_S,
+    hints_used: int = 0
 ) -> float:
     """
     Calculate posterior concept mastery using exact Bayesian Knowledge Tracing (BKT).
+
+    V-01: When hints_used > 0 on a passed attempt, effective guess probability P(G)
+    is elevated proportionally to reflect external scaffolding assistance, dampening
+    unearned mastery jumps.
     """
     p_k = max(0.0, min(1.0, float(prior_mastery)))
+    effective_p_g = min(0.60, p_g + 0.05 * max(0, hints_used)) if (passed and hints_used > 0) else p_g
 
     if passed:
         # P(correct) = P(K) * (1 - P(S)) + (1 - P(K)) * P(G)
-        p_obs = p_k * (1.0 - p_s) + (1.0 - p_k) * p_g
+        p_obs = p_k * (1.0 - p_s) + (1.0 - p_k) * effective_p_g
         # P(K | correct) = [P(K) * (1 - P(S))] / P(correct)
         if p_obs > 0.0:
             p_k_given_obs = (p_k * (1.0 - p_s)) / p_obs

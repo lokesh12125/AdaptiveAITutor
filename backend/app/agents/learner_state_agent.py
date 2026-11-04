@@ -101,7 +101,7 @@ class LearnerStateAgent:
             updated_confusion = prior_confusion
             updated_cog_load = prior_load
         else:
-            updated_mastery = update_mastery(prior_mastery, passed)
+            updated_mastery = update_mastery(prior_mastery, passed, hints_used=current_hints_used)
 
             # 2. Confidence: EWMA
             conf_ev = calculate_confidence_evidence(passed, current_hints_used, consecutive_fails)

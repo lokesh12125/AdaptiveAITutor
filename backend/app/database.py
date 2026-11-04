@@ -84,8 +84,9 @@ INITIAL_PROBLEMS = [
 
 
 def connection() -> sqlite3.Connection:
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=10.0)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON;")
     return conn
 
 
@@ -99,6 +100,12 @@ def _safe_add_column(conn: sqlite3.Connection, table: str, column_def: str) -> N
 
 def initialize_database() -> None:
     with connection() as conn:
+        # P-11/S-02: Enable Write-Ahead Logging (WAL) for concurrent read/write and set busy timeout
+        try:
+            conn.execute("PRAGMA journal_mode = WAL;")
+            conn.execute("PRAGMA busy_timeout = 5000;")
+        except Exception:
+            pass
         conn.executescript("""
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
@@ -224,6 +231,65 @@ def initialize_database() -> None:
             profile_json TEXT NOT NULL,
             intervention TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS state_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            learner_id TEXT NOT NULL,
+            problem_id INTEGER,
+            concept_id TEXT,
+            mastery REAL NOT NULL,
+            confidence REAL NOT NULL,
+            confusion REAL NOT NULL,
+            cognitive_load REAL NOT NULL,
+            consecutive_fails INTEGER DEFAULT 0,
+            scaffolding_level INTEGER DEFAULT 1,
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS learner_misconceptions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            learner_id TEXT NOT NULL,
+            concept_id TEXT NOT NULL,
+            misconception_code TEXT NOT NULL,
+            error_type TEXT,
+            occurrence_count INTEGER DEFAULT 1,
+            last_seen TEXT NOT NULL,
+            resolved INTEGER DEFAULT 0
+        );
+        CREATE TABLE IF NOT EXISTS reflection_responses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id INTEGER,
+            learner_id TEXT NOT NULL,
+            problem_id INTEGER,
+            prompt_text TEXT NOT NULL,
+            response_text TEXT NOT NULL,
+            quality_score REAL DEFAULT 1.0,
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS satisfaction_surveys (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            learner_id TEXT NOT NULL,
+            session_id INTEGER,
+            usefulness_score INTEGER DEFAULT 5,
+            clarity_score INTEGER DEFAULT 5,
+            hint_adequacy_score INTEGER DEFAULT 5,
+            perceived_adaptivity_score INTEGER DEFAULT 5,
+            comments TEXT,
+            recorded_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS classes (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            teacher_id TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS class_enrolments (
+            class_id TEXT NOT NULL,
+            student_id TEXT NOT NULL,
+            enrolled_at TEXT NOT NULL,
+            PRIMARY KEY (class_id, student_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_attempts_learner_time ON attempts(learner_id, created_at);
+        CREATE INDEX IF NOT EXISTS idx_state_history_learner ON state_history(learner_id, created_at);
+        CREATE INDEX IF NOT EXISTS idx_misconceptions_learner ON learner_misconceptions(learner_id, concept_id);
         """)
 
         # Run non-destructive column migrations on existing tables if needed
@@ -667,6 +733,27 @@ def save_attempt_and_state(
                ON CONFLICT(learner_id) DO UPDATE SET state_json=excluded.state_json, updated_at=excluded.updated_at""",
             (learner_id, json.dumps(state), now)
         )
+        # S-07 / R-13: Append to state_history for longitudinal analytics
+        try:
+            conn.execute(
+                """INSERT INTO state_history 
+                   (learner_id, problem_id, concept_id, mastery, confidence, confusion, cognitive_load, consecutive_fails, scaffolding_level, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    learner_id,
+                    problem_id,
+                    concept_id,
+                    float(state.get("mastery", 0.35)),
+                    float(state.get("confidence", 0.50)),
+                    float(state.get("confusion", 0.00)),
+                    float(state.get("cognitive_load", 0.00)),
+                    int(state.get("consecutive_fails", 0)),
+                    scaffolding_level,
+                    now
+                )
+            )
+        except Exception:
+            pass
 
 
 def history(learner_id: str) -> list[dict]:
@@ -933,3 +1020,204 @@ def get_all_student_metrics() -> list[dict]:
                 "metrics": metrics
             })
     return results
+
+
+# --- S-07, R-03, R-13, R-18, R-25 ENHANCEMENT HELPERS ---
+
+def get_state_history(learner_id: str, limit: int = 50) -> list[dict]:
+    """Fetch longitudinal cognitive state progression records for a learner (R-13)."""
+    with connection() as conn:
+        rows = conn.execute(
+            """SELECT * FROM state_history 
+               WHERE learner_id = ? 
+               ORDER BY id ASC LIMIT ?""",
+            (learner_id, limit)
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def record_learner_misconception(learner_id: str, concept_id: str, misconception_code: str, error_type: str = "") -> None:
+    """Record or increment recurring misconceptions for longitudinal tracking (R-03)."""
+    now = datetime.now(timezone.utc).isoformat()
+    with connection() as conn:
+        existing = conn.execute(
+            """SELECT id, occurrence_count FROM learner_misconceptions 
+               WHERE learner_id = ? AND concept_id = ? AND misconception_code = ?""",
+            (learner_id, concept_id, misconception_code)
+        ).fetchone()
+        if existing:
+            conn.execute(
+                """UPDATE learner_misconceptions 
+                   SET occurrence_count = occurrence_count + 1, last_seen = ? 
+                   WHERE id = ?""",
+                (now, existing["id"])
+            )
+        else:
+            conn.execute(
+                """INSERT INTO learner_misconceptions 
+                   (learner_id, concept_id, misconception_code, error_type, occurrence_count, last_seen, resolved)
+                   VALUES (?, ?, ?, ?, 1, ?, 0)""",
+                (learner_id, concept_id, misconception_code, error_type, now)
+            )
+
+
+def get_learner_misconceptions(learner_id: str) -> list[dict]:
+    """Retrieve recurring misconception profiles for a learner (R-03)."""
+    with connection() as conn:
+        rows = conn.execute(
+            """SELECT * FROM learner_misconceptions 
+               WHERE learner_id = ? 
+               ORDER BY occurrence_count DESC, id DESC""",
+            (learner_id,)
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def save_reflection_response(
+    learner_id: str,
+    problem_id: int,
+    prompt_text: str,
+    response_text: str,
+    session_id: Optional[int] = None,
+    quality_score: float = 1.0
+) -> dict:
+    """Persist student metacognitive reflection answer (R-25)."""
+    now = datetime.now(timezone.utc).isoformat()
+    with connection() as conn:
+        cursor = conn.execute(
+            """INSERT INTO reflection_responses 
+               (session_id, learner_id, problem_id, prompt_text, response_text, quality_score, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (session_id, learner_id, problem_id, prompt_text, response_text, quality_score, now)
+        )
+        resp_id = cursor.lastrowid
+    return {
+        "id": resp_id,
+        "learner_id": learner_id,
+        "problem_id": problem_id,
+        "response_text": response_text,
+        "quality_score": quality_score,
+        "created_at": now
+    }
+
+
+def get_reflection_responses(learner_id: str, limit: int = 20) -> list[dict]:
+    """Fetch stored reflection responses for a learner (R-25)."""
+    with connection() as conn:
+        rows = conn.execute(
+            """SELECT * FROM reflection_responses 
+               WHERE learner_id = ? 
+               ORDER BY id DESC LIMIT ?""",
+            (learner_id, limit)
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def save_satisfaction_survey(
+    learner_id: str,
+    session_id: Optional[int],
+    usefulness_score: int,
+    clarity_score: int,
+    hint_adequacy_score: int,
+    perceived_adaptivity_score: int,
+    comments: str = ""
+) -> dict:
+    """Record multi-item Likert satisfaction evaluation (R-18)."""
+    now = datetime.now(timezone.utc).isoformat()
+    with connection() as conn:
+        cursor = conn.execute(
+            """INSERT INTO satisfaction_surveys 
+               (learner_id, session_id, usefulness_score, clarity_score, hint_adequacy_score, perceived_adaptivity_score, comments, recorded_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (learner_id, session_id, usefulness_score, clarity_score, hint_adequacy_score, perceived_adaptivity_score, comments, now)
+        )
+        survey_id = cursor.lastrowid
+    return {
+        "id": survey_id,
+        "learner_id": learner_id,
+        "usefulness_score": usefulness_score,
+        "clarity_score": clarity_score,
+        "hint_adequacy_score": hint_adequacy_score,
+        "perceived_adaptivity_score": perceived_adaptivity_score,
+        "comments": comments,
+        "recorded_at": now
+    }
+
+
+def get_weakest_concepts(learner_id: str, limit: int = 5) -> list[dict]:
+    """Identify weak topics where student has lowest mastery or highest confusion (R-13)."""
+    with connection() as conn:
+        rows = conn.execute(
+            """SELECT cp.concept_id, c.title as concept_title, cp.mastery, cp.confusion, cp.attempts_count, cp.success_count
+               FROM concept_progress cp
+               JOIN concepts c ON cp.concept_id = c.id
+               WHERE cp.learner_id = ? AND cp.attempts_count > 0
+               ORDER BY cp.mastery ASC, cp.confusion DESC
+               LIMIT ?""",
+            (learner_id, limit)
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_student_drilldown(student_id: str) -> Optional[dict]:
+    """R-14: Comprehensive teacher analytics drilldown for a single student."""
+    with connection() as conn:
+        user_row = conn.execute("SELECT id, name, email, role, created_at FROM users WHERE id = ?", (student_id,)).fetchone()
+        if not user_row:
+            return None
+        student_info = dict(user_row)
+
+        # Concept progress
+        c_rows = conn.execute(
+            """SELECT cp.*, c.title as concept_title, c.category 
+               FROM concept_progress cp 
+               JOIN concepts c ON cp.concept_id = c.id 
+               WHERE cp.learner_id = ? 
+               ORDER BY c.order_index ASC""",
+            (student_id,)
+        ).fetchall()
+        concept_breakdown = [dict(r) for r in c_rows]
+
+        # Recent attempts
+        att_rows = conn.execute(
+            """SELECT a.*, p.title as problem_title 
+               FROM attempts a 
+               LEFT JOIN problems p ON a.problem_id = p.id 
+               WHERE a.learner_id = ? 
+               ORDER BY a.id DESC LIMIT 20""",
+            (student_id,)
+        ).fetchall()
+        recent_attempts = [dict(r) for r in att_rows]
+
+        # State history
+        sh_rows = conn.execute(
+            "SELECT * FROM state_history WHERE learner_id = ? ORDER BY id ASC LIMIT 50",
+            (student_id,)
+        ).fetchall()
+        state_progression = [dict(r) for r in sh_rows]
+
+        # Misconceptions
+        m_rows = conn.execute(
+            "SELECT * FROM learner_misconceptions WHERE learner_id = ? ORDER BY occurrence_count DESC",
+            (student_id,)
+        ).fetchall()
+        misconceptions = [dict(r) for r in m_rows]
+
+        # At-risk alert indicator: flagged if average confusion >= 0.50 or consecutive fails >= 3
+        latest_sh = state_progression[-1] if state_progression else {}
+        is_at_risk = (
+            latest_sh.get("confusion", 0) >= 0.50 or
+            latest_sh.get("consecutive_fails", 0) >= 3 or
+            (latest_sh.get("cognitive_load", 0) >= 0.65 and latest_sh.get("mastery", 0) < 0.35)
+        )
+
+        return {
+            "student": student_info,
+            "concept_breakdown": concept_breakdown,
+            "recent_attempts": recent_attempts,
+            "state_progression": state_progression,
+            "misconceptions": misconceptions,
+            "is_at_risk": bool(is_at_risk),
+            "at_risk_reason": "High persistent confusion or cognitive load" if is_at_risk else "Normal progression"
+        }
+

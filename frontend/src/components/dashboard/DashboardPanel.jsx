@@ -103,6 +103,12 @@ export default function DashboardPanel({
 
   const topCompletedTopics = conceptsWithMastery.slice(0, 8);
 
+  // R-13: Identify weak concepts requiring reinforcement
+  const weakTopics = conceptsWithMastery
+    .filter(c => c.attempts > 0 && c.masteryPct < 70)
+    .sort((a, b) => a.masteryPct - b.masteryPct)
+    .slice(0, 3);
+
   return (
     <div className="dashboard-grid">
       {/* Welcome Hero Banner */}
@@ -341,9 +347,46 @@ export default function DashboardPanel({
               </div>
             </div>
 
+            <div className="gauge-item">
+              <div className="gauge-header">
+                <span>Model-Estimated Mastery Gain</span>
+                <strong>{evalMetrics?.model_estimated_mastery_gain !== undefined ? evalMetrics.model_estimated_mastery_gain : ((Math.max(0, (activeState?.mastery || 0.20) - 0.20) / 0.80).toFixed(2))}</strong>
+              </div>
+              <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                Normalized against BKT prior P(L0)=0.20
+              </div>
+            </div>
+
+            {/* R-13: Weak Topics List */}
+            {weakTopics.length > 0 && (
+              <>
+                <hr style={{ margin: '14px 0', border: '0', borderTop: '1px solid #e2e8f0' }} />
+                <div>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#b91c1c' }}>Targeted Review Needed:</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
+                    {weakTopics.map(wt => (
+                      <div 
+                        key={wt.id} 
+                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, background: '#fef2f2', padding: '6px 10px', borderRadius: 6, border: '1px solid #fecaca', cursor: 'pointer' }}
+                        onClick={() => {
+                          const cObj = concepts.find(c => c.id === wt.id);
+                          if (cObj) setSelectedConcept(cObj);
+                          setCurrentTab('curriculum');
+                        }}
+                        title="Click to practice this topic"
+                      >
+                        <span style={{ fontWeight: 600, color: '#991b1b' }}>{wt.title}</span>
+                        <span style={{ color: '#b91c1c', fontWeight: 500 }}>{wt.masteryPct}% ({wt.attempts} attempts)</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
             <hr style={{ margin: '14px 0', border: '0', borderTop: '1px solid #e2e8f0' }} />
 
-            {/* Student Satisfaction Widget */}
+            {/* Student Satisfaction Widget (R-18) */}
             <div>
               <span style={{ fontSize: 13, fontWeight: 700, color: '#334155' }}>Session Satisfaction Rating:</span>
               <div className="satisfaction-widget" style={{ marginTop: 8 }}>

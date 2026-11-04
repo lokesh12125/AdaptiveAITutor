@@ -68,6 +68,13 @@ class AdaptiveScaffoldingAgent:
             f"Inspect your logic around {misconception or 'the return statement'}. Review: {problem.get('expected_behavior', '')}."
         )
 
+        leak_detected = state.get("leak_detected", False)
+        anti_leak_instruction = (
+            "CRITICAL WARNING: Direct code was previously detected. Under NO circumstances output executable Python syntax, complete functions, or code blocks. Use ONLY conceptual questioning."
+            if leak_detected
+            else "Do NOT write the complete solution code."
+        )
+
         prompt = (
             f"Problem: {problem.get('title', '')} - {problem.get('description', '')}\n"
             f"Expected Behavior: {problem.get('expected_behavior', '')}\n"
@@ -79,7 +86,7 @@ class AdaptiveScaffoldingAgent:
             f"Intervention Cue: {intervention}\n"
             f"Rationale: {rationale}\n"
             f"Generate a targeted Level {level} Socratic hint focusing on {focus} (Level 1=guiding question, Level 2=conceptual clue, Level 3=pseudocode guidance, Level 4=step-by-step breakdown). "
-            "Do NOT write the complete solution code."
+            f"{anti_leak_instruction}"
         )
         hint_text = llm.tutor_reply(prompt, fallback_hint)
 
@@ -104,6 +111,7 @@ class AdaptiveScaffoldingAgent:
                 "remediation_flag": remediation_flag,
                 "rationale": rationale,
                 "intervention_applied": intervention,
+                "llm_mode": "fallback" if getattr(llm, "last_was_fallback", True) else "live",
             },
             "agent_activity": ["Adaptive Scaffolding Agent"],
         }

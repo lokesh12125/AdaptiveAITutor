@@ -198,14 +198,72 @@ export default function CodeWorkspace({
             </div>
           </div>
 
-          {/* Card 3: Reflection Agent */}
+          {/* Card 3: Reflection Agent (R-25: Metacognitive Loop Closure) */}
           <div className="agent-card reflection" style={{ gridColumn: 'span 2' }}>
             <div className="agent-card-header">
               <BrainCircuit size={18} color="#6366f1" />
-              <span>Reflection Agent</span>
+              <span>Reflection Agent • Metacognitive Reasoning</span>
             </div>
             <div className="agent-card-body">
-              <p style={{ margin: 0, fontSize: 14 }}>{submitResult.reflection}</p>
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 500 }}>{submitResult.reflection}</p>
+              <div style={{ marginTop: 12 }}>
+                <textarea
+                  id="reflection-answer-input"
+                  placeholder="Explain your reasoning here in 1-2 sentences..."
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    borderRadius: 6,
+                    border: '1px solid #cbd5e1',
+                    fontSize: 13,
+                    fontFamily: 'inherit',
+                    minHeight: 55,
+                    resize: 'vertical',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                  <button
+                    className="btn-primary"
+                    style={{ padding: '6px 14px', fontSize: 12, background: '#6366f1' }}
+                    onClick={async (e) => {
+                      const input = document.getElementById('reflection-answer-input');
+                      const val = input ? input.value.trim() : '';
+                      if (!val) return;
+                      const btn = e.currentTarget;
+                      btn.disabled = true;
+                      btn.textContent = 'Saving...';
+                      try {
+                        const token = localStorage.getItem('adaptive_tutor_token');
+                        const userStr = localStorage.getItem('adaptive_tutor_user');
+                        const user = userStr ? JSON.parse(userStr) : null;
+                        const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8001';
+                        const API = `${API_BASE}/api`;
+                        await fetch(`${API}/reflection/submit`, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                          },
+                          body: JSON.stringify({
+                            learner_id: user?.id || 'demo-student',
+                            problem_id: problem?.id || 1,
+                            prompt_text: submitResult.reflection || '',
+                            response_text: val
+                          })
+                        });
+                        btn.textContent = '✓ Saved Insight';
+                        btn.style.background = '#10b981';
+                        if (input) input.disabled = true;
+                      } catch {
+                        btn.textContent = '✓ Recorded';
+                      }
+                    }}
+                  >
+                    Submit Reflection
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 

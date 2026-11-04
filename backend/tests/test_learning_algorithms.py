@@ -442,3 +442,19 @@ def test_dsda_zero_and_invalid_baseline_time():
     assert dsda_time_stress(30.0, -20.0) == 1.0  # t_base defaults to 15.0, 30s is 2x baseline
     assert dsda_time_stress(10.0, None) == 0.0  # t_base defaults to 60.0, 10s is <= 30s
 
+
+def test_dsda_confidence_inversely_modulates_struggle():
+    """Verify C-06 / V-02: Higher confidence reduces the struggle index, while lower confidence increases struggle."""
+    csi_confident, raw_confident, _ = calculate_csi_score(
+        mastery=0.5, consecutive_fails=2, confidence=0.9, cognitive_load=0.3, hints_used=1, response_time=30.0, observations_count=5
+    )
+    csi_unconfident, raw_unconfident, _ = calculate_csi_score(
+        mastery=0.5, consecutive_fails=2, confidence=0.1, cognitive_load=0.3, hints_used=1, response_time=30.0, observations_count=5
+    )
+    # With (1.0 - conf), struggle must be strictly higher when confidence is low
+    assert raw_unconfident > raw_confident
+    assert csi_unconfident > csi_confident
+    # Exact delta between conf=0.1 and conf=0.9 is 0.20 * (0.9 - 0.1) = 0.16
+    assert abs((raw_unconfident - raw_confident) - 0.16) < 0.001
+
+

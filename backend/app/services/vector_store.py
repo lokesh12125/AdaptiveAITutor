@@ -68,7 +68,10 @@ class VectorStoreService:
             self._client = chromadb.PersistentClient(path=str(CHROMA_DIR))
             self._collection = self._client.get_or_create_collection(
                 name="learner_profiles",
-                metadata={"description": "8D learner profile similarity vectors and interventions"}
+                metadata={
+                    "hnsw:space": "cosine",
+                    "description": "8D learner profile similarity vectors and interventions"
+                }
             )
             self._seed_defaults_if_empty()
             self._initialized = True
@@ -129,8 +132,16 @@ class VectorStoreService:
             logger.warning("ChromaDB query failed: %s", e)
             return []
 
-    def record_learner_profile(self, profile_id: str, vector: list[float], intervention: str, archetype: str = "custom") -> None:
-        """Store or update a learner profile feature vector in ChromaDB."""
+    def record_learner_profile(
+        self,
+        profile_id: str,
+        vector: list[float],
+        intervention: str,
+        archetype: str = "custom",
+        concept: str = "general",
+        outcome: str = "resolved"
+    ) -> None:
+        """Store or update a learner profile feature vector in ChromaDB (R-05)."""
         if not self._initialized or self._collection is None:
             return
         try:
@@ -138,7 +149,12 @@ class VectorStoreService:
             self._collection.upsert(
                 ids=[profile_id],
                 embeddings=[norm_vector],
-                metadatas=[{"archetype": archetype, "intervention": intervention}],
+                metadatas=[{
+                    "archetype": archetype,
+                    "intervention": intervention,
+                    "concept": concept,
+                    "outcome": outcome
+                }],
                 documents=[intervention]
             )
         except Exception as e:
