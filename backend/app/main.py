@@ -50,11 +50,12 @@ from .database import (
     get_student_drilldown,
     save_reflection_response,
     save_satisfaction_survey,
+    save_hint,
 )
 from .graph.tutor_graph import tutor_graph
 from .learning.assessment import evaluate_placement_answers, get_placement_quiz
 from .services.code_runner import evaluate
-from .services.llm_service import llm
+from .services.llm_service import generate_contextual_socratic_fallback, llm
 from .services.vector_store import vector_store
 
 
@@ -172,6 +173,13 @@ class SurveySubmitRequest(BaseModel):
 class PlacementSubmitRequest(BaseModel):
     learner_id: str
     answers: dict[str, str]
+
+
+class ProgressiveHintRequest(BaseModel):
+    learner_id: str = Field(min_length=1, max_length=80)
+    problem_id: int
+    level: int = Field(ge=1, le=4, default=1)
+    code: Optional[str] = ""
 
 
 # --- 1. HEALTH CHECK ---
@@ -535,6 +543,139 @@ def learner_problem_hints(learner_id: str, problem_id: int, current_user: Option
     return get_problem_hints(learner_id, problem_id)
 
 
+def _generate_progressive_hint_content(problem: dict, level: int, code: str = "") -> str:
+    """
+    Generate progressive pedagogical hints (Phase 3.3):
+    - Level 1: Subtle conceptual nudge / guiding question.
+    - Level 2: Specific direction, constraints, and relevant functions/formula.
+    - Level 3: Stronger clue, partial approach, and pseudocode.
+    - Level 4: Complete step-by-step logic explanation and walkthrough.
+    """
+    title = problem.get("title", "")
+    topic = problem.get("topic") or problem.get("concept_id") or "Python"
+    expected = problem.get("expected_behavior", "")
+
+    if level == 1:
+        if "sum" in title.lower():
+            return "Consider the accumulation pattern: how do you keep track of a total value as you examine each item in a collection?"
+        if "max" in title.lower() or "largest" in title.lower():
+            return "Think about keeping a 'current best' variable as you inspect elements one by one. How should you safely initialize it?"
+        if "palindrome" in title.lower():
+            return "A palindrome reads the same forwards and backwards. What transformations (casing, spaces) should happen before comparing?"
+        if "vowel" in title.lower():
+            return "What constitutes a vowel in both lowercase and uppercase? How can Python quickly check if a character belongs to a group?"
+        if "two sum" in title.lower():
+            return "If you are looking for two numbers that add up to a target, what arithmetic relationship connects each number to its partner?"
+        return f"Reflect on the core objective of '{title}': what is the primary invariant or transformation required on the input?"
+
+    elif level == 2:
+        if "sum" in title.lower():
+            return "Initialize a counter (e.g. `total = 0`) before your loop. In each step, add the current item: `total += item`. Ensure you return `total` only after the loop ends."
+        if "max" in title.lower() or "largest" in title.lower():
+            return "Initialize `max_val = numbers[0]` (rather than 0, so it handles negative numbers). If a number is greater than `max_val`, update it: `if num > max_val: max_val = num`."
+        if "palindrome" in title.lower():
+            return "First sanitize the input: `cleaned = ''.join(c.lower() for c in text if c.isalnum())`. Then check if `cleaned == cleaned[::-1]`."
+        if "vowel" in title.lower():
+            return "Define `vowels = set('aeiouAEIOU')`. Loop through each character in the text and check `if char in vowels: count += 1`. Return `count`."
+        if "two sum" in title.lower():
+            return "For each number `num`, calculate `needed = target - num`. Use a dictionary to store `{num: index}` for each number seen so far."
+        return f"Direction for {title}: Review the expected behavior `{expected}`. Check boundary cases such as empty inputs or single-element inputs."
+
+    elif level == 3:
+        if "sum" in title.lower():
+            return (
+                "Pseudocode Approach:\n"
+                "1. total = 0\n"
+                "2. for number in arr:\n"
+                "       total = total + number\n"
+                "3. return total\n\n"
+                "*Tip:* Alternatively, Python's built-in `sum(arr)` accomplishes this in linear time."
+            )
+        if "max" in title.lower():
+            return (
+                "Pseudocode Approach:\n"
+                "1. if not numbers: return None\n"
+                "2. current_max = numbers[0]\n"
+                "3. for val in numbers[1:]:\n"
+                "       if val > current_max:\n"
+                "           current_max = val\n"
+                "4. return current_max"
+            )
+        if "palindrome" in title.lower():
+            return (
+                "Pseudocode Approach:\n"
+                "1. cleaned = ''.join(c.lower() for c in text if c.isalnum())\n"
+                "2. return cleaned == cleaned[::-1]"
+            )
+        if "two sum" in title.lower():
+            return (
+                "Pseudocode Approach:\n"
+                "1. seen = {}\n"
+                "2. for i, num in enumerate(numbers):\n"
+                "       diff = target - num\n"
+                "       if diff in seen:\n"
+                "           return [seen[diff], i]\n"
+                "       seen[num] = i\n"
+                "3. return None"
+            )
+        return (
+            f"Pseudocode Structure for {title}:\n"
+            "1. Validate input parameters and handle empty/edge cases.\n"
+            "2. Initialize state accumulator or container.\n"
+            "3. Perform step-by-step traversal.\n"
+            "4. Return the aggregated or transformed result."
+        )
+
+    else:
+        return (
+            f"### Complete Solution Logic Walkthrough for '{title}'\n\n"
+            f"**1. Problem Invariant:** The function must satisfy `{expected}`.\n"
+            "**2. Step-by-Step Logic:**\n"
+            "- **Initialization:** Declare variables to store the intermediate result before any looping starts.\n"
+            "- **Traversal:** Inspect each item sequentially. Be careful not to return prematurely inside the loop body!\n"
+            "- **State Transformation:** Apply the required arithmetic, comparison, or string operation.\n"
+            "- **Output Return:** After completing the traversal, return the final accumulated result.\n"
+            "**3. Complexity Analysis:** This solution runs in $O(n)$ time using $O(1)$ extra memory."
+        )
+
+
+@app.post("/api/hint/progressive")
+def request_progressive_hint(payload: ProgressiveHintRequest, current_user: Optional[dict] = Depends(get_optional_user)) -> dict:
+    """Phase 3.3: Dynamic progressive hint ladder (Hint 1: Nudge -> Hint 2: Direction -> Hint 3: Pseudocode -> Level 4: Walkthrough)."""
+    check_learner_access(payload.learner_id, current_user)
+    problem = get_problem(payload.problem_id)
+    if not problem:
+        raise HTTPException(status_code=404, detail="Problem not found.")
+
+    level = max(1, min(4, payload.level))
+    focus_map = {1: "Conceptual Nudge", 2: "Specific Direction", 3: "Pseudocode Approach", 4: "Solution Walkthrough"}
+    focus = focus_map.get(level, "Conceptual")
+
+    hint_text = _generate_progressive_hint_content(problem, level, payload.code)
+
+    # Persist hint to SQLite
+    try:
+        save_hint(
+            learner_id=payload.learner_id,
+            problem_id=payload.problem_id,
+            level=level,
+            hint_text=hint_text,
+            focus=focus
+        )
+    except Exception:
+        pass
+
+    return {
+        "status": "ok",
+        "level": level,
+        "title": f"Hint {level}: {focus}",
+        "hint": hint_text,
+        "focus": focus,
+        "max_level": 4,
+        "problem_id": payload.problem_id
+    }
+
+
 # --- 6. SESSION MANAGEMENT & TRACKING ---
 
 class SessionStartRequest(BaseModel):
@@ -630,9 +771,10 @@ def chat(payload: ChatRequest, current_user: Optional[dict] = Depends(get_option
         f"Student Question: {payload.message}"
     )
 
-    fallback = (
-        "Python offers clear and readable syntax for this concept. "
-        "Try isolating a small 2-line test example in your terminal, and observe how variable states change."
+    fallback = generate_contextual_socratic_fallback(
+        message=payload.message,
+        problem=current_problem,
+        learner_state=learner_st
     )
 
     reply = llm.tutor_reply(prompt, fallback, system_prompt=system_prompt)
