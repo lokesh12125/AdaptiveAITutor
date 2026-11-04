@@ -15,33 +15,50 @@ from .config import BACKEND_DIR
 
 # Persist or generate a local server secret for signing tokens
 SECRET_FILE = BACKEND_DIR / ".auth_secret"
-if SECRET_FILE.exists():
-    SERVER_SECRET = SECRET_FILE.read_bytes()
-else:
-    SERVER_SECRET = secrets.token_bytes(32)
-    try:
-        SECRET_FILE.write_bytes(SERVER_SECRET)
-    except Exception:
-        pass
+SERVER_SECRET = os.environ.get("JWT_SECRET", "").encode("utf-8") if os.environ.get("JWT_SECRET") else None
+if not SERVER_SECRET:
+    if SECRET_FILE.exists():
+        SERVER_SECRET = SECRET_FILE.read_bytes()
+    else:
+        SERVER_SECRET = secrets.token_bytes(32)
+        try:
+            SECRET_FILE.write_bytes(SERVER_SECRET)
+        except Exception:
+            pass
 
 security_bearer = HTTPBearer(auto_error=False)
 
+OWASP_PBKDF2_ITERATIONS = 600_000
+LEGACY_PBKDF2_ITERATIONS = 100_000
+
 
 def hash_password(password: str) -> str:
-    """Hash password using PBKDF2-HMAC-SHA256 with 100,000 iterations and a unique salt."""
+    """Hash password using PBKDF2-HMAC-SHA256 with 600,000 iterations (OWASP recommendation) and a unique 16-byte salt."""
     salt = secrets.token_bytes(16)
-    key = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 100_000)
-    return f"{salt.hex()}:{key.hex()}"
+    key = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, OWASP_PBKDF2_ITERATIONS)
+    return f"{OWASP_PBKDF2_ITERATIONS}:{salt.hex()}:{key.hex()}"
 
 
 def verify_password(password: str, stored_hash: str) -> bool:
-    """Verify password against stored salt:key hash."""
+    """Verify password against stored hash, supporting both 600k and legacy 100k iterations."""
     try:
-        salt_hex, key_hex = stored_hash.split(":", 1)
-        salt = bytes.fromhex(salt_hex)
-        expected_key = bytes.fromhex(key_hex)
-        actual_key = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 100_000)
-        return hmac.compare_digest(actual_key, expected_key)
+        parts = stored_hash.split(":")
+        if len(parts) == 3:
+            iters = int(parts[0])
+            salt = bytes.fromhex(parts[1])
+            expected_key = bytes.fromhex(parts[2])
+            actual_key = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iters)
+            return hmac.compare_digest(actual_key, expected_key)
+        elif len(parts) == 2:
+            salt = bytes.fromhex(parts[0])
+            expected_key = bytes.fromhex(parts[1])
+            # Check 600k first, then legacy 100k
+            actual_key_600k = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, OWASP_PBKDF2_ITERATIONS)
+            if hmac.compare_digest(actual_key_600k, expected_key):
+                return True
+            actual_key_100k = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, LEGACY_PBKDF2_ITERATIONS)
+            return hmac.compare_digest(actual_key_100k, expected_key)
+        return False
     except Exception:
         return False
 

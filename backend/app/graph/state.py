@@ -17,4 +17,6 @@ class TutorState(TypedDict, total=False):
     scaffolding: dict
     reflection: str
     recommendation: dict
+    verifier_attempts: int
+    leak_detected: bool
     agent_activity: Annotated[list[str], operator.add]

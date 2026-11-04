@@ -1,6 +1,6 @@
 import React from 'react';
 import Editor from '@monaco-editor/react';
-import { Code2, Timer, Play, RefreshCw, CheckCircle2, XCircle, Lightbulb, BrainCircuit } from 'lucide-react';
+import { Code2, Timer, Play, RefreshCw, CheckCircle2, XCircle, Lightbulb, BrainCircuit, Sparkles } from 'lucide-react';
 
 export default function CodeWorkspace({
   problem,
@@ -18,6 +18,14 @@ export default function CodeWorkspace({
   submitResult,
   setSubmitResult
 }) {
+  const formatActiveTime = (secs) => {
+    if (!secs) return '0s';
+    if (secs < 60) return `${secs}s`;
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}m ${s}s`;
+  };
+
   return (
     <section className="workspace-center">
       {problem && (
@@ -50,7 +58,7 @@ export default function CodeWorkspace({
           </div>
           <div className="timer-tag">
             <Timer size={15} />
-            <span>Active Time: {activeSeconds}s</span>
+            <span>Active Time: {formatActiveTime(activeSeconds)}</span>
           </div>
         </div>
 
@@ -63,6 +71,9 @@ export default function CodeWorkspace({
             setCode(val || '');
             setSubmitResult(null);
             setRunResult(null);
+            if (setIsTimerRunning) {
+              setIsTimerRunning(true);
+            }
           }}
           options={{
             minimap: { enabled: false },
@@ -151,30 +162,132 @@ export default function CodeWorkspace({
 
           {/* Card 2: Adaptive Scaffolding Agent */}
           <div className="agent-card scaffolding">
-            <div className="agent-card-header">
-              <Lightbulb size={18} color="#0d9488" />
-              <span>Adaptive Scaffolding Agent • Level {submitResult.scaffolding?.level || 1}</span>
+            <div className="agent-card-header" style={{ justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Lightbulb size={18} color="#0d9488" />
+                <span>
+                  Adaptive Scaffolding • {submitResult.scaffolding?.level === 0 ? 'Mastery Confirmed' : `Level ${submitResult.scaffolding?.level || 1}`}
+                </span>
+              </div>
+              {submitResult.scaffolding?.focus && submitResult.scaffolding?.focus !== 'None' && (
+                <span style={{ fontSize: 11, background: 'rgba(13, 148, 136, 0.15)', color: '#0d9488', padding: '2px 8px', borderRadius: 4, textTransform: 'none', fontWeight: 600 }}>
+                  {submitResult.scaffolding.focus} Focus
+                </span>
+              )}
             </div>
             <div className="agent-card-body">
-              <p style={{ margin: 0, fontWeight: 600 }}>{submitResult.scaffolding?.hint}</p>
+              <p style={{ margin: 0, fontWeight: 600 }}>
+                {submitResult.scaffolding?.hint || 'Review your code structure and logic.'}
+              </p>
+              {submitResult.scaffolding?.rationale && (
+                <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-muted)' }}>
+                  Pedagogical Rationale: {submitResult.scaffolding.rationale}
+                </div>
+              )}
+              {submitResult.scaffolding?.remediation_flag && (
+                <div style={{ marginTop: 8, fontSize: 11, color: '#b45309', background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '6px 10px', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>⚠️</span>
+                  <span><strong>Remediation Advisory:</strong> High cognitive struggle detected across multiple attempts. Consider reviewing prerequisite concepts.</span>
+                </div>
+              )}
               {submitResult.scaffolding?.intervention_applied && (
-                <div style={{ marginTop: 8, fontSize: 11, color: '#0369a1', background: '#f0f9ff', padding: '4px 8px', borderRadius: 4 }}>
-                  ChromaDB Intervention: {submitResult.scaffolding.intervention_applied}
+                <div style={{ marginTop: 8, fontSize: 11, color: '#0284c7', background: 'rgba(2, 132, 199, 0.1)', padding: '4px 8px', borderRadius: 4 }}>
+                  ChromaDB Peer Strategy: {submitResult.scaffolding.intervention_applied}
                 </div>
               )}
             </div>
           </div>
 
-          {/* Card 3: Reflection Agent */}
+          {/* Card 3: Reflection Agent (R-25: Metacognitive Loop Closure) */}
           <div className="agent-card reflection" style={{ gridColumn: 'span 2' }}>
             <div className="agent-card-header">
               <BrainCircuit size={18} color="#6366f1" />
-              <span>Reflection Agent</span>
+              <span>Reflection Agent • Metacognitive Reasoning</span>
             </div>
             <div className="agent-card-body">
-              <p style={{ margin: 0, fontSize: 14, color: '#1e293b' }}>{submitResult.reflection}</p>
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 500 }}>{submitResult.reflection}</p>
+              <div style={{ marginTop: 12 }}>
+                <textarea
+                  id="reflection-answer-input"
+                  placeholder="Explain your reasoning here in 1-2 sentences..."
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    borderRadius: 6,
+                    border: '1px solid #cbd5e1',
+                    fontSize: 13,
+                    fontFamily: 'inherit',
+                    minHeight: 55,
+                    resize: 'vertical',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                  <button
+                    className="btn-primary"
+                    style={{ padding: '6px 14px', fontSize: 12, background: '#6366f1' }}
+                    onClick={async (e) => {
+                      const input = document.getElementById('reflection-answer-input');
+                      const val = input ? input.value.trim() : '';
+                      if (!val) return;
+                      const btn = e.currentTarget;
+                      btn.disabled = true;
+                      btn.textContent = 'Saving...';
+                      try {
+                        const token = localStorage.getItem('adaptive_tutor_token');
+                        const userStr = localStorage.getItem('adaptive_tutor_user');
+                        const user = userStr ? JSON.parse(userStr) : null;
+                        const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8001';
+                        const API = `${API_BASE}/api`;
+                        await fetch(`${API}/reflection/submit`, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                          },
+                          body: JSON.stringify({
+                            learner_id: user?.id || 'demo-student',
+                            problem_id: problem?.id || 1,
+                            prompt_text: submitResult.reflection || '',
+                            response_text: val
+                          })
+                        });
+                        btn.textContent = '✓ Saved Insight';
+                        btn.style.background = '#10b981';
+                        if (input) input.disabled = true;
+                      } catch {
+                        btn.textContent = '✓ Recorded';
+                      }
+                    }}
+                  >
+                    Submit Reflection
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
+
+          {/* Card 4: Learning Planner Recommendation */}
+          {submitResult.recommendation && submitResult.recommendation.reason && (
+            <div className="agent-card" style={{ gridColumn: 'span 2', borderLeft: '4px solid #10b981', background: 'rgba(16, 185, 129, 0.05)' }}>
+              <div className="agent-card-header" style={{ justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Sparkles size={18} color="#10b981" />
+                  <span>Learning Planner Agent • Next Step Recommendation</span>
+                </div>
+                {submitResult.recommendation.difficulty && (
+                  <span style={{ fontSize: 11, color: '#10b981', fontWeight: 600 }}>
+                    {submitResult.recommendation.difficulty.toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <div className="agent-card-body">
+                <p style={{ margin: 0, fontWeight: 500 }}>
+                  {submitResult.recommendation.reason}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </section>

@@ -51,6 +51,16 @@ export default function App() {
   const [historyList, setHistoryList] = useState([]);
   const [evalMetrics, setEvalMetrics] = useState(null);
   const [satisfactionRating, setSatisfactionRating] = useState(0);
+  const [recommendation, setRecommendation] = useState(null);
+  const [sessionId, setSessionId] = useState(() => {
+    try {
+      const stored = sessionStorage.getItem('adaptive_tutor_session_id');
+      return stored ? parseInt(stored, 10) : null;
+    } catch {
+      return null;
+    }
+  });
+  const sessionStartingRef = useRef(false);
 
   const [chatMessages, setChatMessages] = useState([]);
 
@@ -61,30 +71,51 @@ export default function App() {
       .then(data => setSystemHealth(data))
       .catch(() => setSystemHealth({ backend: 'offline', llm: 'demo' }));
 
-    fetch(`${API}/concepts`)
-      .then(r => r.json())
-      .then(data => {
-        setConcepts(data);
-        if (data.length > 0) setSelectedConcept(data[0]);
-      })
-      .catch(() => {});
+    const loadConcepts = () => {
+      fetch(`${API}/concepts`)
+        .then(r => r.json())
+        .then(data => {
+          if (Array.isArray(data) && data.length > 0) {
+            setConcepts(data);
+            setSelectedConcept(prev => prev || data[0]);
+          }
+        })
+        .catch(() => {});
+    };
 
-    fetch(`${API}/problems`)
-      .then(r => r.json())
-      .then(data => {
-        setProblems(data);
-        if (data.length > 0 && !problem) {
-          setProblem(data[0]);
-          setCode(data[0].starter_code);
-        }
-      })
-      .catch(() => {});
+    const loadProblems = () => {
+      fetch(`${API}/problems`)
+        .then(r => r.json())
+        .then(data => {
+          if (Array.isArray(data) && data.length > 0) {
+            setProblems(data);
+            setProblem(prev => {
+              if (prev) return prev;
+              setCode(data[0].starter_code);
+              return data[0];
+            });
+            // Auto-expand all topics so practice problems are immediately visible
+            const topicsMap = {};
+            data.forEach(p => {
+              const topicKey = p.concept_id || p.topic || 'general';
+              topicsMap[topicKey] = true;
+            });
+            setExpandedTopics(topicsMap);
+          }
+        })
+        .catch(() => {});
+    };
+
+    loadConcepts();
+    loadProblems();
   }, []);
 
   // --- 2. USER DATA REFRESH ---
   const refreshUserData = (learnerId) => {
     if (!learnerId) return;
-    fetch(`${API}/learner/${learnerId}`)
+    const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+    fetch(`${API}/learner/${learnerId}`, { headers: authHeaders })
       .then(r => r.json())
       .then(st => {
         if (submitResult) {
@@ -93,17 +124,17 @@ export default function App() {
       })
       .catch(() => {});
 
-    fetch(`${API}/learner/${learnerId}/progress`)
+    fetch(`${API}/learner/${learnerId}/progress`, { headers: authHeaders })
       .then(r => r.json())
       .then(p => setConceptProgress(p))
       .catch(() => {});
 
-    fetch(`${API}/learner/${learnerId}/history`)
+    fetch(`${API}/learner/${learnerId}/history`, { headers: authHeaders })
       .then(r => r.json())
       .then(h => setHistoryList(h))
       .catch(() => {});
 
-    fetch(`${API}/metrics/${learnerId}`)
+    fetch(`${API}/metrics/${learnerId}`, { headers: authHeaders })
       .then(r => r.json())
       .then(m => {
         setEvalMetrics(m);
@@ -111,7 +142,12 @@ export default function App() {
       })
       .catch(() => {});
 
-    fetch(`${API}/chat/${learnerId}`)
+    fetch(`${API}/learner/${learnerId}/recommendation`, { headers: authHeaders })
+      .then(r => r.json())
+      .then(rec => setRecommendation(rec))
+      .catch(() => {});
+
+    fetch(`${API}/chat/${learnerId}`, { headers: authHeaders })
       .then(r => r.json())
       .then(msgs => setChatMessages(msgs))
       .catch(() => {});
@@ -122,6 +158,90 @@ export default function App() {
       refreshUserData(user.id);
     }
   }, [user]);
+
+  // --- 2b. LEARNING SESSION LIFECYCLE ---
+  useEffect(() => {
+    if (!user?.id || !token || sessionId || sessionStartingRef.current) return;
+
+    // Check if there is already a stored session for this user
+    try {
+      const storedUserId = sessionStorage.getItem('adaptive_tutor_session_user');
+      const storedSessionId = sessionStorage.getItem('adaptive_tutor_session_id');
+      if (storedUserId === user.id && storedSessionId) {
+        setSessionId(parseInt(storedSessionId, 10));
+        return;
+      }
+    } catch {}
+
+    sessionStartingRef.current = true;
+    fetch(`${API}/sessions/start`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ learner_id: user.id })
+    })
+      .then(r => r.json())
+      .then(sess => {
+        if (sess?.id) {
+          setSessionId(sess.id);
+          try {
+            sessionStorage.setItem('adaptive_tutor_session_id', sess.id.toString());
+            sessionStorage.setItem('adaptive_tutor_session_user', user.id);
+          } catch {}
+        }
+      })
+      .catch((err) => {
+        console.warn('Session start error:', err);
+      })
+      .finally(() => {
+        sessionStartingRef.current = false;
+      });
+  }, [user?.id, token, sessionId]);
+
+  useEffect(() => {
+    const handleUnload = () => {
+      if (sessionId && token) {
+        try {
+          fetch(`${API}/sessions/${sessionId}/end`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            keepalive: true
+          });
+        } catch {
+          navigator.sendBeacon?.(`${API}/sessions/${sessionId}/end`);
+        }
+      }
+    };
+    window.addEventListener('pagehide', handleUnload);
+    window.addEventListener('beforeunload', handleUnload);
+    return () => {
+      window.removeEventListener('pagehide', handleUnload);
+      window.removeEventListener('beforeunload', handleUnload);
+    };
+  }, [sessionId, token]);
+
+  const handleEndSession = async () => {
+    if (!sessionId || !token) return;
+    try {
+      await fetch(`${API}/sessions/${sessionId}/end`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+    } catch (e) {
+      console.warn('Error ending session:', e);
+    } finally {
+      try {
+        sessionStorage.removeItem('adaptive_tutor_session_id');
+        sessionStorage.removeItem('adaptive_tutor_session_user');
+      } catch {}
+      setSessionId(null);
+    }
+  };
 
   // --- 3. RESPONSE TIME STOPWATCH ---
   useEffect(() => {
@@ -135,6 +255,12 @@ export default function App() {
     return () => clearInterval(timerRef.current);
   }, [isTimerRunning]);
 
+  useEffect(() => {
+    if (currentTab === 'practice' && problem && !submitLoading) {
+      setIsTimerRunning(true);
+    }
+  }, [currentTab, problem, submitLoading]);
+
   const selectProblem = (prob) => {
     setProblem(prob);
     setCode(prob.starter_code);
@@ -144,11 +270,23 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    if (sessionId && token) {
+      fetch(`${API}/sessions/${sessionId}/end`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      }).catch(() => {});
+    }
+    try {
+      sessionStorage.removeItem('adaptive_tutor_session_id');
+      sessionStorage.removeItem('adaptive_tutor_session_user');
+    } catch {}
     localStorage.removeItem('adaptive_tutor_token');
     localStorage.removeItem('adaptive_tutor_user');
     setUser(null);
     setToken('');
+    setSessionId(null);
     setSubmitResult(null);
+    setRecommendation(null);
   };
 
   const handleRunCode = async () => {
@@ -198,7 +336,8 @@ export default function App() {
           learner_id: user.id,
           problem_id: problem.id,
           code,
-          response_time: responseTime
+          response_time: responseTime,
+          session_id: sessionId
         })
       });
       const data = await res.json();
@@ -217,7 +356,10 @@ export default function App() {
     try {
       await fetch(`${API}/metrics/satisfaction`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ learner_id: user.id, score: rating })
       });
       refreshUserData(user.id);
@@ -260,6 +402,8 @@ export default function App() {
         systemHealth={systemHealth}
         handleLogout={handleLogout}
         setIsTimerRunning={setIsTimerRunning}
+        sessionId={sessionId}
+        handleEndSession={handleEndSession}
       />
 
       <div className="container">
@@ -271,6 +415,7 @@ export default function App() {
             activeState={activeState}
             evalMetrics={evalMetrics}
             submitResult={submitResult}
+            recommendation={recommendation}
             problems={problems}
             selectProblem={selectProblem}
             setCurrentTab={setCurrentTab}
@@ -279,6 +424,7 @@ export default function App() {
             setSelectedConcept={setSelectedConcept}
             satisfactionRating={satisfactionRating}
             setSatisfactionRating={handleRateSatisfaction}
+            historyList={historyList}
           />
         )}
 
