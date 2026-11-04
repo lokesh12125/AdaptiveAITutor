@@ -290,7 +290,7 @@ export default function App() {
   };
 
   const handleRunCode = async () => {
-    if (!problem || !user) return;
+    if (!problem || !user || runLoading || submitLoading) return;
     setRunLoading(true);
     setRunResult(null);
     setSubmitResult(null);
@@ -310,16 +310,28 @@ export default function App() {
         })
       });
       const data = await res.json();
-      setRunResult(data.execution);
+      if (!res.ok) {
+        setRunResult({
+          passed: false,
+          error: data.detail || 'Execution service returned an error.',
+          output: data.detail || 'Execution error.'
+        });
+      } else {
+        setRunResult(data.execution);
+      }
     } catch (err) {
-      alert('Failed to run code: ' + err.message);
+      setRunResult({
+        passed: false,
+        error: err.message,
+        output: `Network/Backend error: ${err.message}`
+      });
     } finally {
       setRunLoading(false);
     }
   };
 
   const handleSubmitCode = async () => {
-    if (!problem || !user) return;
+    if (!problem || !user || submitLoading || runLoading) return;
     setSubmitLoading(true);
     setRunResult(null);
     setIsTimerRunning(false);
@@ -341,10 +353,32 @@ export default function App() {
         })
       });
       const data = await res.json();
-      setSubmitResult(data);
-      refreshUserData(user.id);
+      if (!res.ok) {
+        setSubmitResult({
+          evaluation: {
+            passed: false,
+            feedback: data.detail || 'Evaluation failed.',
+            tests_passed: 0,
+            tests_total: problem.tests?.length || 1,
+            test_results: []
+          },
+          pedagogical_guidance: 'An error occurred during evaluation. Please verify your connection or try again.'
+        });
+      } else {
+        setSubmitResult(data);
+        refreshUserData(user.id);
+      }
     } catch (err) {
-      alert('Failed to communicate with tutor backend: ' + err.message);
+      setSubmitResult({
+        evaluation: {
+          passed: false,
+          feedback: `Submission communication error: ${err.message}`,
+          tests_passed: 0,
+          tests_total: problem.tests?.length || 1,
+          test_results: []
+        },
+        pedagogical_guidance: `Failed to communicate with tutor backend: ${err.message}`
+      });
     } finally {
       setSubmitLoading(false);
     }

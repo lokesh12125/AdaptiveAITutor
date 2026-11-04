@@ -353,3 +353,86 @@ def test_audit_v01_bkt_hint_aware_guess_modulation():
     # Assisted attempt has higher effective P(G), producing a lower posterior mastery update
     assert mastery_unassisted > mastery_assisted
 
+
+def test_progressive_hint_system_levels_1_to_4(client):
+    """Verify Phase 3.3: Progressive hint ladder returns increasingly specific scaffolding."""
+    uid = f"prog_hint_{uuid.uuid4().hex[:6]}"
+    token = create_access_token(uid, "Progressive Student", f"{uid}@test.edu")
+
+    # Hint 1: Nudge
+    h1 = client.post("/api/hint/progressive", json={
+        "learner_id": uid,
+        "problem_id": 1,
+        "level": 1
+    }, headers={"Authorization": f"Bearer {token}"})
+    assert h1.status_code == 200
+    assert h1.json()["level"] == 1
+    assert "accumulation" in h1.json()["hint"].lower() or "total" in h1.json()["hint"].lower()
+    # Level 1 must not reveal implementation code
+    assert "def " not in h1.json()["hint"]
+
+    # Hint 2: Direction & Constraints
+    h2 = client.post("/api/hint/progressive", json={
+        "learner_id": uid,
+        "problem_id": 1,
+        "level": 2
+    }, headers={"Authorization": f"Bearer {token}"})
+    assert h2.status_code == 200
+    assert h2.json()["level"] == 2
+    assert "total" in h2.json()["hint"].lower()
+
+    # Hint 3: Pseudocode
+    h3 = client.post("/api/hint/progressive", json={
+        "learner_id": uid,
+        "problem_id": 1,
+        "level": 3
+    }, headers={"Authorization": f"Bearer {token}"})
+    assert h3.status_code == 200
+    assert h3.json()["level"] == 3
+    assert "pseudocode" in h3.json()["hint"].lower()
+
+    # Hint 4: Solution walkthrough
+    h4 = client.post("/api/hint/progressive", json={
+        "learner_id": uid,
+        "problem_id": 1,
+        "level": 4
+    }, headers={"Authorization": f"Bearer {token}"})
+    assert h4.status_code == 200
+    assert h4.json()["level"] == 4
+    assert "walkthrough" in h4.json()["hint"].lower()
+
+
+def test_contextual_socratic_chat_intelligence(client):
+    """Verify Phase 3.1 & 3.4: Chat responds with intelligent, structured pedagogical explanations."""
+    uid = f"chat_intel_{uuid.uuid4().hex[:6]}"
+    token = create_access_token(uid, "Chat Intel", f"{uid}@test.edu")
+
+    # Test list comprehension query
+    res_list = client.post("/api/chat", json={
+        "learner_id": uid,
+        "message": "Can you explain how list comprehensions work in Python?"
+    }, headers={"Authorization": f"Bearer {token}"})
+    assert res_list.status_code == 200
+    reply = res_list.json()["reply"]
+    assert "list comprehension" in reply.lower()
+    assert "[" in reply
+
+    # Test error debugging query
+    res_err = client.post("/api/chat", json={
+        "learner_id": uid,
+        "message": "Why does my code throw an IndexError: list index out of range?"
+    }, headers={"Authorization": f"Bearer {token}"})
+    assert res_err.status_code == 200
+    err_reply = res_err.json()["reply"]
+    assert "indexerror" in err_reply.lower()
+    assert "0-based" in err_reply.lower() or "index" in err_reply.lower()
+
+    # Test off-topic query redirection
+    res_off = client.post("/api/chat", json={
+        "learner_id": uid,
+        "message": "What is the capital of France?"
+    }, headers={"Authorization": f"Bearer {token}"})
+    assert res_off.status_code == 200
+    off_reply = res_off.json()["reply"]
+    assert "python" in off_reply.lower() or "programming" in off_reply.lower()
+
