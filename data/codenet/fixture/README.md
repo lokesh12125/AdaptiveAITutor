@@ -1,0 +1,1 @@
+**Made-up test data.** These files imitate the column layout documented by IBM Project CodeNet so the importer can be tested. Every row was written by hand for this project. Nothing here came from CodeNet.

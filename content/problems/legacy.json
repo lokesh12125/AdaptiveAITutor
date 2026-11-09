@@ -1,0 +1,3672 @@
+[
+ {
+  "slug": "variable-swap",
+  "title": "Variable Swap",
+  "unit": "python-basics",
+  "difficulty": "easy",
+  "concepts": [
+   "variables"
+  ],
+  "description": "Write a function `swap_values(a, b)` that takes two values and returns a tuple containing the values in swapped order `(b, a)`.\n\n### Input / Output Specifications\n- **Input:** `a`, `b` (Any) — Two arguments of any type.\n- **Output:** (Tuple[Any, Any]) — The 2-element tuple `(b, a)`.\n\n### Constraints\n- `a` and `b` may be any comparable or non-comparable values.\n\n### Examples\n**Example 1:**\n- Input: `1, 2`\n- Output: `(2, 1)`\n\n**Example 2:**\n- Input: `'hello', 'world'`\n- Output: `('world', 'hello')`",
+  "starter_code": "def swap_values(a, b):\n    # Return a tuple with values swapped\n    pass\n",
+  "function_name": "swap_values",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     1,
+     2
+    ],
+    "expected": [
+     2,
+     1
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     "hello",
+     "world"
+    ],
+    "expected": [
+     "world",
+     "hello"
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     null,
+     42
+    ],
+    "expected": [
+     42,
+     null
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      1,
+      2
+     ],
+     [
+      3,
+      4
+     ]
+    ],
+    "expected": [
+     [
+      3,
+      4
+     ],
+     [
+      1,
+      2
+     ]
+    ]
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 101
+ },
+ {
+  "slug": "type-converter",
+  "title": "Type Converter",
+  "unit": "python-basics",
+  "difficulty": "easy",
+  "concepts": [
+   "data-types"
+  ],
+  "description": "Write a function `parse_and_sum(str_a, str_b)` that converts two integer string representations into integers and returns their sum.\n\n### Input / Output Specifications\n- **Input:** `str_a`, `str_b` (str) — Two strings containing integer literals.\n- **Output:** (int) — The numeric sum.\n\n### Constraints\n- Inputs are valid numeric strings within signed 32-bit range.\n\n### Examples\n**Example 1:**\n- Input: `'10', '25'`\n- Output: `35`\n\n**Example 2:**\n- Input: `'-5', '5'`\n- Output: `0`",
+  "starter_code": "def parse_and_sum(str_a, str_b):\n    pass\n",
+  "function_name": "parse_and_sum",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     "10",
+     "25"
+    ],
+    "expected": 35
+   },
+   {
+    "kind": "args",
+    "args": [
+     "-5",
+     "5"
+    ],
+    "expected": 0
+   },
+   {
+    "kind": "args",
+    "args": [
+     "0",
+     "0"
+    ],
+    "expected": 0
+   },
+   {
+    "kind": "args",
+    "args": [
+     "-100",
+     "-250"
+    ],
+    "expected": -350
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 102
+ },
+ {
+  "slug": "format-greeting",
+  "title": "Format Greeting",
+  "unit": "variables-io",
+  "difficulty": "easy",
+  "concepts": [
+   "input-output"
+  ],
+  "description": "Write a function `format_greeting(name, age)` that formats a greeting string using an f-string.\n\n### Input / Output Specifications\n- **Input:** `name` (str), `age` (int)\n- **Output:** (str) — `'Hello <name>, you are <age> years old!'`\n\n### Constraints\n- `1 <= len(name) <= 50`, `0 <= age <= 150`\n\n### Examples\n**Example 1:**\n- Input: `'Ada', 36`\n- Output: `'Hello Ada, you are 36 years old!'`\n\n**Example 2:**\n- Input: `'Bob', 20`\n- Output: `'Hello Bob, you are 20 years old!'`",
+  "starter_code": "def format_greeting(name, age):\n    pass\n",
+  "function_name": "format_greeting",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     "Ada",
+     36
+    ],
+    "expected": "Hello Ada, you are 36 years old!"
+   },
+   {
+    "kind": "args",
+    "args": [
+     "Bob",
+     20
+    ],
+    "expected": "Hello Bob, you are 20 years old!"
+   },
+   {
+    "kind": "args",
+    "args": [
+     "Grace",
+     0
+    ],
+    "expected": "Hello Grace, you are 0 years old!"
+   },
+   {
+    "kind": "args",
+    "args": [
+     "Alan",
+     41
+    ],
+    "expected": "Hello Alan, you are 41 years old!"
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 103
+ },
+ {
+  "slug": "even-or-odd-checker",
+  "title": "Even or Odd Checker",
+  "unit": "variables-io",
+  "difficulty": "easy",
+  "concepts": [
+   "operators"
+  ],
+  "description": "Write a function `is_even(n)` that returns `True` if integer `n` is even, and `False` if it is odd.\n\n### Input / Output Specifications\n- **Input:** `n` (int)\n- **Output:** (bool)\n\n### Constraints\n- `-10^9 <= n <= 10^9`\n\n### Examples\n**Example 1:**\n- Input: `4`\n- Output: `True`\n\n**Example 2:**\n- Input: `7`\n- Output: `False`",
+  "starter_code": "def is_even(n):\n    pass\n",
+  "function_name": "is_even",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     4
+    ],
+    "expected": true
+   },
+   {
+    "kind": "args",
+    "args": [
+     7
+    ],
+    "expected": false
+   },
+   {
+    "kind": "args",
+    "args": [
+     0
+    ],
+    "expected": true
+   },
+   {
+    "kind": "args",
+    "args": [
+     -12
+    ],
+    "expected": true
+   },
+   {
+    "kind": "args",
+    "args": [
+     -7
+    ],
+    "expected": false
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 104
+ },
+ {
+  "slug": "absolute-value",
+  "title": "Absolute Value",
+  "unit": "conditionals",
+  "difficulty": "easy",
+  "concepts": [
+   "if-statements"
+  ],
+  "description": "Write a function `get_abs(n)` that returns the non-negative absolute magnitude of `n`.\n\n### Input / Output Specifications\n- **Input:** `n` (int | float)\n- **Output:** (int | float) — `|n|`\n\n### Constraints\n- `-10^9 <= n <= 10^9`\n\n### Examples\n**Example 1:**\n- Input: `-9`\n- Output: `9`\n\n**Example 2:**\n- Input: `5`\n- Output: `5`",
+  "starter_code": "def get_abs(n):\n    pass\n",
+  "function_name": "get_abs",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     -9
+    ],
+    "expected": 9
+   },
+   {
+    "kind": "args",
+    "args": [
+     5
+    ],
+    "expected": 5
+   },
+   {
+    "kind": "args",
+    "args": [
+     0
+    ],
+    "expected": 0
+   },
+   {
+    "kind": "args",
+    "args": [
+     -42.5
+    ],
+    "expected": 42.5
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 105
+ },
+ {
+  "slug": "sign-of-number",
+  "title": "Sign of Number",
+  "unit": "conditionals",
+  "difficulty": "easy",
+  "concepts": [
+   "if-else"
+  ],
+  "description": "Write a function `sign_description(n)` returning `'positive'` if `n > 0`, and `'non-positive'` otherwise.\n\n### Input / Output Specifications\n- **Input:** `n` (int | float)\n- **Output:** (str) — `'positive'` or `'non-positive'`\n\n### Constraints\n- `-10^9 <= n <= 10^9`\n\n### Examples\n**Example 1:**\n- Input: `5`\n- Output: `'positive'`\n\n**Example 2:**\n- Input: `-2`\n- Output: `'non-positive'`",
+  "starter_code": "def sign_description(n):\n    pass\n",
+  "function_name": "sign_description",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     5
+    ],
+    "expected": "positive"
+   },
+   {
+    "kind": "args",
+    "args": [
+     -2
+    ],
+    "expected": "non-positive"
+   },
+   {
+    "kind": "args",
+    "args": [
+     0
+    ],
+    "expected": "non-positive"
+   },
+   {
+    "kind": "args",
+    "args": [
+     1000
+    ],
+    "expected": "positive"
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 106
+ },
+ {
+  "slug": "compare-numbers",
+  "title": "Compare Numbers",
+  "unit": "conditionals",
+  "difficulty": "easy",
+  "concepts": [
+   "if-elif-else"
+  ],
+  "description": "Write a function `compare(a, b)` returning `'greater'` if `a > b`, `'less'` if `a < b`, or `'equal'` if `a == b`.\n\n### Input / Output Specifications\n- **Input:** `a`, `b` (int | float)\n- **Output:** (str) — `'greater'`, `'less'`, or `'equal'`\n\n### Constraints\n- `-10^9 <= a, b <= 10^9`\n\n### Examples\n**Example 1:**\n- Input: `5, 3`\n- Output: `'greater'`\n\n**Example 2:**\n- Input: `2, 4`\n- Output: `'less'`",
+  "starter_code": "def compare(a, b):\n    pass\n",
+  "function_name": "compare",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     5,
+     3
+    ],
+    "expected": "greater"
+   },
+   {
+    "kind": "args",
+    "args": [
+     2,
+     4
+    ],
+    "expected": "less"
+   },
+   {
+    "kind": "args",
+    "args": [
+     3,
+     3
+    ],
+    "expected": "equal"
+   },
+   {
+    "kind": "args",
+    "args": [
+     -10,
+     -5
+    ],
+    "expected": "less"
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 107
+ },
+ {
+  "slug": "leap-year-checker",
+  "title": "Leap Year Checker",
+  "unit": "conditionals",
+  "difficulty": "medium",
+  "concepts": [
+   "nested-conditions"
+  ],
+  "description": "Write a function `is_leap_year(year)` determining if `year` is a Gregorian leap year (divisible by 4, except century years unless divisible by 400).\n\n### Input / Output Specifications\n- **Input:** `year` (int)\n- **Output:** (bool)\n\n### Constraints\n- `1 <= year <= 9999`\n\n### Examples\n**Example 1:**\n- Input: `2000`\n- Output: `True`\n\n**Example 2:**\n- Input: `1900`\n- Output: `False`",
+  "starter_code": "def is_leap_year(year):\n    pass\n",
+  "function_name": "is_leap_year",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     2000
+    ],
+    "expected": true
+   },
+   {
+    "kind": "args",
+    "args": [
+     1900
+    ],
+    "expected": false
+   },
+   {
+    "kind": "args",
+    "args": [
+     2024
+    ],
+    "expected": true
+   },
+   {
+    "kind": "args",
+    "args": [
+     2023
+    ],
+    "expected": false
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 108
+ },
+ {
+  "slug": "count-multiples",
+  "title": "Count Multiples",
+  "unit": "loops",
+  "difficulty": "easy",
+  "concepts": [
+   "for-loops"
+  ],
+  "description": "Write a function `count_multiples(n, limit)` that returns the count of positive multiples of `n` in the range `1 <= x <= limit`.\n\n### Input / Output Specifications\n- **Input:** `n` (int), `limit` (int)\n- **Output:** (int)\n\n### Constraints\n- `1 <= n <= 10^5`, `0 <= limit <= 10^6`\n\n### Examples\n**Example 1:**\n- Input: `3, 10`\n- Output: `3` (3, 6, 9)\n\n**Example 2:**\n- Input: `5, 4`\n- Output: `0`",
+  "starter_code": "def count_multiples(n, limit):\n    pass\n",
+  "function_name": "count_multiples",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     3,
+     10
+    ],
+    "expected": 3
+   },
+   {
+    "kind": "args",
+    "args": [
+     5,
+     4
+    ],
+    "expected": 0
+   },
+   {
+    "kind": "args",
+    "args": [
+     7,
+     49
+    ],
+    "expected": 7
+   },
+   {
+    "kind": "args",
+    "args": [
+     1,
+     100
+    ],
+    "expected": 100
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 109
+ },
+ {
+  "slug": "collatz-steps",
+  "title": "Collatz Steps",
+  "unit": "loops",
+  "difficulty": "medium",
+  "concepts": [
+   "while-loops"
+  ],
+  "description": "Write a function `collatz_steps(n)` that returns the number of steps to reach 1 in the 3n + 1 sequence. (If even: n = n // 2; if odd: n = 3n + 1).\n\n### Input / Output Specifications\n- **Input:** `n` (int) — Positive integer.\n- **Output:** (int) — Number of transitions until n becomes 1.\n\n### Constraints\n- `1 <= n <= 10^5`\n\n### Examples\n**Example 1:**\n- Input: `6`\n- Output: `8` (6 -> 3 -> 10 -> 5 -> 16 -> 8 -> 4 -> 2 -> 1)\n\n**Example 2:**\n- Input: `1`\n- Output: `0`",
+  "starter_code": "def collatz_steps(n):\n    pass\n",
+  "function_name": "collatz_steps",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     6
+    ],
+    "expected": 8
+   },
+   {
+    "kind": "args",
+    "args": [
+     1
+    ],
+    "expected": 0
+   },
+   {
+    "kind": "args",
+    "args": [
+     2
+    ],
+    "expected": 1
+   },
+   {
+    "kind": "args",
+    "args": [
+     19
+    ],
+    "expected": 20
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 110
+ },
+ {
+  "slug": "first-negative",
+  "title": "First Negative",
+  "unit": "loops",
+  "difficulty": "easy",
+  "concepts": [
+   "break"
+  ],
+  "description": "Write a function `first_negative(numbers)` that iterates through a list and returns the first negative number found, or `None` if no negative exists.\n\n### Input / Output Specifications\n- **Input:** `numbers` (List[int])\n- **Output:** (Optional[int])\n\n### Constraints\n- `0 <= len(numbers) <= 10^4`\n\n### Examples\n**Example 1:**\n- Input: `[3, 7, -2, -8, 5]`\n- Output: `-2`\n\n**Example 2:**\n- Input: `[1, 2, 3]`\n- Output: `None`",
+  "starter_code": "def first_negative(numbers):\n    pass\n",
+  "function_name": "first_negative",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     [
+      3,
+      7,
+      -2,
+      -8,
+      5
+     ]
+    ],
+    "expected": -2
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      1,
+      2,
+      3
+     ]
+    ],
+    "expected": null
+   },
+   {
+    "kind": "args",
+    "args": [
+     []
+    ],
+    "expected": null
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      -99
+     ]
+    ],
+    "expected": -99
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 111
+ },
+ {
+  "slug": "sum-odds-only",
+  "title": "Sum Odds Only",
+  "unit": "loops",
+  "difficulty": "easy",
+  "concepts": [
+   "continue"
+  ],
+  "description": "Write a function `sum_odds(numbers)` that returns the sum of all odd integers in a list.\n\n### Input / Output Specifications\n- **Input:** `numbers` (List[int])\n- **Output:** (int)\n\n### Constraints\n- `0 <= len(numbers) <= 10^4`\n\n### Examples\n**Example 1:**\n- Input: `[1, 2, 3, 4, 5]`\n- Output: `9`\n\n**Example 2:**\n- Input: `[2, 4, 6]`\n- Output: `0`",
+  "starter_code": "def sum_odds(numbers):\n    pass\n",
+  "function_name": "sum_odds",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    ],
+    "expected": 9
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      2,
+      4,
+      6
+     ]
+    ],
+    "expected": 0
+   },
+   {
+    "kind": "args",
+    "args": [
+     []
+    ],
+    "expected": 0
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      -1,
+      -2,
+      -3
+     ]
+    ],
+    "expected": -4
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 112
+ },
+ {
+  "slug": "multiply-by-two",
+  "title": "Multiply By Two",
+  "unit": "functions",
+  "difficulty": "easy",
+  "concepts": [
+   "functions"
+  ],
+  "description": "Write a function `double(n)` that returns twice the value of `n`.\n\n### Input / Output Specifications\n- **Input:** `n` (int | float)\n- **Output:** (int | float) — `2 * n`\n\n### Constraints\n- `-10^9 <= n <= 10^9`\n\n### Examples\n**Example 1:**\n- Input: `7`\n- Output: `14`\n\n**Example 2:**\n- Input: `-3`\n- Output: `-6`",
+  "starter_code": "def double(n):\n    pass\n",
+  "function_name": "double",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     7
+    ],
+    "expected": 14
+   },
+   {
+    "kind": "args",
+    "args": [
+     -3
+    ],
+    "expected": -6
+   },
+   {
+    "kind": "args",
+    "args": [
+     0
+    ],
+    "expected": 0
+   },
+   {
+    "kind": "args",
+    "args": [
+     2.5
+    ],
+    "expected": 5.0
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 113
+ },
+ {
+  "slug": "power-with-default",
+  "title": "Power with Default",
+  "unit": "functions",
+  "difficulty": "easy",
+  "concepts": [
+   "parameters"
+  ],
+  "description": "Write a function `compute_power(base, exp=2)` that calculates `base ** exp`, defaulting `exp` to 2 when omitted.\n\n### Input / Output Specifications\n- **Input:** `base` (int | float), optional `exp` (int, default=2)\n- **Output:** (int | float)\n\n### Constraints\n- `exp >= 0`\n\n### Examples\n**Example 1:**\n- Input: `5`\n- Output: `25`\n\n**Example 2:**\n- Input: `2, 3`\n- Output: `8`",
+  "starter_code": "def compute_power(base, exp=2):\n    pass\n",
+  "function_name": "compute_power",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     5
+    ],
+    "expected": 25
+   },
+   {
+    "kind": "args",
+    "args": [
+     2,
+     3
+    ],
+    "expected": 8
+   },
+   {
+    "kind": "args",
+    "args": [
+     10,
+     0
+    ],
+    "expected": 1
+   },
+   {
+    "kind": "args",
+    "args": [
+     3,
+     4
+    ],
+    "expected": 81
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 114
+ },
+ {
+  "slug": "min-and-max-tuple",
+  "title": "Min and Max Tuple",
+  "unit": "functions",
+  "difficulty": "easy",
+  "concepts": [
+   "return-values"
+  ],
+  "description": "Write a function `find_extrema(numbers)` that returns a tuple `(min_val, max_val)` from a non-empty list.\n\n### Input / Output Specifications\n- **Input:** `numbers` (List[int | float]) — Non-empty list.\n- **Output:** (Tuple[int | float, int | float]) — `(min, max)`\n\n### Constraints\n- `1 <= len(numbers) <= 10^4`\n\n### Examples\n**Example 1:**\n- Input: `[4, 1, 9, 3]`\n- Output: `(1, 9)`\n\n**Example 2:**\n- Input: `[5]`\n- Output: `(5, 5)`",
+  "starter_code": "def find_extrema(numbers):\n    pass\n",
+  "function_name": "find_extrema",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     [
+      4,
+      1,
+      9,
+      3
+     ]
+    ],
+    "expected": [
+     1,
+     9
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      5
+     ]
+    ],
+    "expected": [
+     5,
+     5
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      -10,
+      -2,
+      -50,
+      -1
+     ]
+    ],
+    "expected": [
+     -50,
+     -1
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      100,
+      200,
+      300
+     ]
+    ],
+    "expected": [
+     100,
+     300
+    ]
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 115
+ },
+ {
+  "slug": "first-and-last-char",
+  "title": "First and Last Char",
+  "unit": "strings",
+  "difficulty": "easy",
+  "concepts": [
+   "strings"
+  ],
+  "description": "Write a function `first_and_last(s)` that returns a 2-character string composed of the first and last characters of a non-empty string `s`.\n\n### Input / Output Specifications\n- **Input:** `s` (str) — Non-empty string.\n- **Output:** (str) — The concatenated string `s[0] + s[-1]`.\n\n### Constraints\n- `1 <= len(s) <= 10^4`\n\n### Examples\n**Example 1:**\n- Input: `'Tutor'`\n- Output: `'Tr'`\n\n**Example 2:**\n- Input: `'A'`\n- Output: `'AA'`",
+  "starter_code": "def first_and_last(s):\n    pass\n",
+  "function_name": "first_and_last",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     "Tutor"
+    ],
+    "expected": "Tr"
+   },
+   {
+    "kind": "args",
+    "args": [
+     "A"
+    ],
+    "expected": "AA"
+   },
+   {
+    "kind": "args",
+    "args": [
+     "Python"
+    ],
+    "expected": "Pn"
+   },
+   {
+    "kind": "args",
+    "args": [
+     "racecar"
+    ],
+    "expected": "rr"
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 116
+ },
+ {
+  "slug": "clean-and-uppercase-words",
+  "title": "Clean and Uppercase Words",
+  "unit": "strings",
+  "difficulty": "easy",
+  "concepts": [
+   "string-methods"
+  ],
+  "description": "Write a function `clean_words(sentence)` that strips leading and trailing whitespace, splits the sentence by whitespace, and returns a list of words in all uppercase.\n\n### Input / Output Specifications\n- **Input:** `sentence` (str)\n- **Output:** (List[str]) — List of uppercase tokens.\n\n### Constraints\n- `0 <= len(sentence) <= 10^4`\n\n### Examples\n**Example 1:**\n- Input: `'  hello world  '`\n- Output: `['HELLO', 'WORLD']`\n\n**Example 2:**\n- Input: `'python'`\n- Output: `['PYTHON']`",
+  "starter_code": "def clean_words(sentence):\n    pass\n",
+  "function_name": "clean_words",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     "  hello world  "
+    ],
+    "expected": [
+     "HELLO",
+     "WORLD"
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     "python"
+    ],
+    "expected": [
+     "PYTHON"
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     "   "
+    ],
+    "expected": []
+   },
+   {
+    "kind": "args",
+    "args": [
+     "adaptive   ai   tutor"
+    ],
+    "expected": [
+     "ADAPTIVE",
+     "AI",
+     "TUTOR"
+    ]
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 117
+ },
+ {
+  "slug": "sum-positive-numbers",
+  "title": "Sum Positive Numbers",
+  "unit": "lists-dicts",
+  "difficulty": "easy",
+  "concepts": [
+   "lists"
+  ],
+  "description": "Write a function `sum_positives(numbers)` that calculates and returns the sum of strictly positive numbers (`n > 0`) in a list.\n\n### Input / Output Specifications\n- **Input:** `numbers` (List[int | float])\n- **Output:** (int | float) — Sum of positives.\n\n### Constraints\n- `0 <= len(numbers) <= 10^4`\n\n### Examples\n**Example 1:**\n- Input: `[1, -4, 7, 12]`\n- Output: `20`\n\n**Example 2:**\n- Input: `[-1, -2, -3]`\n- Output: `0`",
+  "starter_code": "def sum_positives(numbers):\n    pass\n",
+  "function_name": "sum_positives",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     [
+      1,
+      -4,
+      7,
+      12
+     ]
+    ],
+    "expected": 20
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      -1,
+      -2,
+      -3
+     ]
+    ],
+    "expected": 0
+   },
+   {
+    "kind": "args",
+    "args": [
+     []
+    ],
+    "expected": 0
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      10,
+      0,
+      20
+     ]
+    ],
+    "expected": 30
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 118
+ },
+ {
+  "slug": "sort-and-deduplicate",
+  "title": "Sort and Deduplicate",
+  "unit": "lists-dicts",
+  "difficulty": "easy",
+  "concepts": [
+   "list-methods"
+  ],
+  "description": "Write a function `sort_and_remove_duplicates(numbers)` that removes duplicates and returns the remaining numbers sorted in ascending order.\n\n### Input / Output Specifications\n- **Input:** `numbers` (List[int])\n- **Output:** (List[int]) — Sorted unique list.\n\n### Constraints\n- `0 <= len(numbers) <= 10^4`\n\n### Examples\n**Example 1:**\n- Input: `[3, 1, 2, 3, 2]`\n- Output: `[1, 2, 3]`\n\n**Example 2:**\n- Input: `[]`\n- Output: `[]`",
+  "starter_code": "def sort_and_remove_duplicates(numbers):\n    pass\n",
+  "function_name": "sort_and_remove_duplicates",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     [
+      3,
+      1,
+      2,
+      3,
+      2
+     ]
+    ],
+    "expected": [
+     1,
+     2,
+     3
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     []
+    ],
+    "expected": []
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      5,
+      4,
+      3,
+      2,
+      1
+     ]
+    ],
+    "expected": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      7,
+      7,
+      7
+     ]
+    ],
+    "expected": [
+     7
+    ]
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 119
+ },
+ {
+  "slug": "euclidean-distance-squared",
+  "title": "Euclidean Distance Squared",
+  "unit": "lists-dicts",
+  "difficulty": "easy",
+  "concepts": [
+   "tuples"
+  ],
+  "description": "Write a function `dist_sq(p1, p2)` computing the squared Euclidean distance `(x1 - x2)^2 + (y1 - y2)^2` between 2D coordinate tuples `p1 = (x1, y1)` and `p2 = (x2, y2)`.\n\n### Input / Output Specifications\n- **Input:** `p1`, `p2` (Tuple[int | float, int | float])\n- **Output:** (int | float)\n\n### Constraints\n- Points contain 2 numeric coordinates.\n\n### Examples\n**Example 1:**\n- Input: `(0, 0), (3, 4)`\n- Output: `25`\n\n**Example 2:**\n- Input: `(1, 1), (1, 1)`\n- Output: `0`",
+  "starter_code": "def dist_sq(p1, p2):\n    pass\n",
+  "function_name": "dist_sq",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     [
+      0,
+      0
+     ],
+     [
+      3,
+      4
+     ]
+    ],
+    "expected": 25
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "expected": 0
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      -2,
+      -3
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "expected": 25
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      5,
+      10
+     ],
+     [
+      2,
+      6
+     ]
+    ],
+    "expected": 25
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 120
+ },
+ {
+  "slug": "shared-elements",
+  "title": "Shared Elements",
+  "unit": "lists-dicts",
+  "difficulty": "medium",
+  "concepts": [
+   "sets"
+  ],
+  "description": "Write a function `common_elements(list1, list2)` returning a sorted list of unique elements that appear in both `list1` and `list2`.\n\n### Input / Output Specifications\n- **Input:** `list1`, `list2` (List[int])\n- **Output:** (List[int]) — Sorted intersection list.\n\n### Constraints\n- `0 <= len(list1), len(list2) <= 10^4`\n\n### Examples\n**Example 1:**\n- Input: `[1, 2, 3], [2, 3, 4]`\n- Output: `[2, 3]`\n\n**Example 2:**\n- Input: `[1, 5], [2, 3]`\n- Output: `[]`",
+  "starter_code": "def common_elements(list1, list2):\n    pass\n",
+  "function_name": "common_elements",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     [
+      1,
+      2,
+      3
+     ],
+     [
+      2,
+      3,
+      4
+     ]
+    ],
+    "expected": [
+     2,
+     3
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      1,
+      5
+     ],
+     [
+      2,
+      3
+     ]
+    ],
+    "expected": []
+   },
+   {
+    "kind": "args",
+    "args": [
+     [],
+     [
+      1,
+      2
+     ]
+    ],
+    "expected": []
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      4,
+      4,
+      4,
+      1
+     ],
+     [
+      4,
+      1,
+      1
+     ]
+    ],
+    "expected": [
+     1,
+     4
+    ]
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 121
+ },
+ {
+  "slug": "count-frequencies",
+  "title": "Count Frequencies",
+  "unit": "lists-dicts",
+  "difficulty": "easy",
+  "concepts": [
+   "dictionaries"
+  ],
+  "description": "Write a function `count_frequencies(items)` returning a dictionary mapping each unique element to its frequency in `items`.\n\n### Input / Output Specifications\n- **Input:** `items` (List[Any]) — Hashable items.\n- **Output:** (Dict[Any, int])\n\n### Constraints\n- `0 <= len(items) <= 10^4`\n\n### Examples\n**Example 1:**\n- Input: `['a', 'b', 'a', 'c']`\n- Output: `{'a': 2, 'b': 1, 'c': 1}`\n\n**Example 2:**\n- Input: `[]`\n- Output: `{}`",
+  "starter_code": "def count_frequencies(items):\n    pass\n",
+  "function_name": "count_frequencies",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     [
+      "a",
+      "b",
+      "a",
+      "c"
+     ]
+    ],
+    "expected": {
+     "a": 2,
+     "b": 1,
+     "c": 1
+    }
+   },
+   {
+    "kind": "args",
+    "args": [
+     []
+    ],
+    "expected": {}
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      1,
+      1,
+      1,
+      1
+     ]
+    ],
+    "expected": {
+     "$dict": [
+      [
+       1,
+       4
+      ]
+     ]
+    }
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      true,
+      false,
+      true
+     ]
+    ],
+    "expected": {
+     "$dict": [
+      [
+       false,
+       1
+      ],
+      [
+       true,
+       2
+      ]
+     ]
+    }
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 122
+ },
+ {
+  "slug": "invert-dictionary",
+  "title": "Invert Dictionary",
+  "unit": "lists-dicts",
+  "difficulty": "medium",
+  "concepts": [
+   "dictionary-methods"
+  ],
+  "description": "Write a function `invert_dict(d)` that swaps keys and values in a dictionary, assuming all values are unique and hashable.\n\n### Input / Output Specifications\n- **Input:** `d` (Dict[Any, Any])\n- **Output:** (Dict[Any, Any]) — Dict with `{value: key}`.\n\n### Constraints\n- Dictionary values are guaranteed to be unique and hashable.\n\n### Examples\n**Example 1:**\n- Input: `{'a': 1, 'b': 2}`\n- Output: `{1: 'a', 2: 'b'}`\n\n**Example 2:**\n- Input: `{}`\n- Output: `{}`",
+  "starter_code": "def invert_dict(d):\n    pass\n",
+  "function_name": null,
+  "tests": [
+   {
+    "kind": "expr",
+    "setup": "d1 = {'a': 1, 'b': 2}",
+    "expr": "invert_dict(d1)",
+    "expected": {
+     "$dict": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    }
+   },
+   {
+    "kind": "expr",
+    "setup": "d1 = {'a': 1, 'b': 2}\ninvert_dict(d1)",
+    "expr": "invert_dict({})",
+    "expected": {
+     "$dict": []
+    }
+   },
+   {
+    "kind": "expr",
+    "setup": "d1 = {'a': 1, 'b': 2}\ninvert_dict(d1)\ninvert_dict({})",
+    "expr": "invert_dict({'x': 'alpha', 'y': 'beta'})",
+    "expected": {
+     "$dict": [
+      [
+       "alpha",
+       "x"
+      ],
+      [
+       "beta",
+       "y"
+      ]
+     ]
+    }
+   },
+   {
+    "kind": "expr",
+    "setup": "d1 = {'a': 1, 'b': 2}\ninvert_dict(d1)\ninvert_dict({})\ninvert_dict({'x': 'alpha', 'y': 'beta'})",
+    "expr": "invert_dict({100: 200, 300: 400})",
+    "expected": {
+     "$dict": [
+      [
+       200,
+       100
+      ],
+      [
+       400,
+       300
+      ]
+     ]
+    }
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 123
+ },
+ {
+  "slug": "every-second-element",
+  "title": "Every Second Element",
+  "unit": "strings",
+  "difficulty": "easy",
+  "concepts": [
+   "slicing"
+  ],
+  "description": "Write a function `every_second(lst)` that returns a new list containing every second element of `lst` starting from index 0.\n\n### Input / Output Specifications\n- **Input:** `lst` (List[Any])\n- **Output:** (List[Any]) — Sliced list elements at indices 0, 2, 4, ...\n\n### Constraints\n- `0 <= len(lst) <= 10^4`\n\n### Examples\n**Example 1:**\n- Input: `[10, 20, 30, 40, 50]`\n- Output: `[10, 30, 50]`\n\n**Example 2:**\n- Input: `[1]`\n- Output: `[1]`",
+  "starter_code": "def every_second(lst):\n    pass\n",
+  "function_name": "every_second",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     [
+      10,
+      20,
+      30,
+      40,
+      50
+     ]
+    ],
+    "expected": [
+     10,
+     30,
+     50
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      1
+     ]
+    ],
+    "expected": [
+     1
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     []
+    ],
+    "expected": []
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      "a",
+      "b",
+      "c",
+      "d"
+     ]
+    ],
+    "expected": [
+     "a",
+     "c"
+    ]
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 124
+ },
+ {
+  "slug": "square-positives-comprehension",
+  "title": "Square Positives Comprehension",
+  "unit": "lists-dicts",
+  "difficulty": "medium",
+  "concepts": [
+   "list-comprehensions"
+  ],
+  "description": "Write a function `square_positives(numbers)` using a list comprehension that returns a list containing the squares of only the positive numbers (`n > 0`).\n\n### Input / Output Specifications\n- **Input:** `numbers` (List[int | float])\n- **Output:** (List[int | float]) — Squared positive values.\n\n### Constraints\n- `0 <= len(numbers) <= 10^4`\n\n### Examples\n**Example 1:**\n- Input: `[-2, 1, 3, -4]`\n- Output: `[1, 9]`\n\n**Example 2:**\n- Input: `[-5, -1]`\n- Output: `[]`",
+  "starter_code": "def square_positives(numbers):\n    pass\n",
+  "function_name": "square_positives",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     [
+      -2,
+      1,
+      3,
+      -4
+     ]
+    ],
+    "expected": [
+     1,
+     9
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      -5,
+      -1
+     ]
+    ],
+    "expected": []
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      4,
+      5,
+      0
+     ]
+    ],
+    "expected": [
+     16,
+     25
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     []
+    ],
+    "expected": []
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 125
+ },
+ {
+  "slug": "character-count-map",
+  "title": "Character Count Map",
+  "unit": "lists-dicts",
+  "difficulty": "medium",
+  "concepts": [
+   "dictionary-comprehensions"
+  ],
+  "description": "Write a function `word_lengths(words)` using a dictionary comprehension that maps each string in `words` to its character length.\n\n### Input / Output Specifications\n- **Input:** `words` (List[str])\n- **Output:** (Dict[str, int])\n\n### Constraints\n- `0 <= len(words) <= 1000`\n\n### Examples\n**Example 1:**\n- Input: `['hi', 'tutor']`\n- Output: `{'hi': 2, 'tutor': 5}`\n\n**Example 2:**\n- Input: `[]`\n- Output: `{}`",
+  "starter_code": "def word_lengths(words):\n    pass\n",
+  "function_name": "word_lengths",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     [
+      "hi",
+      "tutor"
+     ]
+    ],
+    "expected": {
+     "hi": 2,
+     "tutor": 5
+    }
+   },
+   {
+    "kind": "args",
+    "args": [
+     []
+    ],
+    "expected": {}
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      "a",
+      "ab",
+      "abc"
+     ]
+    ],
+    "expected": {
+     "a": 1,
+     "ab": 2,
+     "abc": 3
+    }
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      "",
+      "python"
+     ]
+    ],
+    "expected": {
+     "": 0,
+     "python": 6
+    }
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 126
+ },
+ {
+  "slug": "multiplier-factory",
+  "title": "Multiplier Factory",
+  "unit": "functions",
+  "difficulty": "medium",
+  "concepts": [
+   "scope"
+  ],
+  "description": "Write a function `make_multiplier(factor)` that returns a closure function. The returned function takes a single number `x` and returns `x * factor`.\n\n### Input / Output Specifications\n- **Input:** `factor` (int | float) — The constant multiplying factor.\n- **Output:** (Callable[[int | float], int | float]) — A closure function multiplying its input by `factor`.\n\n### Constraints\n- Returned closure encapsulates the enclosing scope factor.\n\n### Examples\n**Example 1:**\n- `triple = make_multiplier(3)`\n- `triple(5)` -> `15`\n\n**Example 2:**\n- `negate = make_multiplier(-1)`\n- `negate(10)` -> `-10`",
+  "starter_code": "def make_multiplier(factor):\n    # Return a closure function that multiplies by factor\n    pass\n",
+  "function_name": null,
+  "tests": [
+   {
+    "kind": "expr",
+    "setup": "triple = make_multiplier(3)",
+    "expr": "triple(5)",
+    "expected": 15
+   },
+   {
+    "kind": "expr",
+    "setup": "triple = make_multiplier(3)\ntriple(5)",
+    "expr": "triple(0)",
+    "expected": 0
+   },
+   {
+    "kind": "expr",
+    "setup": "triple = make_multiplier(3)\ntriple(5)\ntriple(0)",
+    "expr": "triple(-2)",
+    "expected": -6
+   },
+   {
+    "kind": "expr",
+    "setup": "triple = make_multiplier(3)\ntriple(5)\ntriple(0)\ntriple(-2)\nnegate = make_multiplier(-1)",
+    "expr": "negate(10)",
+    "expected": -10
+   },
+   {
+    "kind": "expr",
+    "setup": "triple = make_multiplier(3)\ntriple(5)\ntriple(0)\ntriple(-2)\nnegate = make_multiplier(-1)\nnegate(10)\ndouble = make_multiplier(2)",
+    "expr": "double(21)",
+    "expected": 42
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 127
+ },
+ {
+  "slug": "recursive-factorial",
+  "title": "Recursive Factorial",
+  "unit": "recursion",
+  "difficulty": "medium",
+  "concepts": [
+   "recursion"
+  ],
+  "description": "Write a recursive function `factorial(n)` that returns the factorial `n!` for non-negative integer `n`. (`0! = 1`, `1! = 1`, `n! = n * (n-1)!`).\n\n### Input / Output Specifications\n- **Input:** `n` (int) — Non-negative integer.\n- **Output:** (int) — Factorial value.\n\n### Constraints\n- `0 <= n <= 20`\n- Must use recursion.\n\n### Examples\n**Example 1:**\n- Input: `5`\n- Output: `120`\n\n**Example 2:**\n- Input: `0`\n- Output: `1`",
+  "starter_code": "def factorial(n):\n    pass\n",
+  "function_name": "factorial",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     5
+    ],
+    "expected": 120
+   },
+   {
+    "kind": "args",
+    "args": [
+     0
+    ],
+    "expected": 1
+   },
+   {
+    "kind": "args",
+    "args": [
+     1
+    ],
+    "expected": 1
+   },
+   {
+    "kind": "args",
+    "args": [
+     6
+    ],
+    "expected": 720
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 128
+ },
+ {
+  "slug": "sort-tuples-by-second-item",
+  "title": "Sort Tuples by Second Item",
+  "unit": "functions",
+  "difficulty": "easy",
+  "concepts": [
+   "lambda-functions"
+  ],
+  "description": "Write a function `sort_by_second(pairs)` returning a list of 2-item tuples sorted in ascending order by their second element using a lambda key.\n\n### Input / Output Specifications\n- **Input:** `pairs` (List[Tuple[Any, int | float]])\n- **Output:** (List[Tuple[Any, int | float]])\n\n### Constraints\n- `0 <= len(pairs) <= 10^4`\n\n### Examples\n**Example 1:**\n- Input: `[(1, 3), (4, 1), (2, 2)]`\n- Output: `[(4, 1), (2, 2), (1, 3)]`\n\n**Example 2:**\n- Input: `[]`\n- Output: `[]`",
+  "starter_code": "def sort_by_second(pairs):\n    pass\n",
+  "function_name": null,
+  "tests": [
+   {
+    "kind": "expr",
+    "setup": "",
+    "expr": "sort_by_second([(1, 3), (4, 1), (2, 2)])",
+    "expected": [
+     {
+      "$tuple": [
+       4,
+       1
+      ]
+     },
+     {
+      "$tuple": [
+       2,
+       2
+      ]
+     },
+     {
+      "$tuple": [
+       1,
+       3
+      ]
+     }
+    ]
+   },
+   {
+    "kind": "expr",
+    "setup": "sort_by_second([(1, 3), (4, 1), (2, 2)])",
+    "expr": "sort_by_second([])",
+    "expected": []
+   },
+   {
+    "kind": "expr",
+    "setup": "sort_by_second([(1, 3), (4, 1), (2, 2)])\nsort_by_second([])",
+    "expr": "sort_by_second([('a', -5), ('b', 0), ('c', -10)])",
+    "expected": [
+     {
+      "$tuple": [
+       "c",
+       -10
+      ]
+     },
+     {
+      "$tuple": [
+       "a",
+       -5
+      ]
+     },
+     {
+      "$tuple": [
+       "b",
+       0
+      ]
+     }
+    ]
+   },
+   {
+    "kind": "expr",
+    "setup": "sort_by_second([(1, 3), (4, 1), (2, 2)])\nsort_by_second([])\nsort_by_second([('a', -5), ('b', 0), ('c', -10)])",
+    "expr": "sort_by_second([('x', 100)])",
+    "expected": [
+     {
+      "$tuple": [
+       "x",
+       100
+      ]
+     }
+    ]
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 129
+ },
+ {
+  "slug": "map-string-to-ints",
+  "title": "Map String to Ints",
+  "unit": "functions",
+  "difficulty": "medium",
+  "concepts": [
+   "map"
+  ],
+  "description": "Write a function `parse_integers(strings)` using Python's `map()` built-in to parse a list of numeric strings into a list of integers.\n\n### Input / Output Specifications\n- **Input:** `strings` (List[str])\n- **Output:** (List[int])\n\n### Constraints\n- `0 <= len(strings) <= 10^4`\n\n### Examples\n**Example 1:**\n- Input: `['1', '2', '3']`\n- Output: `[1, 2, 3]`\n\n**Example 2:**\n- Input: `[]`\n- Output: `[]`",
+  "starter_code": "def parse_integers(strings):\n    pass\n",
+  "function_name": "parse_integers",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     [
+      "1",
+      "2",
+      "3"
+     ]
+    ],
+    "expected": [
+     1,
+     2,
+     3
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     []
+    ],
+    "expected": []
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      "-10",
+      "0",
+      "42"
+     ]
+    ],
+    "expected": [
+     -10,
+     0,
+     42
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      "99999"
+     ]
+    ],
+    "expected": [
+     99999
+    ]
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 130
+ },
+ {
+  "slug": "filter-evens",
+  "title": "Filter Evens",
+  "unit": "functions",
+  "difficulty": "medium",
+  "concepts": [
+   "filter"
+  ],
+  "description": "Write a function `filter_evens(numbers)` using Python's `filter()` built-in to extract and return all even integers from `numbers`.\n\n### Input / Output Specifications\n- **Input:** `numbers` (List[int])\n- **Output:** (List[int])\n\n### Constraints\n- `0 <= len(numbers) <= 10^4`\n\n### Examples\n**Example 1:**\n- Input: `[1, 2, 3, 4]`\n- Output: `[2, 4]`\n\n**Example 2:**\n- Input: `[1, 3, 5]`\n- Output: `[]`",
+  "starter_code": "def filter_evens(numbers):\n    pass\n",
+  "function_name": "filter_evens",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     [
+      1,
+      2,
+      3,
+      4
+     ]
+    ],
+    "expected": [
+     2,
+     4
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      1,
+      3,
+      5
+     ]
+    ],
+    "expected": []
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      2,
+      4,
+      6
+     ]
+    ],
+    "expected": [
+     2,
+     4,
+     6
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     []
+    ],
+    "expected": []
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 131
+ },
+ {
+  "slug": "safe-divide",
+  "title": "Safe Divide",
+  "unit": "python-toolkit",
+  "difficulty": "medium",
+  "concepts": [
+   "exceptions"
+  ],
+  "description": "Write a function `safe_divide(a, b)` that calculates `a / b` using a `try...except` block, returning `None` if a `ZeroDivisionError` occurs.\n\n### Input / Output Specifications\n- **Input:** `a` (int | float), `b` (int | float)\n- **Output:** (Optional[float]) — Quotient or `None` if `b == 0`.\n\n### Constraints\n- `-10^9 <= a, b <= 10^9`\n\n### Examples\n**Example 1:**\n- Input: `10, 2`\n- Output: `5.0`\n\n**Example 2:**\n- Input: `10, 0`\n- Output: `None`",
+  "starter_code": "def safe_divide(a, b):\n    pass\n",
+  "function_name": "safe_divide",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     10,
+     2
+    ],
+    "expected": 5.0
+   },
+   {
+    "kind": "args",
+    "args": [
+     10,
+     0
+    ],
+    "expected": null
+   },
+   {
+    "kind": "args",
+    "args": [
+     0,
+     5
+    ],
+    "expected": 0.0
+   },
+   {
+    "kind": "args",
+    "args": [
+     -15,
+     3
+    ],
+    "expected": -5.0
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 132
+ },
+ {
+  "slug": "count-lines-from-text",
+  "title": "Count Lines from Text",
+  "unit": "python-toolkit",
+  "difficulty": "medium",
+  "concepts": [
+   "file-handling"
+  ],
+  "description": "Write a function `count_non_empty_lines(text)` that splits string `text` by line breaks and counts lines containing at least one non-whitespace character.\n\n### Input / Output Specifications\n- **Input:** `text` (str)\n- **Output:** (int)\n\n### Constraints\n- `0 <= len(text) <= 10^5`\n\n### Examples\n**Example 1:**\n- Input: `'hello\\n\\nworld'`\n- Output: `2`\n\n**Example 2:**\n- Input: `'\\n   \\n'`\n- Output: `0`",
+  "starter_code": "def count_non_empty_lines(text):\n    pass\n",
+  "function_name": "count_non_empty_lines",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     "hello\n\nworld"
+    ],
+    "expected": 2
+   },
+   {
+    "kind": "args",
+    "args": [
+     "\n   \n"
+    ],
+    "expected": 0
+   },
+   {
+    "kind": "args",
+    "args": [
+     ""
+    ],
+    "expected": 0
+   },
+   {
+    "kind": "args",
+    "args": [
+     "line 1\nline 2\nline 3\n"
+    ],
+    "expected": 3
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 133
+ },
+ {
+  "slug": "circle-area",
+  "title": "Circle Area",
+  "unit": "python-toolkit",
+  "difficulty": "easy",
+  "concepts": [
+   "modules"
+  ],
+  "description": "Write a function `circle_area(radius)` that calculates the area of a circle using `math.pi * radius**2`, rounded to 2 decimal places.\n\n### Input / Output Specifications\n- **Input:** `radius` (int | float, `radius >= 0`)\n- **Output:** (float) — Area rounded to 2 decimals.\n\n### Constraints\n- `0 <= radius <= 1000`\n\n### Examples\n**Example 1:**\n- Input: `3`\n- Output: `28.27`\n\n**Example 2:**\n- Input: `0`\n- Output: `0.0`",
+  "starter_code": "def circle_area(radius):\n    pass\n",
+  "function_name": "circle_area",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     3
+    ],
+    "expected": 28.27
+   },
+   {
+    "kind": "args",
+    "args": [
+     0
+    ],
+    "expected": 0.0
+   },
+   {
+    "kind": "args",
+    "args": [
+     1
+    ],
+    "expected": 3.14
+   },
+   {
+    "kind": "args",
+    "args": [
+     10
+    ],
+    "expected": 314.16
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 134
+ },
+ {
+  "slug": "normalize-module-name",
+  "title": "Normalize Module Name",
+  "unit": "python-toolkit",
+  "difficulty": "medium",
+  "concepts": [
+   "packages"
+  ],
+  "description": "Write a function `package_path_to_module(path)` converting a file path like `'app/services/tutor.py'` into Python dotted module format `'app.services.tutor'`.\n\n### Input / Output Specifications\n- **Input:** `path` (str) — Slash-separated Python file path.\n- **Output:** (str) — Dotted module notation.\n\n### Constraints\n- Strip optional trailing `'.py'` extension.\n\n### Examples\n**Example 1:**\n- Input: `'app/services/tutor.py'`\n- Output: `'app.services.tutor'`\n\n**Example 2:**\n- Input: `'main.py'`\n- Output: `'main'`",
+  "starter_code": "def package_path_to_module(path):\n    pass\n",
+  "function_name": "package_path_to_module",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     "app/services/tutor.py"
+    ],
+    "expected": "app.services.tutor"
+   },
+   {
+    "kind": "args",
+    "args": [
+     "main.py"
+    ],
+    "expected": "main"
+   },
+   {
+    "kind": "args",
+    "args": [
+     "pkg/subpkg/module"
+    ],
+    "expected": "pkg.subpkg.module"
+   },
+   {
+    "kind": "args",
+    "args": [
+     "utils/helpers/strings.py"
+    ],
+    "expected": "utils.helpers.strings"
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 135
+ },
+ {
+  "slug": "counter-class",
+  "title": "Counter Class",
+  "unit": "python-toolkit",
+  "difficulty": "medium",
+  "concepts": [
+   "classes"
+  ],
+  "description": "Implement a class `Counter` initialized with count 0, offering methods `increment(step=1)` which increments the count, and `get_count()` which returns the current count.\n\n### Input / Output Specifications\n- Methods: `__init__()`, `increment(step=1)`, `get_count()`\n\n### Examples\n**Example 1:**\n- `c = Counter()`\n- `c.increment()` -> count becomes 1\n- `c.get_count()` -> `1`",
+  "starter_code": "class Counter:\n    def __init__(self):\n        self.count = 0\n    def increment(self, step=1):\n        pass\n    def get_count(self):\n        pass\n",
+  "function_name": null,
+  "tests": [
+   {
+    "kind": "expr",
+    "setup": "c = Counter()",
+    "expr": "c.get_count()",
+    "expected": 0
+   },
+   {
+    "kind": "expr",
+    "setup": "c = Counter()\nc.get_count()\nc.increment()",
+    "expr": "c.get_count()",
+    "expected": 1
+   },
+   {
+    "kind": "expr",
+    "setup": "c = Counter()\nc.get_count()\nc.increment()\nc.get_count()\nc.increment(5)",
+    "expr": "c.get_count()",
+    "expected": 6
+   },
+   {
+    "kind": "expr",
+    "setup": "c = Counter()\nc.get_count()\nc.increment()\nc.get_count()\nc.increment(5)\nc.get_count()\nc2 = Counter()",
+    "expr": "c2.get_count()",
+    "expected": 0
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 136
+ },
+ {
+  "slug": "point-class",
+  "title": "Point Class",
+  "unit": "python-toolkit",
+  "difficulty": "easy",
+  "concepts": [
+   "objects"
+  ],
+  "description": "Implement a class `Point(x, y)` representing a 2D Cartesian point with attributes `self.x` and `self.y`, and a method `move(dx, dy)` that updates coordinates by `dx` and `dy`.\n\n### Input / Output Specifications\n- `__init__(self, x, y)`\n- `move(self, dx, dy)`\n\n### Examples\n**Example 1:**\n- `p = Point(1, 2)`\n- `p.move(3, -1)` -> `p.x == 4, p.y == 1`",
+  "starter_code": "class Point:\n    def __init__(self, x, y):\n        self.x = x\n        self.y = y\n    def move(self, dx, dy):\n        pass\n",
+  "function_name": null,
+  "tests": [
+   {
+    "kind": "expr",
+    "setup": "p = Point(1, 2)",
+    "expr": "p.x",
+    "expected": 1
+   },
+   {
+    "kind": "expr",
+    "setup": "p = Point(1, 2)\np.x",
+    "expr": "p.y",
+    "expected": 2
+   },
+   {
+    "kind": "expr",
+    "setup": "p = Point(1, 2)\np.x\np.y\np.move(3, -1)",
+    "expr": "p.x",
+    "expected": 4
+   },
+   {
+    "kind": "expr",
+    "setup": "p = Point(1, 2)\np.x\np.y\np.move(3, -1)\np.x",
+    "expr": "p.y",
+    "expected": 1
+   },
+   {
+    "kind": "expr",
+    "setup": "p = Point(1, 2)\np.x\np.y\np.move(3, -1)\np.x\np.y\np.move(0, 0)",
+    "expr": "p.x",
+    "expected": 4
+   },
+   {
+    "kind": "expr",
+    "setup": "p = Point(1, 2)\np.x\np.y\np.move(3, -1)\np.x\np.y\np.move(0, 0)\np.x",
+    "expr": "p.y",
+    "expected": 1
+   },
+   {
+    "kind": "expr",
+    "setup": "p = Point(1, 2)\np.x\np.y\np.move(3, -1)\np.x\np.y\np.move(0, 0)\np.x\np.y\np.move(-10, -5)",
+    "expr": "p.x",
+    "expected": -6
+   },
+   {
+    "kind": "expr",
+    "setup": "p = Point(1, 2)\np.x\np.y\np.move(3, -1)\np.x\np.y\np.move(0, 0)\np.x\np.y\np.move(-10, -5)\np.x",
+    "expr": "p.y",
+    "expected": -4
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 137
+ },
+ {
+  "slug": "rectangle-area",
+  "title": "Rectangle Area",
+  "unit": "python-toolkit",
+  "difficulty": "medium",
+  "concepts": [
+   "constructors"
+  ],
+  "description": "Implement a class `Rectangle` with `__init__(self, width, height)` and an `area(self)` method returning `width * height`.\n\n### Input / Output Specifications\n- `__init__(self, width, height)`\n- `area(self)` -> (int | float)\n\n### Examples\n**Example 1:**\n- `r = Rectangle(4, 5)`\n- `r.area()` -> `20`",
+  "starter_code": "class Rectangle:\n    def __init__(self, width, height):\n        pass\n    def area(self):\n        pass\n",
+  "function_name": null,
+  "tests": [
+   {
+    "kind": "expr",
+    "setup": "r = Rectangle(4, 5)",
+    "expr": "r.area()",
+    "expected": 20
+   },
+   {
+    "kind": "expr",
+    "setup": "r = Rectangle(4, 5)\nr.area()\nr2 = Rectangle(10, 0)",
+    "expr": "r2.area()",
+    "expected": 0
+   },
+   {
+    "kind": "expr",
+    "setup": "r = Rectangle(4, 5)\nr.area()\nr2 = Rectangle(10, 0)\nr2.area()\nr3 = Rectangle(2.5, 4)",
+    "expr": "r3.area()",
+    "expected": 10.0
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 138
+ },
+ {
+  "slug": "square-inherits-rectangle",
+  "title": "Square Inherits Rectangle",
+  "unit": "python-toolkit",
+  "difficulty": "medium",
+  "concepts": [
+   "inheritance"
+  ],
+  "description": "Implement a class `Square(Rectangle)` that inherits from `Rectangle(width, height)`. In `Square.__init__(self, side)`, initialize the superclass with `width = side` and `height = side`.\n\n### Input / Output Specifications\n- `Square(side)` inheriting `Rectangle`\n- Inherits `area()` returning `side * side`\n\n### Examples\n**Example 1:**\n- `sq = Square(5)`\n- `sq.area()` -> `25`\n- `isinstance(sq, Rectangle)` -> `True`",
+  "starter_code": "class Rectangle:\n    def __init__(self, width, height):\n        self.width = width\n        self.height = height\n    def area(self):\n        return self.width * self.height\n\nclass Square(Rectangle):\n    def __init__(self, side):\n        pass\n",
+  "function_name": null,
+  "tests": [
+   {
+    "kind": "expr",
+    "setup": "sq = Square(5)",
+    "expr": "sq.area()",
+    "expected": 25
+   },
+   {
+    "kind": "expr",
+    "setup": "sq = Square(5)\nsq.area()",
+    "expr": "bool(isinstance(sq, Rectangle))",
+    "expected": true
+   },
+   {
+    "kind": "expr",
+    "setup": "sq = Square(5)\nsq.area()\nsq2 = Square(0)",
+    "expr": "sq2.area()",
+    "expected": 0
+   },
+   {
+    "kind": "expr",
+    "setup": "sq = Square(5)\nsq.area()\nsq2 = Square(0)\nsq2.area()\nsq3 = Square(12)",
+    "expr": "sq3.area()",
+    "expected": 144
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 139
+ },
+ {
+  "slug": "custom-range-iterator",
+  "title": "Custom Range Iterator",
+  "unit": "python-toolkit",
+  "difficulty": "hard",
+  "concepts": [
+   "iterators"
+  ],
+  "description": "Implement a custom iterator class `RangeIterator(start, stop)` implementing `__iter__` and `__next__` that produces numbers from `start` up to (exclusive) `stop`, raising `StopIteration` when finished.\n\n### Input / Output Specifications\n- `__init__(self, start, stop)`\n- `__iter__(self) -> self`\n- `__next__(self) -> int`\n\n### Examples\n**Example 1:**\n- `list(RangeIterator(1, 4))` -> `[1, 2, 3]`",
+  "starter_code": "class RangeIterator:\n    def __init__(self, start, stop):\n        pass\n    def __iter__(self):\n        return self\n    def __next__(self):\n        pass\n",
+  "function_name": null,
+  "tests": [
+   {
+    "kind": "expr",
+    "setup": "it = RangeIterator(1, 4)",
+    "expr": "list(it)",
+    "expected": [
+     1,
+     2,
+     3
+    ]
+   },
+   {
+    "kind": "expr",
+    "setup": "it = RangeIterator(1, 4)\nlist(it)\nit2 = RangeIterator(5, 5)",
+    "expr": "list(it2)",
+    "expected": []
+   },
+   {
+    "kind": "expr",
+    "setup": "it = RangeIterator(1, 4)\nlist(it)\nit2 = RangeIterator(5, 5)\nlist(it2)\nit3 = RangeIterator(-2, 2)",
+    "expr": "list(it3)",
+    "expected": [
+     -2,
+     -1,
+     0,
+     1
+    ]
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 140
+ },
+ {
+  "slug": "even-number-generator",
+  "title": "Even Number Generator",
+  "unit": "python-toolkit",
+  "difficulty": "medium",
+  "concepts": [
+   "generators"
+  ],
+  "description": "Write a generator function `even_generator(limit)` that yields non-negative even integers starting from 0 up to `limit` (`0, 2, 4, ... <= limit`).\n\n### Input / Output Specifications\n- **Input:** `limit` (int, `limit >= 0`)\n- **Output:** (Generator[int]) — Yields even integers.\n\n### Constraints\n- Must use `yield` keyword.\n\n### Examples\n**Example 1:**\n- `list(even_generator(6))` -> `[0, 2, 4, 6]`\n\n**Example 2:**\n- `list(even_generator(1))` -> `[0]`",
+  "starter_code": "def even_generator(limit):\n    # Yield even numbers from 0 up to limit\n    pass\n",
+  "function_name": null,
+  "tests": [
+   {
+    "kind": "expr",
+    "setup": "g = even_generator(6)",
+    "expr": "list(g)",
+    "expected": [
+     0,
+     2,
+     4,
+     6
+    ]
+   },
+   {
+    "kind": "expr",
+    "setup": "g = even_generator(6)\nlist(g)",
+    "expr": "list(even_generator(0))",
+    "expected": [
+     0
+    ]
+   },
+   {
+    "kind": "expr",
+    "setup": "g = even_generator(6)\nlist(g)\nlist(even_generator(0))",
+    "expr": "list(even_generator(1))",
+    "expected": [
+     0
+    ]
+   },
+   {
+    "kind": "expr",
+    "setup": "g = even_generator(6)\nlist(g)\nlist(even_generator(0))\nlist(even_generator(1))",
+    "expr": "list(even_generator(10))",
+    "expected": [
+     0,
+     2,
+     4,
+     6,
+     8,
+     10
+    ]
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 141
+ },
+ {
+  "slug": "binary-search",
+  "title": "Binary Search",
+  "unit": "searching-sorting",
+  "difficulty": "medium",
+  "concepts": [
+   "searching"
+  ],
+  "description": "Write a function `binary_search(arr, target)` that finds the index of `target` in a sorted list of unique integers `arr` using the binary search algorithm. If `target` is not present in `arr`, return `-1`.\n\n### Input / Output Specifications\n- **Input**: `arr` (list of integers, sorted in ascending order), `target` (integer).\n- **Output**: An integer representing the 0-based index of `target`, or `-1` if not found.\n\n### Constraints\n- `0 \\le \\text{len}(arr) \\le 10^5`\n- Elements in `arr` are strictly increasing.\n- Time Complexity requirement: O(\\log n).\n\n### Examples\n- `binary_search([1, 3, 5, 7, 9], 5)` `\\to` `2`\n- `binary_search([1, 3, 5, 7, 9], 4)` `\\to` `-1`\n- `binary_search([], 10)` `\\to` `-1`",
+  "starter_code": "def binary_search(arr, target):\n    # Write your binary search implementation here\n    pass\n",
+  "function_name": "binary_search",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     [
+      1,
+      3,
+      5,
+      7,
+      9
+     ],
+     5
+    ],
+    "expected": 2
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      1,
+      3,
+      5,
+      7,
+      9
+     ],
+     4
+    ],
+    "expected": -1
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      1,
+      3,
+      5,
+      7,
+      9
+     ],
+     1
+    ],
+    "expected": 0
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      1,
+      3,
+      5,
+      7,
+      9
+     ],
+     9
+    ],
+    "expected": 4
+   },
+   {
+    "kind": "args",
+    "args": [
+     [],
+     10
+    ],
+    "expected": -1
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 142
+ },
+ {
+  "slug": "bubble-sort-implementation",
+  "title": "Bubble Sort Implementation",
+  "unit": "searching-sorting",
+  "difficulty": "medium",
+  "concepts": [
+   "sorting"
+  ],
+  "description": "Write a function `bubble_sort(arr)` that sorts a list of numbers in ascending order using the bubble sort algorithm. Do not use Python's built-in `sort()` or `sorted()` functions. Return the sorted list.\n\n### Input / Output Specifications\n- **Input**: `arr` (list of integers or floats).\n- **Output**: A list containing the same elements sorted in ascending order.\n\n### Constraints\n- `0 \\le \\text{len}(arr) \\le 1000`\n- `-10^4 \\le arr[i] \\le 10^4`\n\n### Examples\n- `bubble_sort([5, 2, 8, 1])` `\\to` `[1, 2, 5, 8]`\n- `bubble_sort([3, -1, 4, -1])` `\\to` `[-1, -1, 3, 4]`\n- `bubble_sort([])` `\\to` `[]`",
+  "starter_code": "def bubble_sort(arr):\n    # Sort the array in ascending order using bubble sort\n    pass\n",
+  "function_name": "bubble_sort",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     [
+      5,
+      2,
+      8,
+      1
+     ]
+    ],
+    "expected": [
+     1,
+     2,
+     5,
+     8
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      3,
+      -1,
+      4,
+      -1
+     ]
+    ],
+    "expected": [
+     -1,
+     -1,
+     3,
+     4
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     []
+    ],
+    "expected": []
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      42
+     ]
+    ],
+    "expected": [
+     42
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      1,
+      2,
+      3,
+      4
+     ]
+    ],
+    "expected": [
+     1,
+     2,
+     3,
+     4
+    ]
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 143
+ },
+ {
+  "slug": "two-sum-fast",
+  "title": "Two Sum Fast",
+  "unit": "hashing",
+  "difficulty": "medium",
+  "concepts": [
+   "hash-map-problems"
+  ],
+  "description": "Write a function `two_sum_fast(numbers, target)` that finds two distinct indices `[i, j]` such that `numbers[i] + numbers[j] == target` and `i < j`. Use a hash table (Python `dict`) to solve this in O(n) time. If no pair exists, return `None`.\n\n### Input / Output Specifications\n- **Input**: `numbers` (list of integers), `target` (integer).\n- **Output**: A list `[i, j]` of two indices where `i < j`, or `None` if no pair sums to `target`.\n\n### Constraints\n- `2 \\le \\text{len}(numbers) \\le 10^5`\n- Each input will have at most one valid answer.\n\n### Examples\n- `two_sum_fast([2, 7, 11, 15], 9)` `\\to` `[0, 1]`\n- `two_sum_fast([3, 2, 4], 6)` `\\to` `[1, 2]`\n- `two_sum_fast([1, 2, 3], 10)` `\\to` `None`",
+  "starter_code": "def two_sum_fast(numbers, target):\n    # Return [i, j] or None\n    pass\n",
+  "function_name": "two_sum_fast",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     [
+      2,
+      7,
+      11,
+      15
+     ],
+     9
+    ],
+    "expected": [
+     0,
+     1
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      3,
+      2,
+      4
+     ],
+     6
+    ],
+    "expected": [
+     1,
+     2
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      3,
+      3
+     ],
+     6
+    ],
+    "expected": [
+     0,
+     1
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      1,
+      2,
+      3
+     ],
+     10
+    ],
+    "expected": null
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 144
+ },
+ {
+  "slug": "valid-parentheses",
+  "title": "Valid Parentheses",
+  "unit": "stacks-queues",
+  "difficulty": "medium",
+  "concepts": [
+   "stack"
+  ],
+  "description": "Write a function `is_valid_parentheses(s)` that determines if an input string composed only of characters `'('`, `')'`, `'{'`, `'}'`, `'['`, and `']'` has valid and properly closed brackets using a stack.\nA string is valid if:\n1. Open brackets are closed by the same type of brackets.\n2. Open brackets are closed in the correct order.\n3. Every close bracket has a corresponding open bracket of the same type.\n\n### Input / Output Specifications\n- **Input**: `s` (string).\n- **Output**: Boolean `True` if valid, `False` otherwise.\n\n### Constraints\n- `0 \\le \\text{len}(s) \\le 10^4`\n\n### Examples\n- `is_valid_parentheses(\"()[]{}\")` `\\to` `True`\n- `is_valid_parentheses(\"([{}])\")` `\\to` `True`\n- `is_valid_parentheses(\"(]\")` `\\to` `False`\n- `is_valid_parentheses(\"([)]\")` `\\to` `False`\n- `is_valid_parentheses(\"\")` `\\to` `True`",
+  "starter_code": "def is_valid_parentheses(s):\n    # Use a stack to validate matching brackets\n    pass\n",
+  "function_name": "is_valid_parentheses",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     "()[]{}"
+    ],
+    "expected": true
+   },
+   {
+    "kind": "args",
+    "args": [
+     "([{}])"
+    ],
+    "expected": true
+   },
+   {
+    "kind": "args",
+    "args": [
+     "(]"
+    ],
+    "expected": false
+   },
+   {
+    "kind": "args",
+    "args": [
+     "([)]"
+    ],
+    "expected": false
+   },
+   {
+    "kind": "args",
+    "args": [
+     ""
+    ],
+    "expected": true
+   },
+   {
+    "kind": "args",
+    "args": [
+     ")("
+    ],
+    "expected": false
+   },
+   {
+    "kind": "args",
+    "args": [
+     "((("
+    ],
+    "expected": false
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 145
+ },
+ {
+  "slug": "recent-counter-queue-processor",
+  "title": "Recent Counter / Queue Processor",
+  "unit": "stacks-queues",
+  "difficulty": "medium",
+  "concepts": [
+   "queue"
+  ],
+  "description": "Write a function `process_queue_requests(requests)` that models a First-In First-Out (FIFO) service queue. Given a list of job requests in arrival order, process and return the jobs in the exact order they finish execution under FIFO scheduling.\n\n### Input / Output Specifications\n- **Input**: `requests` (list of strings representing job identifiers).\n- **Output**: A list of strings representing the processed jobs in FIFO order.\n\n### Constraints\n- `0 \\le \\text{len}(requests) \\le 10^4`\n\n### Examples\n- `process_queue_requests([\"job1\", \"job2\", \"job3\"])` `\\to` `[\"job1\", \"job2\", \"job3\"]`\n- `process_queue_requests([])` `\\to` `[]`\n- `process_queue_requests([\"alpha\"])` `\\to` `[\"alpha\"]`",
+  "starter_code": "def process_queue_requests(requests):\n    # Process queue in FIFO order\n    pass\n",
+  "function_name": "process_queue_requests",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     [
+      "job1",
+      "job2",
+      "job3"
+     ]
+    ],
+    "expected": [
+     "job1",
+     "job2",
+     "job3"
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     []
+    ],
+    "expected": []
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      "print",
+      "scan"
+     ]
+    ],
+    "expected": [
+     "print",
+     "scan"
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      "taskA"
+     ]
+    ],
+    "expected": [
+     "taskA"
+    ]
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 146
+ },
+ {
+  "slug": "recursive-power",
+  "title": "Recursive Power",
+  "unit": "recursion",
+  "difficulty": "hard",
+  "concepts": [
+   "recursion-problems"
+  ],
+  "description": "Write a recursive function `fast_pow(x, n)` that calculates `x^n` for a base number `x` and a non-negative integer exponent `n`. Use recursion to achieve O(\\log n) time complexity by utilizing the relation:\n- `x^n = 1` if `n = 0`\n- `x^n = (x^{n/2})^2` if `n` is even\n- `x^n = x \\times x^{n-1}` if `n` is odd\n\n### Input / Output Specifications\n- **Input**: `x` (integer or float), `n` (non-negative integer).\n- **Output**: Number representing `x^n`.\n\n### Constraints\n- `-100.0 < x < 100.0`\n- `0 \\le n \\le 100`\n\n### Examples\n- `fast_pow(2, 10)` `\\to` `1024`\n- `fast_pow(3, 0)` `\\to` `1`\n- `fast_pow(5, 3)` `\\to` `125`",
+  "starter_code": "def fast_pow(x, n):\n    # Implement fast recursive exponentiation\n    pass\n",
+  "function_name": "fast_pow",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     2,
+     10
+    ],
+    "expected": 1024
+   },
+   {
+    "kind": "args",
+    "args": [
+     3,
+     0
+    ],
+    "expected": 1
+   },
+   {
+    "kind": "args",
+    "args": [
+     5,
+     3
+    ],
+    "expected": 125
+   },
+   {
+    "kind": "args",
+    "args": [
+     2,
+     1
+    ],
+    "expected": 2
+   },
+   {
+    "kind": "args",
+    "args": [
+     7,
+     2
+    ],
+    "expected": 49
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 147
+ },
+ {
+  "slug": "binary-tree-maximum-depth",
+  "title": "Binary Tree Maximum Depth",
+  "unit": "trees",
+  "difficulty": "medium",
+  "concepts": [
+   "recursion-problems"
+  ],
+  "description": "Given the `root` of a binary tree, write a function `max_depth(root)` that returns its maximum depth.\nA binary tree's maximum depth is the number of nodes along the longest path from the root node down to the farthest leaf node.\n\nEach tree node is an instance of `TreeNode`:\n```python\nclass TreeNode:\n    def __init__(self, val=0, left=None, right=None):\n        self.val = val\n        self.left = left\n        self.right = right\n```\n\n### Input / Output Specifications\n- **Input**: `root` (`TreeNode` or `None`).\n- **Output**: Integer representing the maximum depth (0 for empty tree `None`).\n\n### Constraints\n- The number of nodes in the tree is in the range `[0, 10^4]`.\n- `-100 \\le \\text{Node.val} \\le 100`\n\n### Examples\n- Tree `[3, 9, 20, None, None, 15, 7]` (root 3 with left child 9 and right child 20; 20 has children 15, 7) `\\to` `3`\n- Tree `None` `\\to` `0`\n- Tree `[1]` (single root) `\\to` `1`",
+  "starter_code": "class TreeNode:\n    def __init__(self, val=0, left=None, right=None):\n        self.val = val\n        self.left = left\n        self.right = right\n\ndef max_depth(root):\n    # Return the maximum depth of the binary tree\n    pass\n",
+  "function_name": null,
+  "tests": [
+   {
+    "kind": "expr",
+    "setup": "root_bal = TreeNode(1, TreeNode(2, TreeNode(4), TreeNode(5)), TreeNode(3, TreeNode(6), TreeNode(7)))",
+    "expr": "max_depth(root_bal)",
+    "expected": 3
+   },
+   {
+    "kind": "expr",
+    "setup": "root_bal = TreeNode(1, TreeNode(2, TreeNode(4), TreeNode(5)), TreeNode(3, TreeNode(6), TreeNode(7)))\nmax_depth(root_bal)",
+    "expr": "max_depth(None)",
+    "expected": 0
+   },
+   {
+    "kind": "expr",
+    "setup": "root_bal = TreeNode(1, TreeNode(2, TreeNode(4), TreeNode(5)), TreeNode(3, TreeNode(6), TreeNode(7)))\nmax_depth(root_bal)\nmax_depth(None)",
+    "expr": "max_depth(TreeNode(1))",
+    "expected": 1
+   },
+   {
+    "kind": "expr",
+    "setup": "root_bal = TreeNode(1, TreeNode(2, TreeNode(4), TreeNode(5)), TreeNode(3, TreeNode(6), TreeNode(7)))\nmax_depth(root_bal)\nmax_depth(None)\nmax_depth(TreeNode(1))\nleft_skew = TreeNode(1, TreeNode(2, TreeNode(3, TreeNode(4))))",
+    "expr": "max_depth(left_skew)",
+    "expected": 4
+   },
+   {
+    "kind": "expr",
+    "setup": "root_bal = TreeNode(1, TreeNode(2, TreeNode(4), TreeNode(5)), TreeNode(3, TreeNode(6), TreeNode(7)))\nmax_depth(root_bal)\nmax_depth(None)\nmax_depth(TreeNode(1))\nleft_skew = TreeNode(1, TreeNode(2, TreeNode(3, TreeNode(4))))\nmax_depth(left_skew)\nright_skew = TreeNode(10, None, TreeNode(20, None, TreeNode(30)))",
+    "expr": "max_depth(right_skew)",
+    "expected": 3
+   },
+   {
+    "kind": "expr",
+    "setup": "root_bal = TreeNode(1, TreeNode(2, TreeNode(4), TreeNode(5)), TreeNode(3, TreeNode(6), TreeNode(7)))\nmax_depth(root_bal)\nmax_depth(None)\nmax_depth(TreeNode(1))\nleft_skew = TreeNode(1, TreeNode(2, TreeNode(3, TreeNode(4))))\nmax_depth(left_skew)\nright_skew = TreeNode(10, None, TreeNode(20, None, TreeNode(30)))\nmax_depth(right_skew)\nzigzag = TreeNode(1, TreeNode(2, None, TreeNode(3, TreeNode(4))))",
+    "expr": "max_depth(zigzag)",
+    "expected": 4
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 150
+ },
+ {
+  "slug": "invert-binary-tree",
+  "title": "Invert Binary Tree",
+  "unit": "trees",
+  "difficulty": "medium",
+  "concepts": [
+   "recursion-problems"
+  ],
+  "description": "Given the `root` of a binary tree, write a function `invert_tree(root)` that inverts the tree (swaps every node's left and right children recursively) and returns its root.\n\nEach tree node is an instance of `TreeNode`:\n```python\nclass TreeNode:\n    def __init__(self, val=0, left=None, right=None):\n        self.val = val\n        self.left = left\n        self.right = right\n```\n\n### Input / Output Specifications\n- **Input**: `root` (`TreeNode` or `None`).\n- **Output**: The root `TreeNode` of the inverted tree (or `None`).\n\n### Constraints\n- The number of nodes in the tree is in the range `[0, 1000]`.\n\n### Examples\n- Input: `[4, 2, 7, 1, 3, 6, 9]` `\\to` Output: `[4, 7, 2, 9, 6, 3, 1]`\n- Input: `None` `\\to` Output: `None`",
+  "starter_code": "class TreeNode:\n    def __init__(self, val=0, left=None, right=None):\n        self.val = val\n        self.left = left\n        self.right = right\n\ndef invert_tree(root):\n    # Recursively invert the left and right subtrees\n    pass\n",
+  "function_name": null,
+  "tests": [
+   {
+    "kind": "expr",
+    "setup": "root = TreeNode(4, TreeNode(2, TreeNode(1), TreeNode(3)), TreeNode(7, TreeNode(6), TreeNode(9)))\ninv = invert_tree(root)",
+    "expr": "inv.val",
+    "expected": 4
+   },
+   {
+    "kind": "expr",
+    "setup": "root = TreeNode(4, TreeNode(2, TreeNode(1), TreeNode(3)), TreeNode(7, TreeNode(6), TreeNode(9)))\ninv = invert_tree(root)\ninv.val",
+    "expr": "inv.left.val",
+    "expected": 7
+   },
+   {
+    "kind": "expr",
+    "setup": "root = TreeNode(4, TreeNode(2, TreeNode(1), TreeNode(3)), TreeNode(7, TreeNode(6), TreeNode(9)))\ninv = invert_tree(root)\ninv.val\ninv.left.val",
+    "expr": "inv.right.val",
+    "expected": 2
+   },
+   {
+    "kind": "expr",
+    "setup": "root = TreeNode(4, TreeNode(2, TreeNode(1), TreeNode(3)), TreeNode(7, TreeNode(6), TreeNode(9)))\ninv = invert_tree(root)\ninv.val\ninv.left.val\ninv.right.val",
+    "expr": "inv.left.left.val",
+    "expected": 9
+   },
+   {
+    "kind": "expr",
+    "setup": "root = TreeNode(4, TreeNode(2, TreeNode(1), TreeNode(3)), TreeNode(7, TreeNode(6), TreeNode(9)))\ninv = invert_tree(root)\ninv.val\ninv.left.val\ninv.right.val\ninv.left.left.val",
+    "expr": "inv.left.right.val",
+    "expected": 6
+   },
+   {
+    "kind": "expr",
+    "setup": "root = TreeNode(4, TreeNode(2, TreeNode(1), TreeNode(3)), TreeNode(7, TreeNode(6), TreeNode(9)))\ninv = invert_tree(root)\ninv.val\ninv.left.val\ninv.right.val\ninv.left.left.val\ninv.left.right.val",
+    "expr": "inv.right.left.val",
+    "expected": 3
+   },
+   {
+    "kind": "expr",
+    "setup": "root = TreeNode(4, TreeNode(2, TreeNode(1), TreeNode(3)), TreeNode(7, TreeNode(6), TreeNode(9)))\ninv = invert_tree(root)\ninv.val\ninv.left.val\ninv.right.val\ninv.left.left.val\ninv.left.right.val\ninv.right.left.val",
+    "expr": "inv.right.right.val",
+    "expected": 1
+   },
+   {
+    "kind": "expr",
+    "setup": "root = TreeNode(4, TreeNode(2, TreeNode(1), TreeNode(3)), TreeNode(7, TreeNode(6), TreeNode(9)))\ninv = invert_tree(root)\ninv.val\ninv.left.val\ninv.right.val\ninv.left.left.val\ninv.left.right.val\ninv.right.left.val\ninv.right.right.val",
+    "expr": "invert_tree(None)",
+    "expected": null
+   },
+   {
+    "kind": "expr",
+    "setup": "root = TreeNode(4, TreeNode(2, TreeNode(1), TreeNode(3)), TreeNode(7, TreeNode(6), TreeNode(9)))\ninv = invert_tree(root)\ninv.val\ninv.left.val\ninv.right.val\ninv.left.left.val\ninv.left.right.val\ninv.right.left.val\ninv.right.right.val\ninvert_tree(None)\nt_single = TreeNode(42)\ninv_single = invert_tree(t_single)",
+    "expr": "inv_single.val",
+    "expected": 42
+   },
+   {
+    "kind": "expr",
+    "setup": "root = TreeNode(4, TreeNode(2, TreeNode(1), TreeNode(3)), TreeNode(7, TreeNode(6), TreeNode(9)))\ninv = invert_tree(root)\ninv.val\ninv.left.val\ninv.right.val\ninv.left.left.val\ninv.left.right.val\ninv.right.left.val\ninv.right.right.val\ninvert_tree(None)\nt_single = TreeNode(42)\ninv_single = invert_tree(t_single)\ninv_single.val",
+    "expr": "inv_single.left",
+    "expected": null
+   },
+   {
+    "kind": "expr",
+    "setup": "root = TreeNode(4, TreeNode(2, TreeNode(1), TreeNode(3)), TreeNode(7, TreeNode(6), TreeNode(9)))\ninv = invert_tree(root)\ninv.val\ninv.left.val\ninv.right.val\ninv.left.left.val\ninv.left.right.val\ninv.right.left.val\ninv.right.right.val\ninvert_tree(None)\nt_single = TreeNode(42)\ninv_single = invert_tree(t_single)\ninv_single.val\ninv_single.left",
+    "expr": "inv_single.right",
+    "expected": null
+   },
+   {
+    "kind": "expr",
+    "setup": "root = TreeNode(4, TreeNode(2, TreeNode(1), TreeNode(3)), TreeNode(7, TreeNode(6), TreeNode(9)))\ninv = invert_tree(root)\ninv.val\ninv.left.val\ninv.right.val\ninv.left.left.val\ninv.left.right.val\ninv.right.left.val\ninv.right.right.val\ninvert_tree(None)\nt_single = TreeNode(42)\ninv_single = invert_tree(t_single)\ninv_single.val\ninv_single.left\ninv_single.right\nt_left = TreeNode(1, TreeNode(2, TreeNode(3)))\ninv_l = invert_tree(t_left)",
+    "expr": "inv_l.val",
+    "expected": 1
+   },
+   {
+    "kind": "expr",
+    "setup": "root = TreeNode(4, TreeNode(2, TreeNode(1), TreeNode(3)), TreeNode(7, TreeNode(6), TreeNode(9)))\ninv = invert_tree(root)\ninv.val\ninv.left.val\ninv.right.val\ninv.left.left.val\ninv.left.right.val\ninv.right.left.val\ninv.right.right.val\ninvert_tree(None)\nt_single = TreeNode(42)\ninv_single = invert_tree(t_single)\ninv_single.val\ninv_single.left\ninv_single.right\nt_left = TreeNode(1, TreeNode(2, TreeNode(3)))\ninv_l = invert_tree(t_left)\ninv_l.val",
+    "expr": "inv_l.left",
+    "expected": null
+   },
+   {
+    "kind": "expr",
+    "setup": "root = TreeNode(4, TreeNode(2, TreeNode(1), TreeNode(3)), TreeNode(7, TreeNode(6), TreeNode(9)))\ninv = invert_tree(root)\ninv.val\ninv.left.val\ninv.right.val\ninv.left.left.val\ninv.left.right.val\ninv.right.left.val\ninv.right.right.val\ninvert_tree(None)\nt_single = TreeNode(42)\ninv_single = invert_tree(t_single)\ninv_single.val\ninv_single.left\ninv_single.right\nt_left = TreeNode(1, TreeNode(2, TreeNode(3)))\ninv_l = invert_tree(t_left)\ninv_l.val\ninv_l.left",
+    "expr": "inv_l.right.val",
+    "expected": 2
+   },
+   {
+    "kind": "expr",
+    "setup": "root = TreeNode(4, TreeNode(2, TreeNode(1), TreeNode(3)), TreeNode(7, TreeNode(6), TreeNode(9)))\ninv = invert_tree(root)\ninv.val\ninv.left.val\ninv.right.val\ninv.left.left.val\ninv.left.right.val\ninv.right.left.val\ninv.right.right.val\ninvert_tree(None)\nt_single = TreeNode(42)\ninv_single = invert_tree(t_single)\ninv_single.val\ninv_single.left\ninv_single.right\nt_left = TreeNode(1, TreeNode(2, TreeNode(3)))\ninv_l = invert_tree(t_left)\ninv_l.val\ninv_l.left\ninv_l.right.val",
+    "expr": "inv_l.right.right.val",
+    "expected": 3
+   },
+   {
+    "kind": "expr",
+    "setup": "root = TreeNode(4, TreeNode(2, TreeNode(1), TreeNode(3)), TreeNode(7, TreeNode(6), TreeNode(9)))\ninv = invert_tree(root)\ninv.val\ninv.left.val\ninv.right.val\ninv.left.left.val\ninv.left.right.val\ninv.right.left.val\ninv.right.right.val\ninvert_tree(None)\nt_single = TreeNode(42)\ninv_single = invert_tree(t_single)\ninv_single.val\ninv_single.left\ninv_single.right\nt_left = TreeNode(1, TreeNode(2, TreeNode(3)))\ninv_l = invert_tree(t_left)\ninv_l.val\ninv_l.left\ninv_l.right.val\ninv_l.right.right.val\nt_asym = TreeNode(1, TreeNode(2), TreeNode(3, None, TreeNode(4)))\ninv_a = invert_tree(t_asym)",
+    "expr": "inv_a.left.val",
+    "expected": 3
+   },
+   {
+    "kind": "expr",
+    "setup": "root = TreeNode(4, TreeNode(2, TreeNode(1), TreeNode(3)), TreeNode(7, TreeNode(6), TreeNode(9)))\ninv = invert_tree(root)\ninv.val\ninv.left.val\ninv.right.val\ninv.left.left.val\ninv.left.right.val\ninv.right.left.val\ninv.right.right.val\ninvert_tree(None)\nt_single = TreeNode(42)\ninv_single = invert_tree(t_single)\ninv_single.val\ninv_single.left\ninv_single.right\nt_left = TreeNode(1, TreeNode(2, TreeNode(3)))\ninv_l = invert_tree(t_left)\ninv_l.val\ninv_l.left\ninv_l.right.val\ninv_l.right.right.val\nt_asym = TreeNode(1, TreeNode(2), TreeNode(3, None, TreeNode(4)))\ninv_a = invert_tree(t_asym)\ninv_a.left.val",
+    "expr": "inv_a.left.left.val",
+    "expected": 4
+   },
+   {
+    "kind": "expr",
+    "setup": "root = TreeNode(4, TreeNode(2, TreeNode(1), TreeNode(3)), TreeNode(7, TreeNode(6), TreeNode(9)))\ninv = invert_tree(root)\ninv.val\ninv.left.val\ninv.right.val\ninv.left.left.val\ninv.left.right.val\ninv.right.left.val\ninv.right.right.val\ninvert_tree(None)\nt_single = TreeNode(42)\ninv_single = invert_tree(t_single)\ninv_single.val\ninv_single.left\ninv_single.right\nt_left = TreeNode(1, TreeNode(2, TreeNode(3)))\ninv_l = invert_tree(t_left)\ninv_l.val\ninv_l.left\ninv_l.right.val\ninv_l.right.right.val\nt_asym = TreeNode(1, TreeNode(2), TreeNode(3, None, TreeNode(4)))\ninv_a = invert_tree(t_asym)\ninv_a.left.val\ninv_a.left.left.val",
+    "expr": "inv_a.right.val",
+    "expected": 2
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 151
+ },
+ {
+  "slug": "two-pointer-palindrome",
+  "title": "Two-Pointer Palindrome",
+  "unit": "arrays-two-pointers",
+  "difficulty": "medium",
+  "concepts": [
+   "two-pointer"
+  ],
+  "description": "Write a function `is_palindrome_fast(s)` using the two-pointer technique to determine if a lowercase alphanumeric string `s` is a palindrome (reads identically forwards and backwards). Avoid string reversal slicing (`s[::-1]`) to maintain O(1) extra space.\n\n### Input / Output Specifications\n- **Input**: `s` (string of lowercase alphanumeric characters).\n- **Output**: Boolean `True` if `s` is a palindrome, `False` otherwise.\n\n### Constraints\n- `0 \\le \\text{len}(s) \\le 10^5`\n\n### Examples\n- `is_palindrome_fast(\"racecar\")` `\\to` `True`\n- `is_palindrome_fast(\"hello\")` `\\to` `False`\n- `is_palindrome_fast(\"noon\")` `\\to` `True`\n- `is_palindrome_fast(\"\")` `\\to` `True`",
+  "starter_code": "def is_palindrome_fast(s):\n    # Use left and right pointers converging inward\n    pass\n",
+  "function_name": "is_palindrome_fast",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     "racecar"
+    ],
+    "expected": true
+   },
+   {
+    "kind": "args",
+    "args": [
+     "hello"
+    ],
+    "expected": false
+   },
+   {
+    "kind": "args",
+    "args": [
+     "noon"
+    ],
+    "expected": true
+   },
+   {
+    "kind": "args",
+    "args": [
+     ""
+    ],
+    "expected": true
+   },
+   {
+    "kind": "args",
+    "args": [
+     "a"
+    ],
+    "expected": true
+   },
+   {
+    "kind": "args",
+    "args": [
+     "ab"
+    ],
+    "expected": false
+   },
+   {
+    "kind": "args",
+    "args": [
+     "roar"
+    ],
+    "expected": false
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 148
+ },
+ {
+  "slug": "identify-duplicate-o-n",
+  "title": "Identify Duplicate O(n)",
+  "unit": "searching-sorting",
+  "difficulty": "medium",
+  "concepts": [
+   "algorithmic-complexity"
+  ],
+  "description": "Write a function `find_first_duplicate(nums)` that finds and returns the first element that appears more than once as you scan from left to right. Solve this in O(n) time using a hash set. If no duplicates exist, return `None`.\n\n### Input / Output Specifications\n- **Input**: `nums` (list of integers).\n- **Output**: The first repeated integer, or `None` if all elements are distinct.\n\n### Constraints\n- `0 \\le \\text{len}(nums) \\le 10^5`\n- `-10^6 \\le nums[i] \\le 10^6`\n\n### Examples\n- `find_first_duplicate([2, 5, 1, 2, 3, 5])` `\\to` `2`\n- `find_first_duplicate([1, 2, 3])` `\\to` `None`\n- `find_first_duplicate([7, 7])` `\\to` `7`",
+  "starter_code": "def find_first_duplicate(nums):\n    # Use a set to track seen elements in O(n) time\n    pass\n",
+  "function_name": "find_first_duplicate",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     [
+      2,
+      5,
+      1,
+      2,
+      3,
+      5
+     ]
+    ],
+    "expected": 2
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      1,
+      2,
+      3
+     ]
+    ],
+    "expected": null
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      7,
+      7
+     ]
+    ],
+    "expected": 7
+   },
+   {
+    "kind": "args",
+    "args": [
+     []
+    ],
+    "expected": null
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      5,
+      4,
+      3,
+      2,
+      1,
+      4
+     ]
+    ],
+    "expected": 4
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      1,
+      5,
+      2,
+      5,
+      1
+     ]
+    ],
+    "expected": 5
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "curriculum",
+   "name": "Project curriculum",
+   "note": "Carried over from the project's earlier version."
+  },
+  "legacy_id": 149
+ },
+ {
+  "slug": "qq-multiplication-table",
+  "title": "QQ (Multiplication Table)",
+  "unit": "loops",
+  "difficulty": "easy",
+  "concepts": [
+   "for-loops"
+  ],
+  "description": "Write a function `generate_multiplication_table()` that outputs the standard 9x9 multiplication table as a list of formatted strings in the format `f\"{i}x{j}={i*j}\"` for all `1 \\le i \\le 9` and `1 \\le j \\le 9`.\n\n### Input / Output Specifications\n- **Input**: None.\n- **Output**: A list of 81 strings from `\"1x1=1\"` to `\"9x9=81\"`.\n\n### Constraints\n- Total entries: exactly 81 strings.\n\n### Examples\n- Entry 0: `\"1x1=1\"`\n- Entry 8: `\"1x9=9\"`\n- Entry 80: `\"9x9=81\"`",
+  "starter_code": "def generate_multiplication_table():\n    # Generate list of 'ixj=val' for i in 1..9, j in 1..9\n    pass\n",
+  "function_name": null,
+  "tests": [
+   {
+    "kind": "expr",
+    "setup": "table = generate_multiplication_table()",
+    "expr": "len(table)",
+    "expected": 81
+   },
+   {
+    "kind": "expr",
+    "setup": "table = generate_multiplication_table()\nlen(table)",
+    "expr": "table[0]",
+    "expected": "1x1=1"
+   },
+   {
+    "kind": "expr",
+    "setup": "table = generate_multiplication_table()\nlen(table)\ntable[0]",
+    "expr": "table[-1]",
+    "expected": "9x9=81"
+   },
+   {
+    "kind": "expr",
+    "setup": "table = generate_multiplication_table()\nlen(table)\ntable[0]\ntable[-1]",
+    "expr": "table[8]",
+    "expected": "1x9=9"
+   },
+   {
+    "kind": "expr",
+    "setup": "table = generate_multiplication_table()\nlen(table)\ntable[0]\ntable[-1]\ntable[8]",
+    "expr": "table[9]",
+    "expected": "2x1=2"
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "codenet_adapted",
+   "name": "Adapted from IBM Project CodeNet catalogue",
+   "note": "Rewritten as a function exercise by the team. Original ID p00000; provenance of the wording not independently verified.",
+   "dataset_problem_id": "p00000"
+  },
+  "legacy_id": 201
+ },
+ {
+  "slug": "list-of-top-3-hills",
+  "title": "List of Top 3 Hills",
+  "unit": "searching-sorting",
+  "difficulty": "easy",
+  "concepts": [
+   "sorting"
+  ],
+  "description": "Write a function `top_three_heights(heights)` that takes a list of hill heights and returns the top 3 highest hills in descending order.\n\n### Input / Output Specifications\n- **Input**: `heights` (list of positive integers, length `\\ge 3`).\n- **Output**: A list containing the 3 greatest numbers from `heights` sorted in descending order.\n\n### Constraints\n- `3 \\le \\text{len}(heights) \\le 10^4`\n- `1 \\le heights[i] \\le 10^5`\n\n### Examples\n- `top_three_heights([1819, 2003, 876, 2840, 1720])` `\\to` `[2840, 2003, 1819]`\n- `top_three_heights([100, 200, 300])` `\\to` `[300, 200, 100]`",
+  "starter_code": "def top_three_heights(heights):\n    # Return top 3 heights in descending order\n    pass\n",
+  "function_name": "top_three_heights",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     [
+      1819,
+      2003,
+      876,
+      2840,
+      1720
+     ]
+    ],
+    "expected": [
+     2840,
+     2003,
+     1819
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      100,
+      200,
+      300
+     ]
+    ],
+    "expected": [
+     300,
+     200,
+     100
+    ]
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      50,
+      40,
+      30,
+      20,
+      10
+     ]
+    ],
+    "expected": [
+     50,
+     40,
+     30
+    ]
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "codenet_adapted",
+   "name": "Adapted from IBM Project CodeNet catalogue",
+   "note": "Rewritten as a function exercise by the team. Original ID p00001; provenance of the wording not independently verified.",
+   "dataset_problem_id": "p00001"
+  },
+  "legacy_id": 202
+ },
+ {
+  "slug": "digit-number-of-sum",
+  "title": "Digit Number of Sum",
+  "unit": "strings",
+  "difficulty": "easy",
+  "concepts": [
+   "strings"
+  ],
+  "description": "Write a function `sum_digit_count(a, b)` that computes the sum of two non-negative integers `a` and `b`, and returns the number of digits in that sum.\n\n### Input / Output Specifications\n- **Input**: `a` (integer `\\ge 0`), `b` (integer `\\ge 0`).\n- **Output**: An integer representing the number of digits of `a + b`.\n\n### Constraints\n- `0 \\le a, b \\le 10^9`\n\n### Examples\n- `sum_digit_count(5, 7)` `\\to` `2` (since `5+7=12`, which has 2 digits)\n- `sum_digit_count(200, 300)` `\\to` `3` (since `200+300=500`, which has 3 digits)\n- `sum_digit_count(0, 0)` `\\to` `1`",
+  "starter_code": "def sum_digit_count(a, b):\n    # Return the number of digits in a + b\n    pass\n",
+  "function_name": "sum_digit_count",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     5,
+     7
+    ],
+    "expected": 2
+   },
+   {
+    "kind": "args",
+    "args": [
+     200,
+     300
+    ],
+    "expected": 3
+   },
+   {
+    "kind": "args",
+    "args": [
+     0,
+     0
+    ],
+    "expected": 1
+   },
+   {
+    "kind": "args",
+    "args": [
+     99,
+     1
+    ],
+    "expected": 3
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "codenet_adapted",
+   "name": "Adapted from IBM Project CodeNet catalogue",
+   "note": "Rewritten as a function exercise by the team. Original ID p00002; provenance of the wording not independently verified.",
+   "dataset_problem_id": "p00002"
+  },
+  "legacy_id": 203
+ },
+ {
+  "slug": "greatest-common-divisor-euclid",
+  "title": "Greatest Common Divisor (Euclid)",
+  "unit": "recursion",
+  "difficulty": "medium",
+  "concepts": [
+   "recursion"
+  ],
+  "description": "Write a function `gcd_euclid(x, y)` computing the greatest common divisor of two positive integers `x` and `y` using the Euclidean algorithm (`gcd(x, y) = gcd(y, x \\pmod y)`).\n\n### Input / Output Specifications\n- **Input**: `x` (integer `> 0`), `y` (integer `> 0`).\n- **Output**: Positive integer representing the greatest common divisor.\n\n### Constraints\n- `1 \\le x, y \\le 10^9`\n\n### Examples\n- `gcd_euclid(147, 105)` `\\to` `21`\n- `gcd_euclid(54, 24)` `\\to` `6`\n- `gcd_euclid(13, 7)` `\\to` `1`",
+  "starter_code": "def gcd_euclid(x, y):\n    # Euclidean algorithm\n    pass\n",
+  "function_name": "gcd_euclid",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     147,
+     105
+    ],
+    "expected": 21
+   },
+   {
+    "kind": "args",
+    "args": [
+     54,
+     24
+    ],
+    "expected": 6
+   },
+   {
+    "kind": "args",
+    "args": [
+     13,
+     7
+    ],
+    "expected": 1
+   },
+   {
+    "kind": "args",
+    "args": [
+     100,
+     25
+    ],
+    "expected": 25
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "codenet_adapted",
+   "name": "Adapted from IBM Project CodeNet catalogue",
+   "note": "Rewritten as a function exercise by the team. Original ID p02256; provenance of the wording not independently verified.",
+   "dataset_problem_id": "p02256"
+  },
+  "legacy_id": 204
+ },
+ {
+  "slug": "prime-numbers-count",
+  "title": "Prime Numbers Count",
+  "unit": "loops",
+  "difficulty": "medium",
+  "concepts": [
+   "searching"
+  ],
+  "description": "Write a function `count_primes(numbers)` that takes a list of integers and returns the count of prime numbers contained in the list. Recall that a prime number is an integer strictly greater than 1 with no positive divisors other than 1 and itself.\n\n### Input / Output Specifications\n- **Input**: `numbers` (list of integers).\n- **Output**: Integer representing how many numbers in the list are prime.\n\n### Constraints\n- `0 \\le \\text{len}(numbers) \\le 10^4`\n- `-10^5 \\le numbers[i] \\le 10^5`\n\n### Examples\n- `count_primes([2, 3, 4, 5, 6, 7])` `\\to` `4`\n- `count_primes([1, 4, 6, 8, 9])` `\\to` `0`\n- `count_primes([0, -5, 11, 13])` `\\to` `2`",
+  "starter_code": "def count_primes(numbers):\n    # Return count of prime numbers in numbers\n    pass\n",
+  "function_name": "count_primes",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+     ]
+    ],
+    "expected": 4
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      1,
+      4,
+      6,
+      8,
+      9
+     ]
+    ],
+    "expected": 0
+   },
+   {
+    "kind": "args",
+    "args": [
+     [
+      0,
+      -5,
+      11,
+      13
+     ]
+    ],
+    "expected": 2
+   },
+   {
+    "kind": "args",
+    "args": [
+     []
+    ],
+    "expected": 0
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "codenet_adapted",
+   "name": "Adapted from IBM Project CodeNet catalogue",
+   "note": "Rewritten as a function exercise by the team. Original ID p02257; provenance of the wording not independently verified.",
+   "dataset_problem_id": "p02257"
+  },
+  "legacy_id": 205
+ },
+ {
+  "slug": "right-triangle-identifier",
+  "title": "Right Triangle Identifier",
+  "unit": "conditionals",
+  "difficulty": "easy",
+  "concepts": [
+   "conditionals"
+  ],
+  "description": "Write a function `is_right_triangle(a, b, c)` that determines whether three positive integers can form the side lengths of a right-angled triangle by the Pythagorean Theorem (`x^2 + y^2 = z^2` where `z` is the longest side).\n\n### Input / Output Specifications\n- **Input**: `a`, `b`, `c` (positive integers).\n- **Output**: Boolean `True` if they form a right triangle, `False` otherwise.\n\n### Constraints\n- `1 \\le a, b, c \\le 1000`\n\n### Examples\n- `is_right_triangle(3, 4, 5)` `\\to` `True`\n- `is_right_triangle(5, 3, 4)` `\\to` `True`\n- `is_right_triangle(4, 5, 6)` `\\to` `False`",
+  "starter_code": "def is_right_triangle(a, b, c):\n    # Return True if a, b, c can form a right triangle\n    pass\n",
+  "function_name": "is_right_triangle",
+  "tests": [
+   {
+    "kind": "args",
+    "args": [
+     3,
+     4,
+     5
+    ],
+    "expected": true
+   },
+   {
+    "kind": "args",
+    "args": [
+     5,
+     3,
+     4
+    ],
+    "expected": true
+   },
+   {
+    "kind": "args",
+    "args": [
+     4,
+     5,
+     6
+    ],
+    "expected": false
+   },
+   {
+    "kind": "args",
+    "args": [
+     5,
+     12,
+     13
+    ],
+    "expected": true
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "codenet_adapted",
+   "name": "Adapted from IBM Project CodeNet catalogue",
+   "note": "Rewritten as a function exercise by the team. Original ID p00003; provenance of the wording not independently verified.",
+   "dataset_problem_id": "p00003"
+  },
+  "legacy_id": 206
+ },
+ {
+  "slug": "bank-account-class",
+  "title": "Bank Account Class",
+  "unit": "python-toolkit",
+  "difficulty": "medium",
+  "concepts": [
+   "classes"
+  ],
+  "description": "Implement a class `BankAccount` with:\n- An initializer `__init__(self, owner, balance=0)` that sets `self.owner = owner` and `self.balance = balance`.\n- `deposit(self, amount)`: adds `amount` to `balance` if `amount > 0` and returns `self.balance`.\n- `withdraw(self, amount)`: if `0 < amount \\le balance`, deducts `amount` and returns `True`; otherwise leaves balance unchanged and returns `False`.\n- `get_balance(self)`: returns current balance.\n\n### Input / Output Specifications\n- Method calls on `BankAccount` instance.\n\n### Constraints\n- All transaction amounts are positive numbers.\n\n### Examples\n- `acc = BankAccount(\"Alice\", 100)`\n- `acc.deposit(50)` `\\to` `150`\n- `acc.withdraw(70)` `\\to` `True` (balance becomes 80)\n- `acc.withdraw(100)` `\\to` `False` (insufficient funds)",
+  "starter_code": "class BankAccount:\n    def __init__(self, owner, balance=0):\n        pass\n    def deposit(self, amount):\n        pass\n    def withdraw(self, amount):\n        pass\n    def get_balance(self):\n        pass\n",
+  "function_name": null,
+  "tests": [
+   {
+    "kind": "expr",
+    "setup": "acc = BankAccount('Alice', 100)",
+    "expr": "acc.get_balance()",
+    "expected": 100
+   },
+   {
+    "kind": "expr",
+    "setup": "acc = BankAccount('Alice', 100)\nacc.get_balance()",
+    "expr": "acc.deposit(50)",
+    "expected": 150
+   },
+   {
+    "kind": "expr",
+    "setup": "acc = BankAccount('Alice', 100)\nacc.get_balance()\nacc.deposit(50)",
+    "expr": "acc.withdraw(70)",
+    "expected": true
+   },
+   {
+    "kind": "expr",
+    "setup": "acc = BankAccount('Alice', 100)\nacc.get_balance()\nacc.deposit(50)\nacc.withdraw(70)",
+    "expr": "acc.get_balance()",
+    "expected": 80
+   },
+   {
+    "kind": "expr",
+    "setup": "acc = BankAccount('Alice', 100)\nacc.get_balance()\nacc.deposit(50)\nacc.withdraw(70)\nacc.get_balance()",
+    "expr": "acc.withdraw(100)",
+    "expected": false
+   },
+   {
+    "kind": "expr",
+    "setup": "acc = BankAccount('Alice', 100)\nacc.get_balance()\nacc.deposit(50)\nacc.withdraw(70)\nacc.get_balance()\nacc.withdraw(100)",
+    "expr": "acc.get_balance()",
+    "expected": 80
+   }
+  ],
+  "public": 2,
+  "source": {
+   "type": "codenet_adapted",
+   "name": "Adapted from IBM Project CodeNet catalogue",
+   "note": "Rewritten as a function exercise by the team. Original ID p00004; provenance of the wording not independently verified.",
+   "dataset_problem_id": "p00004"
+  },
+  "legacy_id": 207
+ }
+]

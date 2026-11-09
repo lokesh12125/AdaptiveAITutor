@@ -1,0 +1,661 @@
+# Problems written for this project. Copyright the project team. Reference solutions live in
+# content/solutions/ and are never sent to clients. `public` = how many tests the learner can see.
+- slug: say-hello
+  title: Say Hello
+  unit: python-basics
+  difficulty: easy
+  concepts: [functions, strings]
+  recommended_first: true
+  description: |
+    Your first exercise. Write a function `greet(name)` that returns a greeting for `name`.
+
+    **Example:** `greet("Ada")` returns `"Hello, Ada!"`.
+
+    Notice the comma, the space and the exclamation mark. The computer checks them exactly.
+  starter_code: |
+    def greet(name):
+        # Return the greeting as a string
+        pass
+  function_name: greet
+  public: 2
+  tests:
+    - {args: ["Ada"], expected: "Hello, Ada!"}
+    - {args: ["Grace"], expected: "Hello, Grace!"}
+    - {args: [""], expected: "Hello, !"}
+- slug: add-two-numbers-input
+  title: Add Two Numbers from Input
+  unit: variables-io
+  difficulty: easy
+  concepts: [input-output, operators]
+  mode: stdio
+  description: |
+    Read two whole numbers, one per line, using `input()`. Print their sum.
+
+    **Input:**
+    ```
+    4
+    5
+    ```
+    **Output:**
+    ```
+    9
+    ```
+  starter_code: |
+    a = input()
+    b = input()
+    # input() gives you text. Convert it before adding.
+  public: 2
+  tests:
+    - {stdin: "4\n5\n", expected_stdout: "9\n"}
+    - {stdin: "-2\n2\n", expected_stdout: "0\n"}
+    - {stdin: "1000000\n1\n", expected_stdout: "1000001\n"}
+- slug: fizz-word
+  title: Fizz Word
+  unit: conditionals
+  difficulty: easy
+  concepts: [if-elif-else, operators]
+  description: |
+    Write `fizz_word(n)` returning `"FizzBuzz"` if `n` is divisible by both 3 and 5, `"Fizz"` if divisible
+    by 3 only, `"Buzz"` if divisible by 5 only, and otherwise `n` converted to a string.
+  starter_code: |
+    def fizz_word(n):
+        pass
+  function_name: fizz_word
+  public: 2
+  tests:
+    - {args: [15], expected: "FizzBuzz"}
+    - {args: [9], expected: "Fizz"}
+    - {args: [10], expected: "Buzz"}
+    - {args: [7], expected: "7"}
+    - {args: [0], expected: "FizzBuzz"}
+- slug: sum-to-n
+  title: Sum from 1 to N
+  unit: loops
+  difficulty: easy
+  concepts: [for-loops]
+  description: |
+    Write `sum_to_n(n)` that adds every whole number from 1 to `n`, including `n`, using a loop.
+    Return 0 when `n` is 0.
+  starter_code: |
+    def sum_to_n(n):
+        pass
+  function_name: sum_to_n
+  public: 2
+  tests:
+    - {args: [3], expected: 6}
+    - {args: [1], expected: 1}
+    - {args: [0], expected: 0}
+    - {args: [100], expected: 5050}
+- slug: largest-in-list
+  title: Largest in a List
+  unit: loops
+  difficulty: easy
+  concepts: [for-loops, lists]
+  description: |
+    Write `largest(numbers)` returning the largest value in a non-empty list, without using `max()`.
+    The list may contain negative numbers.
+  starter_code: |
+    def largest(numbers):
+        pass
+  function_name: largest
+  public: 2
+  tests:
+    - {args: [[4, 1, 9, 3]], expected: 9}
+    - {args: [[-5, -2, -8]], expected: -2}
+    - {args: [[7]], expected: 7}
+    - {args: [[2, 2, 2]], expected: 2}
+    - {args: [[-1, 0]], expected: 0}
+- slug: reverse-words
+  title: Reverse the Words
+  unit: strings
+  difficulty: easy
+  concepts: [string-methods]
+  description: |
+    Write `reverse_words(sentence)` returning the words of `sentence` in reverse order, separated by one
+    space. Ignore extra spaces in the input.
+  starter_code: |
+    def reverse_words(sentence):
+        pass
+  function_name: reverse_words
+  public: 2
+  tests:
+    - {args: ["hello big world"], expected: "world big hello"}
+    - {args: ["one"], expected: "one"}
+    - {args: ["  spaced   out  "], expected: "out spaced"}
+    - {args: [""], expected: ""}
+- slug: merge-sorted-lists-simple
+  title: Merge Two Sorted Lists
+  unit: searching-sorting
+  difficulty: medium
+  concepts: [sorting, two-pointer]
+  description: |
+    Write `merge_sorted(a, b)` that merges two ascending lists into one ascending list in linear time.
+    Do not call `sort()` or `sorted()`.
+  starter_code: |
+    def merge_sorted(a, b):
+        pass
+  function_name: merge_sorted
+  public: 2
+  tests:
+    - {args: [[1, 3, 5], [2, 4, 6]], expected: [1, 2, 3, 4, 5, 6]}
+    - {args: [[], [1, 2]], expected: [1, 2]}
+    - {args: [[1, 1], [1]], expected: [1, 1, 1]}
+    - {args: [[], []], expected: []}
+    - {args: [[-3, 0], [-5, 10]], expected: [-5, -3, 0, 10]}
+- slug: remove-duplicates-sorted
+  title: Remove Duplicates from a Sorted List
+  unit: arrays-two-pointers
+  difficulty: easy
+  concepts: [two-pointer, lists]
+  description: |
+    Given an ascending list `nums`, write `dedupe_sorted(nums)` returning a new ascending list with each
+    value once. Try keeping one pointer on the last kept value and another scanning forward.
+  starter_code: |
+    def dedupe_sorted(nums):
+        pass
+  function_name: dedupe_sorted
+  public: 2
+  tests:
+    - {args: [[1, 1, 2, 3, 3]], expected: [1, 2, 3]}
+    - {args: [[]], expected: []}
+    - {args: [[5, 5, 5]], expected: [5]}
+    - {args: [[-1, 0, 0, 7]], expected: [-1, 0, 7]}
+- slug: pair-with-target-sum
+  title: Pair with Target Sum
+  unit: arrays-two-pointers
+  difficulty: medium
+  concepts: [two-pointer]
+  description: |
+    `nums` is sorted in ascending order. Write `pair_sum(nums, target)` returning `[i, j]` with `i < j` and
+    `nums[i] + nums[j] == target`, or `[-1, -1]` if no pair exists. Each input has at most one answer.
+    Aim for O(n) time using two pointers.
+  starter_code: |
+    def pair_sum(nums, target):
+        pass
+  function_name: pair_sum
+  public: 2
+  tests:
+    - {args: [[1, 2, 4, 6, 10], 8], expected: [1, 3]}
+    - {args: [[2, 3], 5], expected: [0, 1]}
+    - {args: [[1, 2, 3], 100], expected: [-1, -1]}
+    - {args: [[], 1], expected: [-1, -1]}
+    - {args: [[-4, -1, 3, 9], 2], expected: [1, 2]}
+- slug: move-zeros-to-end
+  title: Move Zeros to the End
+  unit: arrays-two-pointers
+  difficulty: medium
+  concepts: [two-pointer, lists]
+  description: |
+    Write `move_zeros(nums)` returning a list where every 0 is moved to the end and the other values keep
+    their relative order.
+  starter_code: |
+    def move_zeros(nums):
+        pass
+  function_name: move_zeros
+  public: 2
+  tests:
+    - {args: [[0, 1, 0, 3, 12]], expected: [1, 3, 12, 0, 0]}
+    - {args: [[0]], expected: [0]}
+    - {args: [[1, 2]], expected: [1, 2]}
+    - {args: [[]], expected: []}
+    - {args: [[0, 0, 1]], expected: [1, 0, 0]}
+- slug: max-window-sum
+  title: Largest Window Sum
+  unit: arrays-two-pointers
+  difficulty: medium
+  concepts: [sliding-window]
+  description: |
+    Write `max_window_sum(nums, k)` returning the largest sum of any `k` consecutive values. If the list
+    has fewer than `k` values, return `None`. Assume `k >= 1`.
+  starter_code: |
+    def max_window_sum(nums, k):
+        pass
+  function_name: max_window_sum
+  public: 2
+  tests:
+    - {args: [[1, 4, 2, 10, 2], 2], expected: 12}
+    - {args: [[5], 1], expected: 5}
+    - {args: [[1, 2], 3], expected: null}
+    - {args: [[-1, -2, -3], 2], expected: -3}
+    - {args: [[3, 3, 3, 3], 4], expected: 12}
+- slug: first-unique-character
+  title: First Unique Character
+  unit: hashing
+  difficulty: easy
+  concepts: [hash-map, strings]
+  description: |
+    Write `first_unique(s)` returning the index of the first character that appears exactly once in `s`,
+    or `-1` if there is none.
+  starter_code: |
+    def first_unique(s):
+        pass
+  function_name: first_unique
+  public: 2
+  tests:
+    - {args: ["leetcode"], expected: 0}
+    - {args: ["aabb"], expected: -1}
+    - {args: ["loveleetcode"], expected: 2}
+    - {args: [""], expected: -1}
+    - {args: ["z"], expected: 0}
+- slug: group-anagrams
+  title: Group Anagrams
+  unit: hashing
+  difficulty: medium
+  concepts: [hash-map, sorting]
+  description: |
+    Write `group_anagrams(words)` that groups words which are anagrams of each other. Return a list of
+    groups. Sort the words inside each group, and sort the groups by their first word.
+  starter_code: |
+    def group_anagrams(words):
+        pass
+  function_name: group_anagrams
+  public: 2
+  tests:
+    - {args: [["eat", "tea", "tan", "ate", "nat", "bat"]], expected: [["ate", "eat", "tea"], ["bat"], ["nat", "tan"]]}
+    - {args: [[]], expected: []}
+    - {args: [["a"]], expected: [["a"]]}
+    - {args: [["ab", "ba", "ab"]], expected: [["ab", "ab", "ba"]]}
+- slug: longest-consecutive-run
+  title: Longest Consecutive Run
+  unit: hashing
+  difficulty: hard
+  concepts: [hash-map, sets]
+  description: |
+    Write `longest_run(nums)` returning the length of the longest run of consecutive integers contained in
+    `nums`, in any order. Aim for O(n) time using a set.
+  starter_code: |
+    def longest_run(nums):
+        pass
+  function_name: longest_run
+  public: 2
+  tests:
+    - {args: [[100, 4, 200, 1, 3, 2]], expected: 4}
+    - {args: [[]], expected: 0}
+    - {args: [[1, 1, 1]], expected: 1}
+    - {args: [[-1, 0, 1, 5]], expected: 3}
+    - {args: [[10, 30, 20]], expected: 1}
+- slug: evaluate-rpn
+  title: Evaluate Reverse Polish Notation
+  unit: stacks-queues
+  difficulty: medium
+  concepts: [stack]
+  description: |
+    Write `eval_rpn(tokens)` evaluating an arithmetic expression in Reverse Polish Notation. Tokens are
+    integers as strings or one of `+`, `-`, `*`, `/`. Division truncates toward zero.
+
+    `["2", "1", "+", "3", "*"]` means `(2 + 1) * 3`, which is `9`.
+  starter_code: |
+    def eval_rpn(tokens):
+        pass
+  function_name: eval_rpn
+  public: 2
+  tests:
+    - {args: [["2", "1", "+", "3", "*"]], expected: 9}
+    - {args: [["4", "13", "5", "/", "+"]], expected: 6}
+    - {args: [["7"]], expected: 7}
+    - {args: [["-7", "2", "/"]], expected: -3}
+- slug: next-warmer-day
+  title: Next Warmer Day
+  unit: stacks-queues
+  difficulty: hard
+  concepts: [stack, monotonic-stack]
+  description: |
+    Given daily temperatures, write `days_until_warmer(temps)` returning a list where each entry is the
+    number of days until a warmer temperature, or 0 if none comes. Aim for O(n) with a stack of indices.
+  starter_code: |
+    def days_until_warmer(temps):
+        pass
+  function_name: days_until_warmer
+  public: 2
+  tests:
+    - {args: [[73, 74, 75, 71, 69, 72, 76, 73]], expected: [1, 1, 4, 2, 1, 1, 0, 0]}
+    - {args: [[30]], expected: [0]}
+    - {args: [[]], expected: []}
+    - {args: [[50, 40, 30]], expected: [0, 0, 0]}
+- slug: queue-from-two-stacks
+  title: Queue from Two Stacks
+  unit: stacks-queues
+  difficulty: medium
+  concepts: [stack, queue, classes]
+  description: |
+    Implement class `StackQueue` with `push(x)`, `pop()` and `size()`. It must behave first-in first-out but
+    store data using only two Python lists used as stacks. `pop()` on an empty queue returns `None`.
+  starter_code: |
+    class StackQueue:
+        def __init__(self):
+            pass
+
+        def push(self, x):
+            pass
+
+        def pop(self):
+            pass
+
+        def size(self):
+            pass
+  public: 2
+  tests:
+    - {setup: "q = StackQueue(); q.push(1); q.push(2)", expr: "q.pop()", expected: 1}
+    - {setup: "q = StackQueue()", expr: "q.pop()", expected: null}
+    - {setup: "q = StackQueue(); q.push(1); q.push(2); q.pop(); q.push(3)", expr: "[q.pop(), q.pop(), q.pop()]", expected: [2, 3, null]}
+    - {setup: "q = StackQueue(); q.push(1); q.push(2); q.pop()", expr: "q.size()", expected: 1}
+- &linked
+  slug: reverse-linked-list
+  title: Reverse a Linked List
+  unit: linked-lists
+  difficulty: medium
+  concepts: [linked-list, pointers]
+  prelude: &list_prelude |
+    class ListNode:
+        def __init__(self, val=0, next=None):
+            self.val = val
+            self.next = next
+
+    def build_list(values):
+        head = None
+        for value in reversed(values):
+            head = ListNode(value, head)
+        return head
+
+    def to_list(head, limit=10000):
+        out = []
+        while head is not None and len(out) < limit:
+            out.append(head.val)
+            head = head.next
+        return out
+  description: |
+    Write `reverse_list(head)` that reverses a singly linked list and returns the new head.
+
+    `ListNode` is available to your code. Each node has `.val` and `.next`, and an empty list is `None`.
+  starter_code: |
+    # ListNode has .val and .next, and is already defined for you.
+    def reverse_list(head):
+        pass
+  public: 2
+  tests:
+    - {setup: "h = build_list([1, 2, 3])", expr: "to_list(reverse_list(h))", expected: [3, 2, 1]}
+    - {setup: "h = build_list([])", expr: "to_list(reverse_list(h))", expected: []}
+    - {setup: "h = build_list([7])", expr: "to_list(reverse_list(h))", expected: [7]}
+    - {setup: "h = build_list([1, 1, 2, 2])", expr: "to_list(reverse_list(h))", expected: [2, 2, 1, 1]}
+- slug: middle-of-linked-list
+  title: Middle of a Linked List
+  unit: linked-lists
+  difficulty: easy
+  concepts: [linked-list, fast-slow-pointers]
+  prelude: *list_prelude
+  description: |
+    Write `middle_node(head)` returning the middle node of a non-empty list. With two middle nodes, return the
+    second one. Try moving one pointer twice as fast as another.
+  starter_code: |
+    # ListNode has .val and .next, and is already defined for you.
+    def middle_node(head):
+        pass
+  public: 2
+  tests:
+    - {setup: "h = build_list([1, 2, 3, 4, 5])", expr: "middle_node(h).val", expected: 3}
+    - {setup: "h = build_list([1, 2, 3, 4])", expr: "middle_node(h).val", expected: 3}
+    - {setup: "h = build_list([9])", expr: "middle_node(h).val", expected: 9}
+    - {setup: "h = build_list([1, 2])", expr: "middle_node(h).val", expected: 2}
+- slug: merge-two-linked-lists
+  title: Merge Two Sorted Linked Lists
+  unit: linked-lists
+  difficulty: medium
+  concepts: [linked-list, pointers]
+  prelude: *list_prelude
+  description: |
+    Write `merge_lists(a, b)` merging two ascending linked lists into one ascending list and returning its head.
+    Reuse the existing nodes. Either list may be empty.
+  starter_code: |
+    # ListNode has .val and .next, and is already defined for you.
+    def merge_lists(a, b):
+        pass
+  public: 2
+  tests:
+    - {setup: "a = build_list([1, 3]); b = build_list([2, 4])", expr: "to_list(merge_lists(a, b))", expected: [1, 2, 3, 4]}
+    - {setup: "a = build_list([]); b = build_list([1])", expr: "to_list(merge_lists(a, b))", expected: [1]}
+    - {setup: "a = build_list([]); b = build_list([])", expr: "to_list(merge_lists(a, b))", expected: []}
+    - {setup: "a = build_list([1, 1]); b = build_list([1])", expr: "to_list(merge_lists(a, b))", expected: [1, 1, 1]}
+- slug: detect-cycle
+  title: Detect a Cycle
+  unit: linked-lists
+  difficulty: medium
+  concepts: [linked-list, fast-slow-pointers]
+  prelude: *list_prelude
+  description: |
+    Write `has_cycle(head)` returning `True` if following `.next` ever revisits a node and `False` if the list
+    ends. A tiny amount of extra memory is enough, so try the fast and slow pointer technique.
+  starter_code: |
+    # ListNode has .val and .next, and is already defined for you.
+    def has_cycle(head):
+        pass
+  public: 2
+  tests:
+    - {setup: "h = build_list([1, 2, 3])", expr: "has_cycle(h)", expected: false}
+    - {setup: "h = build_list([1, 2, 3]); h.next.next.next = h", expr: "has_cycle(h)", expected: true}
+    - {setup: "h = None", expr: "has_cycle(h)", expected: false}
+    - {setup: "h = build_list([1]); h.next = h", expr: "has_cycle(h)", expected: true}
+- slug: inorder-traversal
+  title: Inorder Traversal
+  unit: trees
+  difficulty: easy
+  concepts: [binary-tree, recursion]
+  prelude: &tree_prelude |
+    class TreeNode:
+        def __init__(self, val=0, left=None, right=None):
+            self.val = val
+            self.left = left
+            self.right = right
+
+    def build_tree(values):
+        """Build from level order, where None marks a missing node."""
+        if not values or values[0] is None:
+            return None
+        nodes = [None if v is None else TreeNode(v) for v in values]
+        children = iter(nodes[1:])
+        for node in nodes:
+            if node is None:
+                continue
+            node.left = next(children, None)
+            node.right = next(children, None)
+        return nodes[0]
+  description: |
+    Write `inorder(root)` returning the values of a binary tree in inorder: left subtree, node, right subtree.
+    `TreeNode` has `.val`, `.left` and `.right`. An empty tree is `None`.
+  starter_code: |
+    # TreeNode has .val, .left and .right, and is already defined for you.
+    def inorder(root):
+        pass
+  public: 2
+  tests:
+    - {setup: "r = build_tree([2, 1, 3])", expr: "inorder(r)", expected: [1, 2, 3]}
+    - {setup: "r = None", expr: "inorder(r)", expected: []}
+    - {setup: "r = build_tree([1, None, 2, 3])", expr: "inorder(r)", expected: [1, 3, 2]}
+    - {setup: "r = build_tree([5])", expr: "inorder(r)", expected: [5]}
+- slug: search-bst
+  title: Search a Binary Search Tree
+  unit: trees
+  difficulty: easy
+  concepts: [binary-search-tree]
+  prelude: *tree_prelude
+  description: |
+    Write `bst_contains(root, target)` returning `True` if `target` is in the binary search tree. Use the BST
+    ordering so that you never need to visit both children of a node.
+  starter_code: |
+    # TreeNode has .val, .left and .right, and is already defined for you.
+    def bst_contains(root, target):
+        pass
+  public: 2
+  tests:
+    - {setup: "r = build_tree([4, 2, 7, 1, 3])", expr: "bst_contains(r, 3)", expected: true}
+    - {setup: "r = build_tree([4, 2, 7, 1, 3])", expr: "bst_contains(r, 5)", expected: false}
+    - {setup: "r = None", expr: "bst_contains(r, 1)", expected: false}
+    - {setup: "r = build_tree([1])", expr: "bst_contains(r, 1)", expected: true}
+- slug: level-order
+  title: Level Order Traversal
+  unit: trees
+  difficulty: medium
+  concepts: [binary-tree, breadth-first-search, queue]
+  prelude: *tree_prelude
+  description: |
+    Write `level_order(root)` returning a list of levels, each a list of values from left to right.
+  starter_code: |
+    # TreeNode has .val, .left and .right, and is already defined for you.
+    def level_order(root):
+        pass
+  public: 2
+  tests:
+    - {setup: "r = build_tree([3, 9, 20, None, None, 15, 7])", expr: "level_order(r)", expected: [[3], [9, 20], [15, 7]]}
+    - {setup: "r = None", expr: "level_order(r)", expected: []}
+    - {setup: "r = build_tree([1])", expr: "level_order(r)", expected: [[1]]}
+    - {setup: "r = build_tree([1, 2, 3, 4])", expr: "level_order(r)", expected: [[1], [2, 3], [4]]}
+- slug: graph-has-path
+  title: Is There a Path?
+  unit: graphs
+  difficulty: medium
+  concepts: [graph, depth-first-search]
+  description: |
+    `graph` is a dictionary from each node name to a list of its neighbours. Write `has_path(graph, start, goal)`
+    returning `True` if `goal` can be reached from `start`. Graphs may contain cycles, so remember what you
+    have visited.
+  starter_code: |
+    def has_path(graph, start, goal):
+        pass
+  function_name: has_path
+  public: 2
+  tests:
+    - {args: [{"a": ["b"], "b": ["c"], "c": []}, "a", "c"], expected: true}
+    - {args: [{"a": ["b"], "b": [], "c": ["a"]}, "a", "c"], expected: false}
+    - {args: [{"a": ["b"], "b": ["a"], "c": []}, "a", "c"], expected: false}
+    - {args: [{"a": []}, "a", "a"], expected: true}
+- slug: bfs-shortest-steps
+  title: Fewest Steps Between Nodes
+  unit: graphs
+  difficulty: medium
+  concepts: [graph, breadth-first-search]
+  description: |
+    Write `fewest_steps(graph, start, goal)` returning the minimum number of edges from `start` to `goal`, or
+    `-1` if `goal` cannot be reached. `graph` maps each node name to a list of neighbours.
+  starter_code: |
+    def fewest_steps(graph, start, goal):
+        pass
+  function_name: fewest_steps
+  public: 2
+  tests:
+    - {args: [{"a": ["b", "c"], "b": ["d"], "c": ["d"], "d": []}, "a", "d"], expected: 2}
+    - {args: [{"a": ["b"], "b": []}, "b", "a"], expected: -1}
+    - {args: [{"a": []}, "a", "a"], expected: 0}
+    - {args: [{"a": ["b"], "b": ["a", "c"], "c": []}, "a", "c"], expected: 2}
+- slug: count-islands
+  title: Count the Islands
+  unit: graphs
+  difficulty: medium
+  concepts: [graph, depth-first-search, grid]
+  description: |
+    `grid` is a list of equal-length strings of `"1"` (land) and `"0"` (water). Land cells connect up, down, left
+    and right. Write `count_islands(grid)` returning the number of separate islands.
+  starter_code: |
+    def count_islands(grid):
+        pass
+  function_name: count_islands
+  public: 2
+  tests:
+    - {args: [["110", "010", "001"]], expected: 2}
+    - {args: [["000"]], expected: 0}
+    - {args: [[]], expected: 0}
+    - {args: [["101", "000", "101"]], expected: 4}
+- slug: course-order-possible
+  title: Can All Courses Be Finished?
+  unit: graphs
+  difficulty: hard
+  concepts: [graph, topological-sort, cycle-detection]
+  description: |
+    There are `n` courses numbered from 0. `prereqs` is a list of pairs `[a, b]` meaning `b` must come before `a`.
+    Write `can_finish(n, prereqs)` returning `True` if all courses can be completed, meaning the prerequisites
+    contain no cycle.
+  starter_code: |
+    def can_finish(n, prereqs):
+        pass
+  function_name: can_finish
+  public: 2
+  tests:
+    - {args: [2, [[1, 0]]], expected: true}
+    - {args: [2, [[1, 0], [0, 1]]], expected: false}
+    - {args: [1, []], expected: true}
+    - {args: [4, [[1, 0], [2, 1], [3, 2], [1, 3]]], expected: false}
+    - {args: [3, [[2, 0], [2, 1]]], expected: true}
+- slug: climbing-stairs
+  title: Climbing Stairs
+  unit: dynamic-programming
+  difficulty: easy
+  concepts: [dynamic-programming, memoization]
+  description: |
+    You can climb 1 or 2 steps at a time. Write `climb_ways(n)` returning the number of distinct ways to reach
+    step `n`, with `climb_ways(0) == 1`. It must stay fast for `n = 60`, which a plain recursion cannot manage.
+  starter_code: |
+    def climb_ways(n):
+        pass
+  function_name: climb_ways
+  public: 2
+  tests:
+    - {args: [2], expected: 2}
+    - {args: [3], expected: 3}
+    - {args: [0], expected: 1}
+    - {args: [5], expected: 8}
+    - {args: [60], expected: 2504730781961}
+- slug: house-robber
+  title: Non-Adjacent Maximum
+  unit: dynamic-programming
+  difficulty: medium
+  concepts: [dynamic-programming]
+  description: |
+    Write `max_non_adjacent(values)` returning the largest total you can collect from a list of non-negative
+    values if you may not take two neighbouring values. An empty list gives 0.
+  starter_code: |
+    def max_non_adjacent(values):
+        pass
+  function_name: max_non_adjacent
+  public: 2
+  tests:
+    - {args: [[2, 7, 9, 3, 1]], expected: 12}
+    - {args: [[1, 2, 3, 1]], expected: 4}
+    - {args: [[]], expected: 0}
+    - {args: [[5]], expected: 5}
+    - {args: [[2, 1, 1, 2]], expected: 4}
+- slug: fewest-coins
+  title: Fewest Coins
+  unit: dynamic-programming
+  difficulty: medium
+  concepts: [dynamic-programming]
+  description: |
+    Write `fewest_coins(coins, amount)` returning the fewest coins needed to make `amount`, with unlimited use of
+    each coin, or `-1` if it cannot be made. A greedy choice does not always work.
+  starter_code: |
+    def fewest_coins(coins, amount):
+        pass
+  function_name: fewest_coins
+  public: 2
+  tests:
+    - {args: [[1, 2, 5], 11], expected: 3}
+    - {args: [[2], 3], expected: -1}
+    - {args: [[1], 0], expected: 0}
+    - {args: [[1, 3, 4], 6], expected: 2}
+    - {args: [[5, 7], 1], expected: -1}
+- slug: longest-common-subsequence
+  title: Longest Common Subsequence
+  unit: dynamic-programming
+  difficulty: hard
+  concepts: [dynamic-programming, strings]
+  description: |
+    Write `lcs_length(a, b)` returning the length of the longest subsequence common to strings `a` and `b`. A
+    subsequence keeps the order of characters but need not be contiguous.
+  starter_code: |
+    def lcs_length(a, b):
+        pass
+  function_name: lcs_length
+  public: 2
+  tests:
+    - {args: ["abcde", "ace"], expected: 3}
+    - {args: ["abc", "def"], expected: 0}
+    - {args: ["", "abc"], expected: 0}
+    - {args: ["aaaa", "aa"], expected: 2}
+    - {args: ["AGGTAB", "GXTXAYB"], expected: 4}

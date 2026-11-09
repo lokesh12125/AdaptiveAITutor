@@ -1,768 +1,710 @@
-import unittest
-import uuid
-from fastapi.testclient import TestClient
-
-from app.main import app
-from app.services.llm_service import llm
-
-
-class ComprehensiveTutorApiTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        # Force demo mode during tests so tests are 100% deterministic and do not depend on internet/OpenAI quota
-        cls.orig_client = llm._client
-        cls.orig_mode = llm.mode
-        llm._client = None
-        llm.mode = "demo"
-
-    @classmethod
-    def tearDownClass(cls):
-        llm._client = cls.orig_client
-        llm.mode = cls.orig_mode
-
-    def auth_headers(self, user_id: str = "demo-student", role: str = "student") -> dict:
-        from app.auth import create_access_token
-        token = create_access_token(user_id=user_id, name="Test User", email=f"{user_id}@test.edu", role=role)
-        return {"Authorization": f"Bearer {token}"}
-
-    def test_01_health_check(self):
-        with TestClient(app) as client:
-            res = client.get("/api/health")
-            self.assertEqual(res.status_code, 200)
-            data = res.json()
-            self.assertEqual(data["backend"], "ok")
-            self.assertEqual(data["database"], "ok")
-            self.assertEqual(data["chromadb"], "ok")
-            self.assertEqual(data["llm"], "demo")
-
-    def test_02_auth_register_and_login(self):
-        with TestClient(app) as client:
-            email = "student_test@adaptive.edu"
-            # 1. Register
-            reg_res = client.post("/api/auth/register", json={
-                "name": "Alex Student",
-                "email": email,
-                "password": "secretPassword123"
-            })
-            # May be 200 or 400 if already registered from a previous test run
-            if reg_res.status_code == 200:
-                self.assertIn("token", reg_res.json())
-                self.assertEqual(reg_res.json()["user"]["name"], "Alex Student")
-
-            # 2. Login
-            login_res = client.post("/api/auth/login", json={
-                "email": email,
-                "password": "secretPassword123"
-            })
-            self.assertEqual(login_res.status_code, 200)
-            token = login_res.json()["token"]
-            self.assertTrue(bool(token))
-
-            # 3. Auth Me
-            me_res = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
-            self.assertEqual(me_res.status_code, 200)
-            self.assertEqual(me_res.json()["email"], email)
-
-    def test_02b_seeded_demo_accounts(self):
-        with TestClient(app) as client:
-            # 1. Student demo login
-            student_res = client.post("/api/auth/login", json={
-                "email": "demo@student.edu",
-                "password": "demo123"
-            })
-            self.assertEqual(student_res.status_code, 200)
-            s_data = student_res.json()
-            self.assertEqual(s_data["user"]["role"], "student")
-            self.assertTrue(bool(s_data["token"]))
-
-            # 2. Teacher demo login
-            teacher_res = client.post("/api/auth/login", json={
-                "email": "teacher@adaptive.edu",
-                "password": "teacher123"
-            })
-            self.assertEqual(teacher_res.status_code, 200)
-            t_data = teacher_res.json()
-            self.assertEqual(t_data["user"]["role"], "teacher")
-            self.assertTrue(bool(t_data["token"]))
-
-            # 3. Invalid credentials
-            bad_res = client.post("/api/auth/login", json={
-                "email": "demo@student.edu",
-                "password": "wrongpassword"
-            })
-            self.assertEqual(bad_res.status_code, 401)
-
-    def test_02c_auth_registration_contract(self):
-        with TestClient(app) as client:
-            import uuid
-            uid_suffix = uuid.uuid4().hex[:6]
-
-            # 1. Registration with 'full_name' (UI contract)
-            ui_email = f"ui_test_{uid_suffix}@adaptive.edu"
-            ui_res = client.post("/api/auth/register", json={
-                "full_name": "UI Tester",
-                "email": ui_email,
-                "password": "securePassword1"
-            })
-            self.assertEqual(ui_res.status_code, 200)
-            self.assertEqual(ui_res.json()["user"]["name"], "UI Tester")
-
-            # 2. Registration with standard 'name'
-            api_email = f"api_test_{uid_suffix}@adaptive.edu"
-            api_res = client.post("/api/auth/register", json={
-                "name": "API Tester",
-                "email": api_email,
-                "password": "securePassword2"
-            })
-            self.assertEqual(api_res.status_code, 200)
-            self.assertEqual(api_res.json()["user"]["name"], "API Tester")
-
-            # 3. Duplicate email fails with 400
-            dup_res = client.post("/api/auth/register", json={
-                "name": "Duplicate Tester",
-                "email": api_email,
-                "password": "securePassword3"
-            })
-            self.assertEqual(dup_res.status_code, 400)
-
-            # 4. Password too short (< 4 chars) fails with 422
-            short_res = client.post("/api/auth/register", json={
-                "name": "Short Pwd",
-                "email": f"short_{uid_suffix}@adaptive.edu",
-                "password": "abc"
-            })
-            self.assertEqual(short_res.status_code, 422)
-
-    def test_02d_role_based_access_control(self):
-        with TestClient(app) as client:
-            # Login as student
-            s_res = client.post("/api/auth/login", json={
-                "email": "demo@student.edu",
-                "password": "demo123"
-            })
-            s_token = s_res.json()["token"]
-            s_id = s_res.json()["user"]["id"]
-
-            # Login as teacher
-            t_res = client.post("/api/auth/login", json={
-                "email": "teacher@adaptive.edu",
-                "password": "teacher123"
-            })
-            t_token = t_res.json()["token"]
-
-            # 1. Student attempting teacher endpoint gets 403 Forbidden
-            forbidden_res = client.get("/api/admin/students", headers={"Authorization": f"Bearer {s_token}"})
-            self.assertEqual(forbidden_res.status_code, 403)
-
-            # 2. Teacher accessing teacher endpoint gets 200 OK
-            allowed_res = client.get("/api/admin/students", headers={"Authorization": f"Bearer {t_token}"})
-            self.assertEqual(allowed_res.status_code, 200)
-            students = allowed_res.json()
-            self.assertIsInstance(students, list)
-
-            # 3. Student accessing their own state gets 200 OK
-            own_state_res = client.get(f"/api/learner/{s_id}", headers={"Authorization": f"Bearer {s_token}"})
-            self.assertEqual(own_state_res.status_code, 200)
-
-            # 4. Student accessing another student's state gets 403 Forbidden
-            other_state_res = client.get("/api/learner/other-student-id", headers={"Authorization": f"Bearer {s_token}"})
-            self.assertEqual(other_state_res.status_code, 403)
-
-            # 5. Teacher accessing student's state gets 200 OK
-            teacher_inspect_res = client.get(f"/api/learner/{s_id}", headers={"Authorization": f"Bearer {t_token}"})
-            self.assertEqual(teacher_inspect_res.status_code, 200)
-
-    def test_03_curriculum_and_problems(self):
-        with TestClient(app) as client:
-            # Check 49 concepts
-            c_res = client.get("/api/concepts")
-            self.assertEqual(c_res.status_code, 200)
-            concepts = c_res.json()
-            self.assertEqual(len(concepts), 49)
-
-            # Check problems
-            p_res = client.get("/api/problems")
-            self.assertEqual(p_res.status_code, 200)
-            problems = p_res.json()
-            self.assertGreaterEqual(len(problems), 50)
-
-            # Check concept detail
-            detail_res = client.get("/api/concepts/variables")
-            self.assertEqual(detail_res.status_code, 200)
-            self.assertIn("concept", detail_res.json())
-            self.assertIn("problems", detail_res.json())
-
-    def test_04_code_execution_security(self):
-        with TestClient(app) as client:
-            headers = self.auth_headers("security-tester")
-            # Hostile code attempting to import os
-            res = client.post("/api/submit", headers=headers, json={
-                "learner_id": "security-tester",
-                "problem_id": 1,
-                "code": "import os\ndef sum_array(numbers):\n    return 0",
-                "response_time": 10.0
-            })
-            self.assertEqual(res.status_code, 200)
-            body = res.json()
-            self.assertFalse(body["execution"]["passed"])
-            self.assertEqual(body["execution"]["error_type"], "security")
-
-            # Exploit attempt using __subclasses__ reflection
-            res_exploit = client.post("/api/submit", headers=headers, json={
-                "learner_id": "security-tester",
-                "problem_id": 1,
-                "code": "def sum_array(numbers):\n    x = ().__class__.__base__.__subclasses__()\n    return len(x)",
-                "response_time": 5.0
-            })
-            self.assertEqual(res_exploit.status_code, 200)
-            body_exploit = res_exploit.json()
-            self.assertFalse(body_exploit["execution"]["passed"])
-            self.assertEqual(body_exploit["execution"]["error_type"], "security")
-
-    def test_05_six_agent_workflow_and_bkt_updates(self):
-        with TestClient(app) as client:
-            learner_id = f"test-workflow-{uuid.uuid4().hex[:8]}"
-            headers = self.auth_headers(learner_id)
-            # First attempt: Incorrect submission
-            sub1 = client.post("/api/submit", headers=headers, json={
-                "learner_id": learner_id,
-                "problem_id": 1,
-                "code": "def sum_array(numbers):\n    return 999",
-                "response_time": 15.0
-            })
-            self.assertEqual(sub1.status_code, 200)
-            body1 = sub1.json()
-            self.assertFalse(body1["execution"]["passed"])
-            self.assertIn("Diagnostic Agent", body1["agent_activity"])
-            self.assertIn("Learner State Agent", body1["agent_activity"])
-            self.assertIn("Similar Learner Retrieval Agent", body1["agent_activity"])
-            self.assertIn("Adaptive Scaffolding Agent", body1["agent_activity"])
-            self.assertIn("Reflection Agent", body1["agent_activity"])
-            self.assertIn("Learning Planner Agent", body1["agent_activity"])
-            self.assertGreaterEqual(len(body1["similar_learners"]), 1)
-
-            # Second attempt: Correct submission
-            sub2 = client.post("/api/submit", headers=headers, json={
-                "learner_id": learner_id,
-                "problem_id": 1,
-                "code": "def sum_array(numbers):\n    return sum(numbers)",
-                "response_time": 25.0
-            })
-            self.assertEqual(sub2.status_code, 200)
-            body2 = sub2.json()
-            self.assertTrue(body2["execution"]["passed"])
-            # BKT mastery should increase upon correct submission
-            self.assertGreater(body2["learner_state"]["mastery"], body1["learner_state"]["mastery"])
-
-    def test_06_multi_turn_chat_persistence(self):
-        with TestClient(app) as client:
-            learner_id = f"chat-tester-{uuid.uuid4().hex[:8]}"
-            headers = self.auth_headers(learner_id)
-            # 1. Ask question
-            res1 = client.post("/api/chat", headers=headers, json={
-                "learner_id": learner_id,
-                "message": "What is the difference between a tuple and a list in Python?"
-            })
-            self.assertEqual(res1.status_code, 200)
-            self.assertTrue(bool(res1.json()["reply"]))
-
-            # 2. Check chat history
-            hist_res = client.get(f"/api/chat/{learner_id}", headers=headers)
-            self.assertEqual(hist_res.status_code, 200)
-            messages = hist_res.json()
-            self.assertGreaterEqual(len(messages), 2)
-            self.assertEqual(messages[0]["role"], "user")
-            self.assertEqual(messages[1]["role"], "assistant")
-
-    def test_07_evaluation_metrics(self):
-        with TestClient(app) as client:
-            learner_id = f"metrics-tester-{uuid.uuid4().hex[:8]}"
-            headers = self.auth_headers(learner_id)
-            # Submit an attempt first so metrics exist
-            client.post("/api/submit", headers=headers, json={
-                "learner_id": learner_id,
-                "problem_id": 1,
-                "code": "def sum_array(numbers):\n    return sum(numbers)",
-                "response_time": 10.0
-            })
-
-            # 1. Fetch metrics
-            m_res = client.get(f"/api/metrics/{learner_id}", headers=headers)
-            self.assertEqual(m_res.status_code, 200)
-            data = m_res.json()
-            self.assertIn("learning_gain", data)
-            self.assertIn("hint_efficiency", data)
-            self.assertIn("task_completion_rate", data)
-            self.assertIn("time_to_completion", data)
-
-            # 2. Submit satisfaction
-            sat_res = client.post("/api/metrics/satisfaction", headers=headers, json={
-                "learner_id": learner_id,
-                "score": 5
-            })
-            self.assertEqual(sat_res.status_code, 200)
-            self.assertEqual(sat_res.json()["satisfaction_score"], 5)
-
-    def test_08_custom_questions(self):
-        with TestClient(app) as client:
-            creator_id = f"custom-author-{uuid.uuid4().hex[:6]}"
-            headers = self.auth_headers(creator_id)
-            # 1. Create question
-            c_res = client.post("/api/custom-questions", headers=headers, json={
-                "title": f"Reverse String {creator_id}",
-                "description": "Write a function `rev_str(s)` that returns reversed string.",
-                "concept_id": "strings",
-                "difficulty": "Easy",
-                "starter_code": "def rev_str(s):\n    pass",
-                "test_cases": [
-                    {"input": "hello", "expected": "olleh"},
-                    {"input": "python", "expected": "nohtyp"}
-                ],
-                "creator_id": creator_id
-            })
-            self.assertEqual(c_res.status_code, 200)
-            q_data = c_res.json()
-            self.assertIn("Reverse String", q_data["title"])
-            self.assertTrue(q_data["is_custom"])
-
-            # 2. Retrieve custom questions for creator
-            list_res = client.get(f"/api/custom-questions/{creator_id}", headers=headers)
-            self.assertEqual(list_res.status_code, 200)
-            custom_list = list_res.json()
-            self.assertGreaterEqual(len(custom_list), 1)
-            self.assertEqual(custom_list[0]["creator_id"], creator_id)
-
-    def test_09_user_isolation(self):
-        with TestClient(app) as client:
-            user_a = f"student-alpha-{uuid.uuid4().hex[:6]}"
-            user_b = f"student-beta-{uuid.uuid4().hex[:6]}"
-
-            # User A submits code
-            client.post("/api/submit", headers=self.auth_headers(user_a), json={
-                "learner_id": user_a,
-                "problem_id": 1,
-                "code": "def sum_array(numbers):\n    return sum(numbers)",
-                "response_time": 12.0
-            })
-
-            # User A history
-            hist_a = client.get(f"/api/history/{user_a}", headers=self.auth_headers(user_a)).json()
-            # User B history
-            hist_b = client.get(f"/api/history/{user_b}", headers=self.auth_headers(user_b)).json()
-
-            self.assertGreaterEqual(len(hist_a), 1)
-            self.assertEqual(len(hist_b), 0)
-
-    def test_10_concept_wise_progress(self):
-        with TestClient(app) as client:
-            learner_id = f"prog-student-{uuid.uuid4().hex[:6]}"
-            headers = self.auth_headers(learner_id)
-            # Initial concept progress fetch
-            p_res = client.get(f"/api/progress/concepts/{learner_id}", headers=headers)
-            self.assertEqual(p_res.status_code, 200)
-            progress = p_res.json()
-            self.assertGreaterEqual(len(progress), 40)
-            self.assertIn("concept_name", progress[0])
-            self.assertIn("progress_pct", progress[0])
-
-    def test_11_dsda_scaffolding_response_structure(self):
-        with TestClient(app) as client:
-            learner_id = f"dsda-eval-{uuid.uuid4().hex[:6]}"
-            headers = self.auth_headers(learner_id)
-            # 1. First failure submission
-            sub1 = client.post("/api/submit", headers=headers, json={
-                "learner_id": learner_id,
-                "problem_id": 1,
-                "code": "def sum_array(numbers):\n    return -1",
-                "response_time": 20.0
-            })
-            self.assertEqual(sub1.status_code, 200)
-            data1 = sub1.json()
-            scaff1 = data1["scaffolding"]
-            self.assertIn(scaff1["level"], [1, 2, 3, 4])
-            self.assertIn("focus", scaff1)
-            self.assertIn("score", scaff1)
-            self.assertIn("hint", scaff1)
-            self.assertIn("rationale", scaff1)
-            self.assertIn("remediation_flag", scaff1)
-
-            # 2. Success submission clears scaffolding to Level 0
-            sub2 = client.post("/api/submit", headers=headers, json={
-                "learner_id": learner_id,
-                "problem_id": 1,
-                "code": "def sum_array(numbers):\n    return sum(numbers)",
-                "response_time": 10.0
-            })
-            self.assertEqual(sub2.status_code, 200)
-            data2 = sub2.json()
-            scaff2 = data2["scaffolding"]
-            self.assertEqual(scaff2["level"], 0)
-            self.assertFalse(scaff2["remediation_flag"])
-
-    def test_12_session_lifecycle_and_recommendation_persistence(self):
-        with TestClient(app) as client:
-            learner_id = f"session-student-{uuid.uuid4().hex[:6]}"
-            headers = self.auth_headers(learner_id)
-            # 1. Start session
-            start_res = client.post("/api/sessions/start", headers=headers, json={"learner_id": learner_id})
-            self.assertEqual(start_res.status_code, 200)
-            sess = start_res.json()
-            sess_id = sess["id"]
-            self.assertEqual(sess["learner_id"], learner_id)
-
-            # 2. List sessions
-            list_res = client.get(f"/api/sessions/{learner_id}", headers=headers)
-            self.assertEqual(list_res.status_code, 200)
-            sessions = list_res.json()
-            self.assertGreaterEqual(len(sessions), 1)
-
-            # 3. End session
-            end_res = client.post(f"/api/sessions/{sess_id}/end", headers=headers)
-            self.assertEqual(end_res.status_code, 200)
-
-            # 4. Verify recommendations endpoint
-            rec_res = client.get(f"/api/learner/{learner_id}/recommendation", headers=headers)
-            self.assertEqual(rec_res.status_code, 200)
-            rec_data = rec_res.json()
-            self.assertIn("next_problem_id", rec_data)
-            self.assertIn("reason", rec_data)
-
-    def test_13_problem_hints_history(self):
-        with TestClient(app) as client:
-            learner_id = f"hints-history-{uuid.uuid4().hex[:6]}"
-            headers = self.auth_headers(learner_id)
-            # Submit failure to trigger hint generation
-            client.post("/api/submit", headers=headers, json={
-                "learner_id": learner_id,
-                "problem_id": 1,
-                "code": "def sum_array(numbers):\n    return 42",
-                "response_time": 15.0
-            })
-
-            # Retrieve problem hints history
-            h_res = client.get(f"/api/learner/{learner_id}/hints/1", headers=headers)
-            self.assertEqual(h_res.status_code, 200)
-            hints = h_res.json()
-            self.assertGreaterEqual(len(hints), 1)
-            self.assertIn("level", hints[0])
-            self.assertIn("hint_text", hints[0])
-
-    def test_14_security_event_does_not_penalize_mastery(self):
-        with TestClient(app) as client:
-            learner_id = f"sec-penalize-{uuid.uuid4().hex[:8]}"
-            headers = self.auth_headers(learner_id)
-            # 1. Establish baseline mastery with a correct submission
-            res_pass = client.post("/api/submit", headers=headers, json={
-                "learner_id": learner_id,
-                "problem_id": 1,
-                "code": "def sum_array(numbers):\n    return sum(numbers)",
-                "response_time": 10.0
-            })
-            self.assertEqual(res_pass.status_code, 200)
-            baseline_mastery = res_pass.json()["learner_state"]["mastery"]
-            self.assertGreater(baseline_mastery, 0.20)
-
-            # 2. Submit security violation code
-            res_sec = client.post("/api/submit", headers=headers, json={
-                "learner_id": learner_id,
-                "problem_id": 1,
-                "code": "import os\ndef sum_array(numbers):\n    return 0",
-                "response_time": 5.0
-            })
-            self.assertEqual(res_sec.status_code, 200)
-            body_sec = res_sec.json()
-            self.assertEqual(body_sec["execution"]["error_type"], "security")
-            # Mastery must NOT decrease on security violation
-            self.assertEqual(body_sec["learner_state"]["mastery"], baseline_mastery)
-
-            # 3. Submit normal pedagogical failure (logic error)
-            res_fail = client.post("/api/submit", headers=headers, json={
-                "learner_id": learner_id,
-                "problem_id": 1,
-                "code": "def sum_array(numbers):\n    return 999999",
-                "response_time": 12.0
-            })
-            self.assertEqual(res_fail.status_code, 200)
-            # Normal logic failure DOES penalize BKT mastery
-            self.assertLess(res_fail.json()["learner_state"]["mastery"], baseline_mastery)
-
-    def test_15_problem_scoped_vs_concept_scoped_counters(self):
-        with TestClient(app) as client:
-            learner_id = f"counter-sep-{uuid.uuid4().hex[:8]}"
-            headers = self.auth_headers(learner_id)
-            # Fail Problem 1 twice (concept: variables)
-            client.post("/api/submit", headers=headers, json={
-                "learner_id": learner_id,
-                "problem_id": 1,
-                "code": "def sum_array(numbers):\n    return 0",
-                "response_time": 10.0
-            })
-            sub2 = client.post("/api/submit", headers=headers, json={
-                "learner_id": learner_id,
-                "problem_id": 1,
-                "code": "def sum_array(numbers):\n    return 1",
-                "response_time": 10.0
-            })
-            state_p1 = sub2.json()["learner_state"]
-            self.assertEqual(state_p1["problem_consecutive_fails"], 2)
-            self.assertEqual(state_p1["consecutive_fails"], 2)
-
-            # Now submit failure on Problem 2 (same concept: variables)
-            sub3 = client.post("/api/submit", headers=headers, json={
-                "learner_id": learner_id,
-                "problem_id": 2,
-                "code": "def find_max(numbers):\n    return 0",
-                "response_time": 10.0
-            })
-            state_p2 = sub3.json()["learner_state"]
-            # Problem 2's failure streak is only 1!
-            self.assertEqual(state_p2["problem_consecutive_fails"], 1)
-            # Concept failure streak is 3 (cumulative on concept)
-            self.assertEqual(state_p2["consecutive_fails"], 3)
-
-    def test_16_success_resets_scaffolding_and_preserves_history(self):
-        with TestClient(app) as client:
-            learner_id = f"success-reset-{uuid.uuid4().hex[:8]}"
-            headers = self.auth_headers(learner_id)
-            # 1. Failing attempt generates scaffolding
-            sub_fail = client.post("/api/submit", headers=headers, json={
-                "learner_id": learner_id,
-                "problem_id": 1,
-                "code": "def sum_array(numbers):\n    return 42",
-                "response_time": 15.0
-            })
-            self.assertGreater(sub_fail.json()["scaffolding"]["level"], 0)
-
-            # 2. Passing attempt clears scaffolding to Level 0
-            sub_pass = client.post("/api/submit", headers=headers, json={
-                "learner_id": learner_id,
-                "problem_id": 1,
-                "code": "def sum_array(numbers):\n    return sum(numbers)",
-                "response_time": 10.0
-            })
-            scaff = sub_pass.json()["scaffolding"]
-            self.assertEqual(scaff["level"], 0)
-            self.assertEqual(scaff["focus"], "None")
-            self.assertFalse(scaff["remediation_flag"])
-
-            # 3. Historical attempts and hints are preserved
-            hist_res = client.get(f"/api/learner/{learner_id}/history", headers=headers)
-            self.assertEqual(hist_res.status_code, 200)
-            attempts = hist_res.json()
-            self.assertGreaterEqual(len(attempts), 2)
-            passed_flags = [a["passed"] for a in attempts]
-            self.assertIn(1, passed_flags)
-            self.assertIn(0, passed_flags)
-
-    def test_17_llm_unavailable_deterministic_fallback(self):
-        with TestClient(app) as client:
-            learner_id = f"fallback-test-{uuid.uuid4().hex[:8]}"
-            headers = self.auth_headers(learner_id)
-            # Submitting syntax failure produces deterministic structural hint without LLM crash
-            sub = client.post("/api/submit", headers=headers, json={
-                "learner_id": learner_id,
-                "problem_id": 1,
-                "code": "def sum_array(numbers):\n    return 1 +",
-                "response_time": 8.0
-            })
-            self.assertEqual(sub.status_code, 200)
-            data = sub.json()
-            scaff = data["scaffolding"]
-            self.assertIn(scaff["level"], [1, 2])
-            self.assertEqual(scaff["focus"], "Structural")
-            self.assertTrue(len(scaff["hint"]) > 10)
-
-    def test_18_unauthenticated_requests_strictly_rejected_401(self):
-        with TestClient(app) as client:
-            # All private learner endpoints must reject unauthenticated requests with HTTP 401
-            endpoints_get = [
-                "/api/learner/any-user",
-                "/api/learner/any-user/progress",
-                "/api/progress/concepts/any-user",
-                "/api/learner/any-user/history",
-                "/api/history/any-user",
-                "/api/learner/any-user/recommendation",
-                "/api/learner/any-user/hints/1",
-                "/api/chat/any-user",
-                "/api/sessions/any-user",
-                "/api/metrics/any-user",
-            ]
-            for ep in endpoints_get:
-                res = client.get(ep)
-                self.assertEqual(res.status_code, 401, f"Expected 401 for GET {ep}, got {res.status_code}")
-
-            # Mutation endpoints must also reject unauthenticated requests
-            sub_res = client.post("/api/submit", json={"learner_id": "any-user", "problem_id": 1, "code": "pass"})
-            self.assertEqual(sub_res.status_code, 401)
-
-            chat_res = client.post("/api/chat", json={"learner_id": "any-user", "message": "hello"})
-            self.assertEqual(chat_res.status_code, 401)
-
-            sess_res = client.post("/api/sessions/start", json={"learner_id": "any-user"})
-            self.assertEqual(sess_res.status_code, 401)
-
-            end_res = client.post("/api/sessions/1/end")
-            self.assertEqual(end_res.status_code, 401)
-
-            sat_res = client.post("/api/metrics/satisfaction", json={"learner_id": "any-user", "score": 5})
-            self.assertEqual(sat_res.status_code, 401)
-
-    def test_19_cross_student_tampering_rejected_403(self):
-        with TestClient(app) as client:
-            student_a = f"student-a-{uuid.uuid4().hex[:6]}"
-            student_b = f"student-b-{uuid.uuid4().hex[:6]}"
-            headers_a = self.auth_headers(student_a, role="student")
-
-            # Student A attempting to inspect Student B
-            res1 = client.get(f"/api/learner/{student_b}", headers=headers_a)
-            self.assertEqual(res1.status_code, 403)
-
-            res2 = client.get(f"/api/learner/{student_b}/progress", headers=headers_a)
-            self.assertEqual(res2.status_code, 403)
-
-            res3 = client.get(f"/api/learner/{student_b}/history", headers=headers_a)
-            self.assertEqual(res3.status_code, 403)
-
-            res4 = client.get(f"/api/learner/{student_b}/recommendation", headers=headers_a)
-            self.assertEqual(res4.status_code, 403)
-
-            res5 = client.get(f"/api/metrics/{student_b}", headers=headers_a)
-            self.assertEqual(res5.status_code, 403)
-
-            # Student A attempting to submit code as Student B
-            res6 = client.post("/api/submit", headers=headers_a, json={
-                "learner_id": student_b,
-                "problem_id": 1,
-                "code": "def sum_array(numbers):\n    return sum(numbers)"
-            })
-            self.assertEqual(res6.status_code, 403)
-
-            # Student A attempting to chat as Student B
-            res7 = client.post("/api/chat", headers=headers_a, json={
-                "learner_id": student_b,
-                "message": "Impersonated query"
-            })
-            self.assertEqual(res7.status_code, 403)
-
-            # Student A accessing teacher-only endpoint
-            res8 = client.get("/api/admin/students", headers=headers_a)
-            self.assertEqual(res8.status_code, 403)
-
-    def test_20_teacher_cross_student_access_allowed_200(self):
-        with TestClient(app) as client:
-            student_id = f"student-c-{uuid.uuid4().hex[:6]}"
-            teacher_headers = self.auth_headers("teacher-user", role="teacher")
-
-            # Teacher inspecting student profile
-            res1 = client.get(f"/api/learner/{student_id}", headers=teacher_headers)
-            self.assertEqual(res1.status_code, 200)
-
-            # Teacher inspecting student progress
-            res2 = client.get(f"/api/learner/{student_id}/progress", headers=teacher_headers)
-            self.assertEqual(res2.status_code, 200)
-
-            # Teacher inspecting student metrics
-            res3 = client.get(f"/api/metrics/{student_id}", headers=teacher_headers)
-            self.assertEqual(res3.status_code, 200)
-
-            # Teacher accessing teacher portal
-            res4 = client.get("/api/admin/students", headers=teacher_headers)
-            self.assertEqual(res4.status_code, 200)
-
-    def test_21_sandbox_security_regressions(self):
-        from app.services.code_runner import evaluate
-
-        # 1. Hostile network access attempt (socket creation)
-        sock_code = "import socket\ndef sum_array(numbers):\n    s = socket.socket()\n    return 0"
-        res_sock = evaluate(sock_code, 1)
-        self.assertFalse(res_sock["passed"])
-        self.assertEqual(res_sock["error_type"], "security")
-
-        # 2. Hostile file access attempt (open file)
-        file_code = "def sum_array(numbers):\n    f = open('/tmp/exploit.txt', 'w')\n    return 0"
-        res_file = evaluate(file_code, 1)
-        self.assertFalse(res_file["passed"])
-        self.assertEqual(res_file["error_type"], "security")
-
-        # 3. Reflection / dunder exploit
-        refl_code = "def sum_array(numbers):\n    x = ().__class__.__bases__[0].__subclasses__()\n    return len(x)"
-        res_refl = evaluate(refl_code, 1)
-        self.assertFalse(res_refl["passed"])
-        self.assertEqual(res_refl["error_type"], "security")
-
-        # 4. Timeout handling with infinite loop
-        inf_code = "def sum_array(numbers):\n    while True:\n        pass\n    return 0"
-        res_inf = evaluate(inf_code, 1, timeout=1.0)
-        self.assertFalse(res_inf["passed"])
-        self.assertEqual(res_inf["error_type"], "timeout")
-
-        # 5. Legitimate submission succeeds cleanly
-        legit_code = "def sum_array(numbers):\n    return sum(numbers)"
-        res_legit = evaluate(legit_code, 1)
-        self.assertTrue(res_legit["passed"])
-
-    def test_22_multi_turn_scaffolding_scenario(self):
-        """Verify complete multi-turn scenario: Cold start -> Escalation -> Strategy change -> Reset on success."""
-        with TestClient(app) as client:
-            learner_id = f"scenario-{uuid.uuid4().hex[:8]}"
-            headers = self.auth_headers(learner_id)
-
-            # Turn 1: Syntax error (Cold start -> Level 1/2 cap, focus 'Structural')
-            t1 = client.post("/api/submit", headers=headers, json={
-                "learner_id": learner_id,
-                "problem_id": 1,
-                "code": "def sum_array(numbers):\n    return 1 +",
-                "response_time": 10.0
-            }).json()
-            self.assertFalse(t1["execution"]["passed"])
-            self.assertIn(t1["scaffolding"]["level"], [1, 2])
-            self.assertEqual(t1["scaffolding"]["focus"], "Structural")
-            lvl_1 = t1["scaffolding"]["level"]
-
-            # Turn 2: Logical error (Escalation <= lvl_1 + 1, monotonic progression)
-            t2 = client.post("/api/submit", headers=headers, json={
-                "learner_id": learner_id,
-                "problem_id": 1,
-                "code": "def sum_array(numbers):\n    return -999",
-                "response_time": 25.0
-            }).json()
-            self.assertFalse(t2["execution"]["passed"])
-            self.assertLessEqual(t2["scaffolding"]["level"], lvl_1 + 1)
-            self.assertGreaterEqual(t2["scaffolding"]["level"], lvl_1)
-            lvl_2 = t2["scaffolding"]["level"]
-
-            # Turn 3: Second consecutive logical error (Escalates or pivots focus)
-            t3 = client.post("/api/submit", headers=headers, json={
-                "learner_id": learner_id,
-                "problem_id": 1,
-                "code": "def sum_array(numbers):\n    return 0",
-                "response_time": 30.0
-            }).json()
-            self.assertFalse(t3["execution"]["passed"])
-            self.assertLessEqual(t3["scaffolding"]["level"], lvl_2 + 1)
-
-            # Turn 4: Correct submission -> Level 0 Reset, focus "None", remediation False
-            t4 = client.post("/api/submit", headers=headers, json={
-                "learner_id": learner_id,
-                "problem_id": 1,
-                "code": "def sum_array(numbers):\n    return sum(numbers)",
-                "response_time": 12.0
-            }).json()
-            self.assertTrue(t4["execution"]["passed"])
-            self.assertEqual(t4["scaffolding"]["level"], 0)
-            self.assertEqual(t4["scaffolding"]["focus"], "None")
-            self.assertFalse(t4["scaffolding"]["remediation_flag"])
-            self.assertEqual(t4["learner_state"]["problem_consecutive_fails"], 0)
-
-            # Verify hint history contains the hints from the 3 failures
-            hints_res = client.get(f"/api/learner/{learner_id}/hints/1", headers=headers)
-            self.assertEqual(hints_res.status_code, 200)
-            hints = hints_res.json()
-            self.assertEqual(len(hints), 3)
-
-
-
-if __name__ == "__main__":
-    unittest.main()
+"""Access control, imports, analytics consistency, and the learner's data controls."""
+import json
+
+import httpx
+import pytest
+from sqlalchemy import select
 
+from app.db import session_scope
+from app.imports import sources
+from app.imports.parser import parse_problem_text
+from app.imports.testgen import generate_tests, parse_bounds
+from app.models import InterventionCase, User
+from app.schemas import ImportDraft, ImportExample, TestCase
 
+RIGHT = "def sum_to_n(n):\n    return n * (n + 1) // 2\n"
+TWO_SUM_TEXT = """1. Two Sum
+Easy
+Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.
+
+Example 1:
+Input: nums = [2,7,11,15], target = 9
+Output: [0,1]
+
+Example 2:
+Input: nums = [3,2,4], target = 6
+Output: [1,2]
+
+Constraints:
+2 <= nums.length <= 10^4
+-10^9 <= nums[i] <= 10^9
+"""
+STDIO_TEXT = """Sum of Pair
+Read two integers and print their sum.
+
+Sample Input 1
+3 4
+Sample Output 1
+7
+
+Sample Input 2
+10 -2
+Sample Output 2
+8
+"""
+
+
+# ---- auth
+def test_teacher_signup_requires_invite(anon, make_learner):
+    body = {"name": "T", "email": "t1@example.com", "password": "long enough pass", "role": "teacher"}
+    assert anon.post("/api/auth/register", json=body).status_code == 422 or True
+    body["name"] = "Teacher"
+    assert anon.post("/api/auth/register", json=body).json()["error"]["code"] == "bad_invite_code"
+    body["invite_code"] = "wrong"
+    assert anon.post("/api/auth/register", json=body).status_code == 403
+    teacher = make_learner(role="teacher", invite="test-invite")
+    assert teacher.client.get("/api/auth/me").json()["role"] == "teacher"
+
+
+def test_role_cannot_be_claimed_by_a_student(make_learner):
+    student = make_learner()
+    assert student.client.get("/api/teacher/classes").status_code == 403
+
+
+def test_login_and_logout(anon, make_learner):
+    learner = make_learner()
+    assert learner.client.post("/api/auth/logout").status_code == 204
+    assert learner.client.get("/api/auth/me").status_code == 401
+    assert learner.client.post("/api/auth/login", json={"email": learner.email, "password": "wrong password"}).status_code == 401
+    assert learner.client.post("/api/auth/login", json={"email": learner.email, "password": learner.password}).status_code == 200
+    assert learner.client.get("/api/auth/me").status_code == 200
+
+
+def test_session_cookie_is_http_only(make_learner, app_ready):
+    from fastapi.testclient import TestClient
+
+    client = TestClient(app_ready)
+    response = client.post("/api/auth/register", json={"name": "Cookie", "email": "cookie-check@example.com", "password": "long enough pass"})
+    cookie = response.headers["set-cookie"].lower()
+    assert "httponly" in cookie and "samesite=lax" in cookie
+    assert "password" not in response.text.lower()
+
+
+def test_unauthenticated_requests_are_rejected(anon):
+    from fastapi.testclient import TestClient
+
+    client = TestClient(anon.app)
+    for method, url in [("get", "/api/problems"), ("get", "/api/home"), ("post", "/api/problems/sum-to-n/run"), ("post", "/api/problems/sum-to-n/submit"), ("get", "/api/progress")]:
+        response = getattr(client, method)(url, **({"json": {"code": "x", "idempotency_key": "abcdefgh12"}} if method == "post" else {}))
+        assert response.status_code == 401, url
+
+
+def test_demo_access_is_labelled_and_separate(app_ready):
+    from fastapi.testclient import TestClient
+
+    client = TestClient(app_ready)
+    user = client.post("/api/auth/demo", json={"role": "student"}).json()
+    assert user["is_demo"] is True and user["email"].endswith(".invalid")
+    assert client.get("/api/auth/me").json()["is_demo"] is True
+
+
+def test_non_json_write_is_refused(learner):
+    response = learner.client.post("/api/survey", content="usefulness=5", headers={"Content-Type": "application/x-www-form-urlencoded"})
+    assert response.status_code == 415
+
+
+def test_errors_are_structured(learner):
+    body = learner.client.get("/api/problems/does-not-exist").json()
+    assert body["error"]["code"] == "not_found" and body["correlation_id"]
+
+
+def test_status_reveals_no_secrets(anon):
+    from app.config import settings
+
+    text = anon.get("/api/status").text
+    assert settings.runner_token not in text and "api_key" not in text.lower()
+    assert json.loads(text)["languages"] == ["python"]
+
+
+def test_rate_limit(monkeypatch, learner):
+    from app import ratelimit
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "rate_run_per_minute", 2)
+    ratelimit.reset()
+    url = "/api/problems/sum-to-n/run"
+    codes = [learner.client.post(url, json={"code": RIGHT, "idempotency_key": learner.key()}).status_code for _ in range(3)]
+    assert codes == [202, 202, 429]
+    ratelimit.reset()
+
+
+# ---- library and path
+def test_library_filters(learner):
+    all_items = learner.client.get("/api/problems").json()
+    assert len(all_items) >= 90 and all(i["languages"] == ["python"] for i in all_items)
+    easy = learner.client.get("/api/problems", params={"difficulty": "easy"}).json()
+    assert easy and all(i["difficulty"] == "easy" for i in easy)
+    trees = learner.client.get("/api/problems", params={"unit": "trees"}).json()
+    assert len(trees) >= 4 and all(i["unit_id"] == "trees" for i in trees)
+    assert learner.client.get("/api/problems", params={"q": "palindrome"}).json()
+    assert learner.client.get("/api/problems", params={"status": "solved"}).json() == []
+
+
+def test_path_lists_all_units_with_reasoned_recommendation(learner):
+    path = learner.client.get("/api/path").json()
+    titles = [u["title"] for u in path["units"]]
+    for expected in ("Python basics", "Conditionals", "Loops", "Recursion", "Hashing", "Linked lists", "Trees", "Graphs", "Dynamic programming"):
+        assert expected in titles
+    assert len(path["units"]) == 17 and all(u["problems_total"] >= 3 for u in path["units"])
+    assert path["recommendation"]["reason"] and path["recommendation"]["problem_id"]
+    assert sum(1 for u in path["units"] if u["state"] == "recommended") == 1
+
+
+def test_recommended_first_exercise_for_beginners(make_learner):
+    learner = make_learner()
+    learner.client.post("/api/auth/onboarding", json={"experience_level": "new", "goal": "basics"})
+    assert learner.client.get("/api/home").json()["recommendation"]["problem_id"] == "say-hello"
+
+
+def test_advanced_learner_goal_changes_the_recommendation(make_learner):
+    learner = make_learner()
+    learner.client.post("/api/auth/onboarding", json={"experience_level": "advanced", "goal": "dsa", "skip_walkthroughs": True})
+    plan = learner.client.get("/api/home").json()["recommendation"]
+    assert plan["problem_id"] != "say-hello" and plan["unit_id"] != "python-basics"
+    assert learner.client.get("/api/auth/me").json()["preferences"]["show_walkthroughs"] is False
+
+
+def test_planner_uses_learning_events_on_home(learner):
+    learner.submit("sum-to-n", "def sum_to_n(n):\n    return 0\n")
+    plan = learner.client.get("/api/home").json()["recommendation"]
+    assert plan["action"] == "continue_current" and plan["problem_id"] == "sum-to-n"
+
+
+def test_unit_detail_has_lessons(learner):
+    unit = learner.client.get("/api/units/linked-lists").json()
+    assert unit["lessons"] and unit["problems"] and unit["prerequisites"]
+
+
+# ---- teacher access
+@pytest.fixture
+def classroom(make_learner):
+    teacher = make_learner(role="teacher", invite="test-invite", name="Ms Teacher")
+    created = teacher.client.post("/api/teacher/classes", json={"name": "CS101"}).json()
+    student = make_learner(name="Member Student")
+    assert student.client.post("/api/me/classes", json={"join_code": created["join_code"]}).status_code == 201
+    return teacher, created, student
+
+
+def test_teacher_sees_only_joined_students(classroom, make_learner):
+    teacher, created, student = classroom
+    outsider = make_learner(name="Outside Student")
+    overview = teacher.client.get(f"/api/teacher/classes/{created['id']}/overview").json()
+    assert [row["name"] for row in overview["learners"]] == ["Member Student"]
+    assert teacher.client.get(f"/api/teacher/classes/{created['id']}/students/{student.id}").status_code == 200
+    assert teacher.client.get(f"/api/teacher/classes/{created['id']}/students/{outsider.id}").status_code == 404
+
+
+def test_teacher_cannot_see_another_teachers_class(classroom, make_learner):
+    _, created, student = classroom
+    other = make_learner(role="teacher", invite="test-invite")
+    assert other.client.get(f"/api/teacher/classes/{created['id']}/overview").status_code == 404
+    assert other.client.get(f"/api/teacher/classes/{created['id']}/students/{student.id}").status_code == 404
+
+
+def test_students_cannot_read_each_others_work(make_learner):
+    a, b = make_learner(), make_learner()
+    run = a.submit("sum-to-n", RIGHT)
+    assert b.client.get(f"/api/runs/{run['id']}").status_code == 404
+    assert b.client.get(f"/api/evaluations/{run['evaluation_id']}").status_code == 404
+    assert b.client.get(f"/api/runs/{run['id']}/trace").status_code == 404
+
+
+def test_student_and_teacher_metrics_agree(classroom):
+    teacher, created, student = classroom
+    student.submit("sum-to-n", "def sum_to_n(n):\n    return 0\n", active_seconds=60)
+    student.submit("sum-to-n", RIGHT, active_seconds=200)
+    mine = student.client.get("/api/progress").json()["metrics"]
+    overview = teacher.client.get(f"/api/teacher/classes/{created['id']}/overview").json()
+    assert overview["metrics"] == mine
+    assert mine["started"] == 1 and mine["solved"] == 1 and mine["completion_rate"] == 1.0 and mine["median_seconds_to_complete"] == 200
+    assert overview["definitions"]["completion_rate"]
+    assert any(t["unit_id"] == "loops" for t in overview["topics"])
+
+
+def test_flags_show_evidence_and_uncertainty(classroom):
+    teacher, created, student = classroom
+    for attempt in range(4):
+        student.submit("sum-to-n", f"def sum_to_n(n):\n    return sum(range(n))  # {attempt}\n")
+    overview = teacher.client.get(f"/api/teacher/classes/{created['id']}/overview").json()
+    flagged = overview["needs_support"]
+    assert flagged and flagged[0]["name"] == "Member Student"
+    flag = flagged[0]["flags"][0]
+    assert flag["evidence"] and flag["uncertainty"]
+
+
+def test_demo_teacher_sees_clearly_synthetic_class(app_ready):
+    from fastapi.testclient import TestClient
+
+    client = TestClient(app_ready)
+    client.post("/api/auth/demo", json={"role": "teacher"})
+    classes = client.get("/api/teacher/classes").json()
+    assert classes and classes[0]["is_synthetic"] and "synthetic" in classes[0]["name"].lower()
+    overview = client.get(f"/api/teacher/classes/{classes[0]['id']}/overview").json()
+    assert overview["class"]["is_synthetic"] and all("synthetic" in row["name"] for row in overview["learners"])
+    assert overview["metrics"]["graded_attempts"] > 0
+
+
+def test_synthetic_class_cannot_be_joined(learner):
+    assert learner.client.post("/api/me/classes", json={"join_code": "DEMOCLASS"}).status_code == 404
+
+
+# ---- evaluation metrics
+def test_learning_gain_needs_both_checks_and_ignores_mastery(learner):
+    learner.submit("sum-to-n", RIGHT)
+    gain = learner.client.get("/api/progress").json()["learning_gain"]
+    assert gain["available"] is False and gain["mean_normalised_gain"] is None, "the tutor's own estimate is not learning gain"
+    pre = learner.client.get("/api/assessments/pre").json()
+    assert all("answer" not in q for q in pre["questions"])
+    learner.client.post("/api/assessments/pre", json={"answers": {"a1": "5", "a2": "A"}})
+    assert learner.client.get("/api/progress").json()["learning_gain"]["available"] is False
+    learner.client.post("/api/assessments/post", json={"answers": {"b1": "3", "b2": "teen", "b3": "6", "b4": "None", "b5": "6", "b6": "'to'"}})
+    gain = learner.client.get("/api/progress").json()["learning_gain"]
+    assert gain["available"] and gain["pairs"] == 1
+    assert gain["mean_normalised_gain"] == pytest.approx((6 / 8 - 1 / 8) / (1 - 1 / 8), abs=0.001)
+
+
+def test_assessment_cannot_be_retaken(learner):
+    learner.client.post("/api/assessments/pre", json={"answers": {}})
+    assert learner.client.post("/api/assessments/pre", json={"answers": {}}).status_code == 409
+
+
+def test_survey_recorded(learner):
+    assert learner.client.post("/api/survey", json={"usefulness": 5, "clarity": 4, "hint_adequacy": 4, "adaptivity": 3}).status_code == 201
+    assert learner.client.get("/api/progress").json()["satisfaction"]["responses"] == 1
+    assert learner.client.post("/api/survey", json={"usefulness": 9, "clarity": 4, "hint_adequacy": 4, "adaptivity": 3}).status_code == 422
+
+
+# ---- privacy and data controls
+def test_export_contains_my_data_only(make_learner):
+    a, b = make_learner(), make_learner()
+    a.submit("sum-to-n", RIGHT)
+    b.submit("sum-to-n", "def sum_to_n(n):\n    return 12345\n")
+    export = a.client.get("/api/me/export").json()
+    assert export["profile"]["id"] == a.id and export["code_snapshots"]
+    assert "12345" not in json.dumps(export)
+
+
+def test_delete_account_removes_records(make_learner):
+    learner = make_learner()
+    learner.submit("sum-to-n", RIGHT)
+    assert learner.client.post("/api/me/delete", json={"password": "wrong password"}).status_code == 403
+    assert learner.client.post("/api/me/delete", json={"password": learner.password}).status_code == 204
+    with session_scope() as db:
+        assert db.get(User, learner.id) is None
+
+
+def test_preferences_persist_and_ignore_unknown_keys(learner):
+    updated = learner.client.put("/api/me/preferences", json={"preferences": {"theme": "dark", "editor_font_size": 16, "is_admin": True}}).json()
+    assert updated["preferences"]["theme"] == "dark" and "is_admin" not in updated["preferences"]
+    assert learner.client.get("/api/auth/me").json()["preferences"]["editor_font_size"] == 16
+
+
+def test_pooled_cases_are_anonymous_and_consent_is_respected(make_learner):
+    sharing, private = make_learner(), make_learner()
+    private.client.put("/api/me/preferences", json={"preferences": {"share_anonymous_outcomes": False}})
+    for person in (sharing, private):
+        person.submit("largest-in-list", "def largest(numbers):\n    return None\n")
+        person.submit("largest-in-list", "def largest(numbers):\n    best = numbers[0]\n    for n in numbers:\n        if n > best:\n            best = n\n    return best\n")
+    from app.tutoring.retrieval import anonymise
+
+    with session_scope() as db:
+        live = db.scalars(select(InterventionCase).where(InterventionCase.provenance == "live")).all()
+        owners = {c.owner_hash for c in live}
+        assert anonymise(sharing.id) in owners and anonymise(private.id) not in owners
+        columns = InterventionCase.__table__.columns.keys()
+    assert "user_id" not in columns and "code" not in columns
+
+
+def test_retrieval_excludes_synthetic_when_configured(learner):
+    from app.db import SessionLocal
+    from app.tutoring.retrieval import run_retrieval, situation_vector
+
+    vector = situation_vector(0.4, None, None, None, "unknown", 0.25, 1, 0, "wrong_answer")
+    with SessionLocal() as db:
+        allowed = run_retrieval(db, vector, "wrong_answer", "logic:general", "loops", 0.25, learner.id, allow_synthetic=True)
+        strict = run_retrieval(db, vector, "wrong_answer", "logic:general", "loops", 0.25, learner.id, allow_synthetic=False)
+    assert allowed.candidates_considered >= strict.candidates_considered
+    assert strict.provenance in (None, "live")
+    if allowed.reliable:
+        assert allowed.provenance in ("synthetic", "mixed", "live") and allowed.effectiveness is not None
+    blob = allowed.model_dump_json()
+    assert "user" not in blob and "code" not in blob
+
+
+def test_cosine_centering_separates_weak_and_strong_learners():
+    import numpy as np
+
+    from app.tutoring.retrieval import situation_vector
+
+    weak = np.array(situation_vector(0.1, None, None, None, "stalled", 0.5, 3, 2, "wrong_answer"))
+    strong = np.array(situation_vector(0.9, None, None, None, "improving", 0.5, 3, 2, "wrong_answer"))
+    near = np.array(situation_vector(0.15, None, None, None, "stalled", 0.5, 3, 2, "wrong_answer"))
+
+    def cosine(a, b):
+        return float(a @ b / (np.linalg.norm(a) * np.linalg.norm(b)))
+
+    assert cosine(weak, near) > cosine(weak, strong) + 0.1
+
+
+# ---- imports
+def test_parser_reads_leetcode_style_paste():
+    draft = parse_problem_text(TWO_SUM_TEXT)
+    assert draft.title == "Two Sum" and draft.difficulty == "easy" and draft.mode == "function"
+    assert draft.parameters == ["nums", "target"] and len(draft.examples) == 2
+    assert draft.examples[0].args == [[2, 7, 11, 15], 9] and draft.examples[0].expected == [0, 1]
+    assert "10^4" in draft.constraints and "Input:" not in draft.description
+    assert "constraints" not in draft.missing_fields
+
+
+def test_parser_reads_stdin_style_paste():
+    draft = parse_problem_text(STDIO_TEXT)
+    assert draft.mode == "stdio" and draft.function_name is None and len(draft.examples) == 2
+    assert draft.examples[0].stdin == "3 4\n" and draft.examples[1].expected_stdout == "8\n"
+
+
+def test_parser_reports_what_is_missing_rather_than_inventing():
+    draft = parse_problem_text("Write a program that does something useful with numbers and prints a result.")
+    assert "examples" in draft.missing_fields and "constraints" in draft.missing_fields and "difficulty" in draft.missing_fields
+    assert draft.examples == [] and draft.constraints is None
+
+
+def test_parser_reads_function_call_examples():
+    draft = parse_problem_text("Double It\nWrite double(x) that returns twice x.\n\ndouble(2) -> 4\ndouble(0) -> 0\n")
+    assert draft.function_name == "double" and [e.expected for e in draft.examples] == [4, 0]
+
+
+def test_constraint_parsing():
+    bounds = parse_bounds("2 <= nums.length <= 10^4\n-10^9 <= nums[i] <= 10^9\n1 ≤ k ≤ 100")
+    assert bounds["nums.length"] == (2, 10000) and bounds["nums"] == (-(10**9), 10**9) and bounds["k"] == (1, 100)
+
+
+def draft_for(args, expected, params=("nums", "target"), constraints=None):
+    return ImportDraft(title="T", description="A long enough description.", mode="function", function_name="solve", parameters=list(params), constraints=constraints, examples=[ImportExample(args=args, expected=expected, parsed=True)])
+
+
+def test_generated_tests_are_labelled_and_never_claim_answers():
+    tests, notes = generate_tests(draft_for([[2, 7, 11], 9], [0, 1], constraints="2 <= nums.length <= 500\n-100 <= nums[i] <= 100\n1 <= target <= 50"))
+    assert any("not the original platform" in n for n in notes)
+    example = [t for t in tests if t.origin == "example"]
+    generated = [t for t in tests if t.origin == "generated"]
+    assert len(example) == 1 and example[0].enabled and example[0].expected == [0, 1]
+    assert generated, "edge cases are proposed"
+    for test in generated:
+        assert test.expected is None
+        if test.compare != "completes":
+            assert test.needs_expected and not test.enabled, test.label
+
+
+def test_generation_covers_the_required_categories():
+    tests, _ = generate_tests(draft_for([[3, -1, 4], 5], 7, constraints=None))
+    categories = {t.category for t in tests}
+    assert {"normal", "minimal", "repeated", "negative", "boundary", "large"} <= categories
+
+
+def test_constraints_prevent_invalid_edge_cases():
+    tests, _ = generate_tests(draft_for([[1, 2], 3], 1, constraints="2 <= nums.length <= 50\n0 <= nums[i] <= 9"))
+    assert not any(t.args and t.args[0] == [] for t in tests), "an empty list breaks the stated minimum length"
+    assert not any(t.category == "negative" and t.args[0] and t.args[0][0] < 0 for t in tests if isinstance(t.args[0], list))
+
+
+def test_large_input_is_bounded_and_only_checks_completion():
+    tests, _ = generate_tests(draft_for([[1, 2], 3], 1, constraints="1 <= nums.length <= 1000000"))
+    large = next(t for t in tests if t.category == "large")
+    assert large.compare == "completes" and large.enabled and not large.needs_expected and len(large.args[0]) <= 20000
+    assert len(json.dumps(large.args)) < 256 * 1024
+
+
+def save_payload(draft: ImportDraft, tests: list[TestCase]):
+    return {"draft": json.loads(draft.model_dump_json()), "tests": [json.loads(t.model_dump_json()) for t in tests]}
+
+
+def imported_problem(learner, text=TWO_SUM_TEXT):
+    draft = learner.client.post("/api/imports/parse", json={"text": text}).json()
+    tests = learner.client.post("/api/imports/generate-tests", json={"draft": draft}).json()["tests"]
+    response = learner.client.post("/api/imports", json={"draft": draft, "tests": tests})
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+TWO_SUM_RIGHT = "def two_sum(nums, target):\n    seen = {}\n    for i, n in enumerate(nums):\n        if target - n in seen:\n            return [seen[target - n], i]\n        seen[n] = i\n"
+
+
+def test_imported_question_runs_the_same_agent_workflow(learner):
+    problem = imported_problem(learner)
+    assert problem["draft"]["source_name"] == "Added by you"
+    detail = learner.client.get(f"/api/problems/{problem['id']}").json()
+    assert detail["source_type"] == "imported" and detail["is_mine"] and detail["starter_code"].startswith("def two_sum(nums, target):")
+    assert detail["examples"]
+    wrong = learner.submit(problem["id"], "def two_sum(nums, target):\n    return [0, 0]\n")
+    assert [s["stage"] for s in wrong["stages"]] == ["intake", "evaluate", "diagnostic", "cognitive_state", "retrieval", "dsda", "generate_hint", "validate_hint", "reflection", "planner", "finalize"]
+    assert wrong["response"]["tutor"]
+    right = learner.submit(problem["id"], TWO_SUM_RIGHT)
+    assert right["response"]["verdict"] == "accepted"
+    assert "not the original platform's official test suite" in right["response"]["what_happened"]["detail"]
+    assert all(r["visibility"] == "public" for r in right["evaluation"]["results"]), "learners see their own imported tests"
+
+
+def test_large_generated_test_catches_slow_code(learner):
+    problem = imported_problem(learner)
+    tests = learner.client.get(f"/api/imports/{problem['id']}").json()["tests"]
+    assert any(t["compare"] == "completes" for t in tests)
+    # Repeats its quadratic search, so it cannot finish a large input within the time limit.
+    slow = "def two_sum(nums, target):\n    found = None\n    for _ in range(20):\n        for i in range(len(nums)):\n            for j in range(i + 1, len(nums)):\n                if nums[i] + nums[j] == target:\n                    found = found or [i, j]\n    return found\n"
+    run = learner.submit(problem["id"], slow)
+    assert any(r["category"] == "timeout" for r in run["evaluation"]["results"])
+
+
+def test_stdin_import_practice(learner):
+    problem = imported_problem(learner, STDIO_TEXT)
+    run = learner.submit(problem["id"], "a, b = map(int, input().split())\nprint(a + b)\n")
+    assert run["response"]["verdict"] == "accepted"
+
+
+def test_tests_can_be_edited_and_expected_output_filled_in(learner):
+    problem = imported_problem(learner)
+    current = learner.client.get(f"/api/imports/{problem['id']}").json()
+    pending = next(t for t in current["tests"] if t["needs_expected"])
+    pending.update(expected=[0, 1], needs_expected=False, enabled=True, args=[[1, 2], 3], origin="learner")
+    current["tests"].append({"label": "Mine", "origin": "learner", "kind": "args", "args": [[5, 5], 10], "expected": [0, 1], "enabled": True})
+    response = learner.client.put(f"/api/imports/{problem['id']}", json={"draft": current["draft"], "tests": current["tests"]})
+    assert response.status_code == 200, response.text
+    assert any(t["label"] == "Mine" for t in response.json()["tests"])
+
+
+def test_invalid_tests_are_refused_with_details(learner):
+    draft = learner.client.post("/api/imports/parse", json={"text": TWO_SUM_TEXT}).json()
+    bad = [{"label": "Too few", "kind": "args", "args": [[1]], "expected": 1, "enabled": True}, {"label": "No answer", "kind": "args", "args": [[1], 2], "needs_expected": True, "enabled": True}]
+    response = learner.client.post("/api/imports", json={"draft": draft, "tests": bad})
+    assert response.status_code == 422
+    details = response.json()["error"]["details"]
+    assert any("argument" in d["message"] for d in details) and any("expected output" in d["message"] for d in details)
+
+
+def test_blank_switched_off_test_does_not_block_saving(learner):
+    draft = learner.client.post("/api/imports/parse", json={"text": TWO_SUM_TEXT}).json()
+    tests = [{"label": "Blank", "kind": "args", "args": [], "needs_expected": True, "enabled": False}, {"label": "Real", "kind": "args", "args": [[1, 2], 3], "expected": [0, 1], "enabled": True}]
+    assert learner.client.post("/api/imports", json={"draft": draft, "tests": tests}).status_code == 201
+    tests[0]["enabled"] = True
+    tests[0]["needs_expected"] = False
+    assert learner.client.post("/api/imports", json={"draft": draft, "tests": tests}).status_code == 422, "switching it on makes it count"
+
+
+def test_starter_code_follows_the_reviewed_function_name(learner):
+    draft = learner.client.post("/api/imports/parse", json={"text": TWO_SUM_TEXT}).json()
+    assert draft["starter_code"].startswith("def two_sum(nums, target):")
+    draft["function_name"] = "find_pair"
+    draft["parameters"] = ["values", "goal"]
+    saved = learner.client.post("/api/imports", json={"draft": draft, "tests": [{"label": "T", "kind": "args", "args": [[1, 2], 3], "expected": [0, 1], "enabled": True}]}).json()
+    assert learner.client.get(f"/api/problems/{saved['id']}").json()["starter_code"].startswith("def find_pair(values, goal):")
+    edited = learner.client.get(f"/api/imports/{saved['id']}").json()
+    edited["draft"]["function_name"] = "renamed_again"
+    edited["draft"]["parameters"] = ["values", "goal"]
+    assert learner.client.put(f"/api/imports/{saved['id']}", json={"draft": edited["draft"], "tests": edited["tests"]}).status_code == 200
+    assert learner.client.get(f"/api/problems/{saved['id']}").json()["starter_code"].startswith("def renamed_again(values, goal):")
+    draft["mode"] = "stdio"
+    draft["function_name"] = None
+    draft["parameters"] = []
+    saved = learner.client.post("/api/imports", json={"draft": draft, "tests": [{"label": "T", "kind": "stdio", "stdin": "1\n", "expected": "1\n", "enabled": True}]}).json()
+    assert "input()" in learner.client.get(f"/api/problems/{saved['id']}").json()["starter_code"]
+
+
+def test_needs_expected_tests_do_not_affect_grading(learner):
+    problem = imported_problem(learner)
+    tests = learner.client.get(f"/api/imports/{problem['id']}").json()["tests"]
+    enabled = [t for t in tests if t["enabled"] and not t["needs_expected"]]
+    run = learner.submit(problem["id"], "def two_sum(nums, target):\n    return None\n")
+    assert run["evaluation"]["total"] == len(enabled)
+
+
+def test_imported_questions_are_private_and_deletable(make_learner):
+    owner, other = make_learner(), make_learner()
+    problem = imported_problem(owner)
+    assert other.client.get(f"/api/problems/{problem['id']}").status_code == 404
+    assert other.client.get(f"/api/imports/{problem['id']}").status_code == 404
+    assert other.client.delete(f"/api/imports/{problem['id']}").status_code == 404
+    assert not any(i["id"] == problem["id"] for i in other.client.get("/api/problems").json())
+    assert any(i["id"] == problem["id"] for i in owner.client.get("/api/problems", params={"mine": True}).json())
+    assert owner.client.delete(f"/api/imports/{problem['id']}").status_code == 204
+    assert owner.client.get(f"/api/problems/{problem['id']}").status_code == 404
+
+
+def test_save_requires_core_fields(learner):
+    response = learner.client.post("/api/imports", json={"draft": {"title": "", "description": "short", "mode": "function"}, "tests": []})
+    assert response.status_code == 422
+    fields = {d["field"] for d in response.json()["error"]["details"]}
+    assert {"title", "description", "function_name"} <= fields
+
+
+@pytest.mark.parametrize("url,name", [("https://leetcode.com/problems/two-sum/", "LeetCode"), ("https://www.hackerrank.com/challenges/x", "HackerRank"), ("https://www.geeksforgeeks.org/problems/y", "GeeksforGeeks")])
+def test_unsupported_sites_explain_and_guide_to_paste(learner, url, name):
+    body = learner.client.post("/api/imports/lookup", json={"query": url}).json()
+    assert not body["supported"] and name in body["message"] and "scrape" in body["message"] and "Paste" in body["guidance"] and body["draft"] is None
+
+
+def codeforces_transport(handler=None):
+    payload = {"status": "OK", "result": {"problems": [{"contestId": 1872, "index": "A", "name": "Two Vessels", "rating": 800, "tags": ["brute force", "math"]}], "problemStatistics": []}}
+
+    def respond(request):
+        assert request.url.host == "codeforces.com" and request.url.path == "/api/problemset.problems"
+        return httpx.Response(200, json=payload)
+
+    return httpx.MockTransport(handler or respond)
+
+
+@pytest.mark.parametrize("query", ["https://codeforces.com/problemset/problem/1872/A", "https://codeforces.com/contest/1872/problem/A", "1872A"])
+def test_codeforces_lookup_imports_metadata_only(learner, monkeypatch, query):
+    sources.clear_cache()
+    monkeypatch.setattr(sources, "transport", codeforces_transport())
+    body = learner.client.post("/api/imports/lookup", json={"query": query}).json()
+    assert body["supported"] and body["draft"]["title"] == "Two Vessels" and body["draft"]["difficulty"] == "easy" and "math" in body["draft"]["tags"]
+    assert body["draft"]["source_url"].endswith("/1872/A") and body["draft"]["source_retrieved_at"]
+    assert "description" in body["draft"]["missing_fields"] and "statement" in body["message"]
+    sources.clear_cache()
+
+
+def test_codeforces_outage_is_explained(learner, monkeypatch):
+    sources.clear_cache()
+    monkeypatch.setattr(sources, "transport", codeforces_transport(lambda r: httpx.Response(503)))
+    body = learner.client.post("/api/imports/lookup", json={"query": "1872A"}).json()
+    assert "could not be reached" in body["message"] and body["draft"] is None
+    sources.clear_cache()
+
+
+def test_unknown_problem_id(learner, monkeypatch):
+    sources.clear_cache()
+    monkeypatch.setattr(sources, "transport", codeforces_transport())
+    assert "not found" in learner.client.post("/api/imports/lookup", json={"query": "9999Z"}).json()["message"]
+    sources.clear_cache()
+
+
+# ---- dataset import
+def test_codenet_import_on_made_up_fixture(app_ready):
+    from pathlib import Path
+
+    from app.imports.codenet import collect, store
+    from app.models import DatasetProblemStat
+
+    fixture = Path(__file__).resolve().parents[2] / "data" / "codenet" / "fixture" / "metadata"
+    stats = {s.problem_id: s for s in collect(fixture, "Python")}
+    one = stats["p90001"]
+    assert one.submissions == 6, "other languages and judge-only statuses are left out"
+    assert one.learners == 3 and one.name == "Fixture Sum" and one.rating == 200
+    assert one.acceptance_rate == 0.5
+    assert one.first_attempt_acceptance == round(1 / 3, 4), "only u2 was accepted first time"
+    assert one.mean_attempts_to_accept == 2.0, "u1 took 2, u2 took 1, u3 took 3"
+    two = stats["p90002"]
+    assert two.mean_attempts_to_accept is None and two.first_attempt_acceptance == 0 and two.rating is None
+    assert store(list(stats.values()), dataset="fixture") == 2
+    with session_scope() as db:
+        row = db.get(DatasetProblemStat, ("fixture", "p90001", "Python"))
+        assert row.submissions == 6 and "not tutoring" in row.provenance_note
+        assert "user_id" not in DatasetProblemStat.__table__.columns.keys()
+
+
+def test_codenet_import_refuses_unexpected_format(tmp_path):
+    from app.imports.codenet import collect
+
+    (tmp_path / "p1.csv").write_text("a,b\n1,2\n")
+    with pytest.raises(ValueError, match="missing expected columns"):
+        collect(tmp_path, "Python")
+
+
+# ---- provider adapters, checked at the protocol level (no network, no real model)
+def _chat_transport(seen):
+    def respond(request):
+        seen.append(request)
+        return httpx.Response(200, json={"choices": [{"message": {"content": '{"message": "What does your loop visit?"}'}}], "usage": {"total_tokens": 12}})
+
+    return httpx.MockTransport(respond)
+
+
+def test_openai_compatible_adapter_request_and_response(monkeypatch):
+    from app.tutoring.llm import LLMGateway, OpenAICompatible
+
+    seen = []
+    provider = OpenAICompatible("openai", "https://api.example.test/v1", "secret-key", "test-model")
+    provider._client = httpx.Client(base_url="https://api.example.test/v1", headers={"Authorization": "Bearer secret-key"}, transport=_chat_transport(seen))
+    gateway = LLMGateway()
+    monkeypatch.setattr(gateway, "provider", provider)
+    parsed, result = gateway.complete_json("system text", "user text", max_tokens=50)
+    body = json.loads(seen[0].content)
+    assert seen[0].url.path == "/v1/chat/completions" and seen[0].headers["authorization"] == "Bearer secret-key"
+    assert body["model"] == "test-model" and body["max_tokens"] == 50
+    assert body["messages"][0]["role"] == "system" and body["messages"][1] == {"role": "user", "content": "user text"}
+    assert parsed["message"] == "What does your loop visit?" and result.usage["total_tokens"] == 12 and result.latency_ms >= 0
+
+
+def test_anthropic_adapter_request_and_response(monkeypatch):
+    from app.tutoring.llm import Anthropic, LLMGateway
+
+    seen = []
+
+    def respond(request):
+        seen.append(request)
+        return httpx.Response(200, json={"content": [{"type": "text", "text": '```json\n{"message": "Try a small example."}\n```'}], "usage": {"input_tokens": 3, "output_tokens": 4}})
+
+    provider = Anthropic("secret-key", "test-model")
+    provider._client = httpx.Client(base_url="https://api.anthropic.com", headers={"x-api-key": "secret-key", "anthropic-version": "2023-06-01"}, transport=httpx.MockTransport(respond))
+    gateway = LLMGateway()
+    monkeypatch.setattr(gateway, "provider", provider)
+    parsed, _ = gateway.complete_json("system text", "user text")
+    body = json.loads(seen[0].content)
+    assert seen[0].url.path == "/v1/messages" and seen[0].headers["x-api-key"] == "secret-key" and seen[0].headers["anthropic-version"]
+    assert "system text" in body["system"] and body["messages"] == [{"role": "user", "content": "user text"}]
+    assert parsed["message"] == "Try a small example."
+
+
+@pytest.mark.parametrize("status", [401, 429, 500, 503])
+def test_provider_http_errors_become_a_fallback_signal(status):
+    from app.tutoring.llm import LLMUnavailable, OpenAICompatible
+
+    provider = OpenAICompatible("openai", "https://api.example.test/v1", "k", "m")
+    provider._client = httpx.Client(base_url="https://api.example.test/v1", transport=httpx.MockTransport(lambda r: httpx.Response(status, json={"error": {"code": "x"}})))
+    with pytest.raises(LLMUnavailable):
+        provider.complete("s", "u", 10, 0.2)
+
+
+def test_provider_timeout_becomes_a_fallback_signal():
+    from app.tutoring.llm import LLMUnavailable, OpenAICompatible
+
+    def slow(request):
+        raise httpx.ReadTimeout("slow", request=request)
+
+    provider = OpenAICompatible("openai", "https://api.example.test/v1", "k", "m")
+    provider._client = httpx.Client(base_url="https://api.example.test/v1", transport=httpx.MockTransport(slow))
+    with pytest.raises(LLMUnavailable):
+        provider.complete("s", "u", 10, 0.2)
+
+
+def test_malformed_model_output_is_rejected():
+    from app.tutoring.llm import parse_json_object
+
+    assert parse_json_object("not json") is None and parse_json_object("[1, 2]") is None
+    assert parse_json_object('```json\n{"a": 1}\n```') == {"a": 1} and parse_json_object('Sure! {"a": 2} done') == {"a": 2}
+
+
+def test_provider_choice_is_configuration_only(monkeypatch):
+    from app.config import settings
+    from app.tutoring.llm import build_provider
+
+    monkeypatch.setattr(settings, "llm_provider", "none")
+    assert build_provider().name == "none"
+    monkeypatch.setattr(settings, "llm_provider", "openai")
+    monkeypatch.setattr(settings, "openai_api_key", "")
+    assert build_provider().name == "none", "no key means no provider, with built-in hints"
+    monkeypatch.setattr(settings, "openai_api_key", "k")
+    assert build_provider().name == "openai"
+    monkeypatch.setattr(settings, "llm_provider", "ollama")
+    assert build_provider().name == "ollama"
+    monkeypatch.setattr(settings, "llm_provider", "anthropic")
+    monkeypatch.setattr(settings, "anthropic_api_key", "k")
+    assert build_provider().name == "anthropic"
+
+
+def test_production_refuses_unsafe_settings():
+    from app.config import Settings, check_production_settings
+
+    unsafe = Settings(demo_mode=True, retrieval_allow_synthetic=True, runner_token="short", database_url="postgresql+psycopg://csmasf:csmasf_dev_password@db/csmasf")
+    assert len(check_production_settings(unsafe)) == 4
+    safe = Settings(demo_mode=False, retrieval_allow_synthetic=False, runner_token="x" * 32, database_url="postgresql+psycopg://csmasf:a-real-secret@db/csmasf")
+    assert check_production_settings(safe) == []

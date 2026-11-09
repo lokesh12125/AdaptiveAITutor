@@ -1,0 +1,50 @@
+[project]
+name = "csmasf-backend"
+version = "1.0.0"
+description = "API and LangGraph tutoring pipeline for the CSMASF adaptive Python tutor"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "pydantic>=2.7",
+  "pydantic-settings>=2.3",
+  "email-validator>=2.1",
+  "sqlalchemy>=2.0.30",
+  "alembic>=1.13",
+  "psycopg[binary,pool]>=3.2",
+  "langgraph>=0.2.60",
+  "langgraph-checkpoint-postgres>=2.0",
+  "chromadb>=0.5",
+  "httpx>=0.27",
+  "argon2-cffi>=23.1",
+  "pyyaml>=6",
+  "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.setuptools.package-data]
+app = ["tutoring/*.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::pytest.PytestCollectionWarning"]
+markers = [
+  "integration: needs PostgreSQL",
+  "runner: needs the execution service and Docker",
+]
+
+[tool.ruff]
+line-length = 110
+exclude = ["migrations/versions"]
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["B008", "B905", "E501"]

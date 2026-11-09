@@ -1,0 +1,70 @@
+# `docker compose up -d db` starts only PostgreSQL, for local development.
+# `docker compose --profile full up --build` runs the whole stack in containers.
+name: csmasf
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: csmasf
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-csmasf_dev_password}
+      POSTGRES_DB: csmasf
+    ports:
+      - "127.0.0.1:5544:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U csmasf"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  sandbox-image:
+    profiles: ["full"]
+    build: ./runner/sandbox
+    image: csmasf-sandbox:py312
+    entrypoint: ["/bin/true"]
+
+  runner:
+    profiles: ["full"]
+    build: ./runner
+    environment:
+      RUNNER_TOKEN: ${RUNNER_TOKEN:?set RUNNER_TOKEN in .env}
+      RUNNER_BACKEND: docker
+    volumes:
+      # Lets the service start sibling sandbox containers. See docs/security.md for this trade-off.
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      sandbox-image:
+        condition: service_completed_successfully
+    # Deliberately not published to the host: only the API can reach it.
+
+  api:
+    profiles: ["full"]
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file: [.env]
+    environment:
+      DATABASE_URL: postgresql+psycopg://csmasf:${POSTGRES_PASSWORD:-csmasf_dev_password}@db:5432/csmasf
+      RUNNER_URL: http://runner:8102
+      CHROMA_PATH: /data/chroma
+    volumes:
+      - chroma:/data/chroma
+    depends_on:
+      db:
+        condition: service_healthy
+      runner:
+        condition: service_started
+    ports:
+      - "127.0.0.1:8101:8101"
+
+  web:
+    profiles: ["full"]
+    build: ./frontend
+    depends_on: [api]
+    ports:
+      - "127.0.0.1:8080:80"
+
+volumes:
+  pgdata:
+  chroma:

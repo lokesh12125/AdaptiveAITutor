@@ -1,0 +1,109 @@
+/* Design tokens. Trellis: quiet surfaces with a slight green bias, forest primary, amber reserved for tutor help.
+   Text colours are checked against WCAG AA on their surfaces in docs/accessibility notes. */
+:root {
+  color-scheme: light;
+  --font-ui: "Figtree Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-code: "JetBrains Mono Variable", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --bg: #f5f7f4;
+  --surface: #ffffff;
+  --surface-2: #eef1ed;
+  --surface-3: #e3e8e2;
+  --border: #d8ded6;
+  --border-strong: #aab4aa;
+  --text: #17211c;
+  --text-2: #465149;
+  --text-3: #5f6b63;
+  --primary: #0b6b4c;
+  --primary-hover: #085a3f;
+  --on-primary: #ffffff;
+  --primary-soft: #e0f1ea;
+  --hint: #805200;
+  --hint-soft: #fbf1dc;
+  --hint-border: #e6cf9e;
+  --info: #1d5ba3;
+  --info-soft: #e3eefa;
+  --ok: #0b6b4c;
+  --ok-soft: #e0f1ea;
+  --warn: #805200;
+  --warn-soft: #fbf1dc;
+  --danger: #b0241c;
+  --danger-soft: #fbe8e6;
+  --focus: #1d5ba3;
+  --overlay: rgb(15 25 20 / 0.45);
+  --shadow-1: 0 1px 2px rgb(20 30 25 / 0.06), 0 1px 1px rgb(20 30 25 / 0.04);
+  --shadow-2: 0 8px 28px rgb(20 30 25 / 0.14);
+
+  /* Chart series, validated with the data-visualisation palette checks. */
+  --series-1: #0b8a60;
+  --series-2: #c2750e;
+  --series-3: #5b5bb5;
+  --chart-grid: #e6eae4;
+
+  --radius-s: 6px;
+  --radius-m: 10px;
+  --radius-l: 14px;
+  --space-unit: 4px;
+  --page-gutter: clamp(16px, 3vw, 32px);
+  --editor-font-size: 14px;
+  --control-height: 38px;
+  --transition: 140ms ease;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f1513;
+  --surface: #17201d;
+  --surface-2: #1e2925;
+  --surface-3: #28342f;
+  --border: #2f3b36;
+  --border-strong: #4d5c55;
+  --text: #e8eeea;
+  --text-2: #b6c2bb;
+  --text-3: #97a49c;
+  --primary: #5cc8a0;
+  --primary-hover: #76d6b2;
+  --on-primary: #08251b;
+  --primary-soft: #16322a;
+  --hint: #e7b765;
+  --hint-soft: #2e2510;
+  --hint-border: #5b4a22;
+  --info: #93bff2;
+  --info-soft: #17293f;
+  --ok: #5cc8a0;
+  --ok-soft: #16322a;
+  --warn: #e7b765;
+  --warn-soft: #2e2510;
+  --danger: #f4a7a0;
+  --danger-soft: #3a1c19;
+  --focus: #93bff2;
+  --overlay: rgb(0 0 0 / 0.6);
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-2: 0 10px 30px rgb(0 0 0 / 0.5);
+  --series-1: #2a9e78;
+  --series-2: #c78428;
+  --series-3: #7f82e0;
+  --chart-grid: #26312c;
+}
+
+:root[data-density="compact"] {
+  --control-height: 32px;
+  --space-unit: 3px;
+}
+
+:root[data-motion="reduced"] *,
+:root[data-motion="reduced"] *::before,
+:root[data-motion="reduced"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

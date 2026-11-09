@@ -1,0 +1,293 @@
+# Reference solutions. Server-side only: used to verify tests and to detect leakage in hints.
+say-hello: |
+  def greet(name):
+      return f"Hello, {name}!"
+add-two-numbers-input: |
+  a = input()
+  b = input()
+  print(int(a) + int(b))
+fizz-word: |
+  def fizz_word(n):
+      if n % 15 == 0:
+          return "FizzBuzz"
+      if n % 3 == 0:
+          return "Fizz"
+      if n % 5 == 0:
+          return "Buzz"
+      return str(n)
+sum-to-n: |
+  def sum_to_n(n):
+      total = 0
+      for i in range(1, n + 1):
+          total += i
+      return total
+largest-in-list: |
+  def largest(numbers):
+      best = numbers[0]
+      for n in numbers:
+          if n > best:
+              best = n
+      return best
+reverse-words: |
+  def reverse_words(sentence):
+      return " ".join(reversed(sentence.split()))
+merge-sorted-lists-simple: |
+  def merge_sorted(a, b):
+      i = j = 0
+      out = []
+      while i < len(a) and j < len(b):
+          if a[i] <= b[j]:
+              out.append(a[i])
+              i += 1
+          else:
+              out.append(b[j])
+              j += 1
+      return out + a[i:] + b[j:]
+remove-duplicates-sorted: |
+  def dedupe_sorted(nums):
+      out = []
+      for n in nums:
+          if not out or out[-1] != n:
+              out.append(n)
+      return out
+pair-with-target-sum: |
+  def pair_sum(nums, target):
+      i, j = 0, len(nums) - 1
+      while i < j:
+          total = nums[i] + nums[j]
+          if total == target:
+              return [i, j]
+          if total < target:
+              i += 1
+          else:
+              j -= 1
+      return [-1, -1]
+move-zeros-to-end: |
+  def move_zeros(nums):
+      kept = [n for n in nums if n != 0]
+      return kept + [0] * (len(nums) - len(kept))
+max-window-sum: |
+  def max_window_sum(nums, k):
+      if len(nums) < k:
+          return None
+      window = sum(nums[:k])
+      best = window
+      for i in range(k, len(nums)):
+          window += nums[i] - nums[i - k]
+          best = max(best, window)
+      return best
+first-unique-character: |
+  def first_unique(s):
+      counts = {}
+      for ch in s:
+          counts[ch] = counts.get(ch, 0) + 1
+      for i, ch in enumerate(s):
+          if counts[ch] == 1:
+              return i
+      return -1
+group-anagrams: |
+  def group_anagrams(words):
+      groups = {}
+      for word in words:
+          groups.setdefault("".join(sorted(word)), []).append(word)
+      return sorted((sorted(g) for g in groups.values()), key=lambda g: g[0])
+longest-consecutive-run: |
+  def longest_run(nums):
+      values = set(nums)
+      best = 0
+      for n in values:
+          if n - 1 not in values:
+              length = 1
+              while n + length in values:
+                  length += 1
+              best = max(best, length)
+      return best
+evaluate-rpn: |
+  def eval_rpn(tokens):
+      stack = []
+      for t in tokens:
+          if t in ("+", "-", "*", "/"):
+              b, a = stack.pop(), stack.pop()
+              if t == "+":
+                  stack.append(a + b)
+              elif t == "-":
+                  stack.append(a - b)
+              elif t == "*":
+                  stack.append(a * b)
+              else:
+                  stack.append(int(a / b))
+          else:
+              stack.append(int(t))
+      return stack[0]
+next-warmer-day: |
+  def days_until_warmer(temps):
+      out = [0] * len(temps)
+      stack = []
+      for i, t in enumerate(temps):
+          while stack and temps[stack[-1]] < t:
+              j = stack.pop()
+              out[j] = i - j
+          stack.append(i)
+      return out
+queue-from-two-stacks: |
+  class StackQueue:
+      def __init__(self):
+          self.incoming = []
+          self.outgoing = []
+
+      def push(self, x):
+          self.incoming.append(x)
+
+      def pop(self):
+          if not self.outgoing:
+              while self.incoming:
+                  self.outgoing.append(self.incoming.pop())
+          return self.outgoing.pop() if self.outgoing else None
+
+      def size(self):
+          return len(self.incoming) + len(self.outgoing)
+reverse-linked-list: |
+  def reverse_list(head):
+      prev = None
+      while head:
+          head.next, prev, head = prev, head, head.next
+      return prev
+middle-of-linked-list: |
+  def middle_node(head):
+      slow = fast = head
+      while fast and fast.next:
+          slow = slow.next
+          fast = fast.next.next
+      return slow
+merge-two-linked-lists: |
+  def merge_lists(a, b):
+      dummy = tail = ListNode()
+      while a and b:
+          if a.val <= b.val:
+              tail.next, a = a, a.next
+          else:
+              tail.next, b = b, b.next
+          tail = tail.next
+      tail.next = a or b
+      return dummy.next
+detect-cycle: |
+  def has_cycle(head):
+      slow = fast = head
+      while fast and fast.next:
+          slow = slow.next
+          fast = fast.next.next
+          if slow is fast:
+              return True
+      return False
+inorder-traversal: |
+  def inorder(root):
+      if root is None:
+          return []
+      return inorder(root.left) + [root.val] + inorder(root.right)
+search-bst: |
+  def bst_contains(root, target):
+      while root:
+          if target == root.val:
+              return True
+          root = root.left if target < root.val else root.right
+      return False
+level-order: |
+  def level_order(root):
+      levels = []
+      current = [root] if root else []
+      while current:
+          levels.append([n.val for n in current])
+          current = [c for n in current for c in (n.left, n.right) if c]
+      return levels
+graph-has-path: |
+  def has_path(graph, start, goal):
+      seen = {start}
+      stack = [start]
+      while stack:
+          node = stack.pop()
+          if node == goal:
+              return True
+          for nxt in graph.get(node, []):
+              if nxt not in seen:
+                  seen.add(nxt)
+                  stack.append(nxt)
+      return False
+bfs-shortest-steps: |
+  from collections import deque
+
+  def fewest_steps(graph, start, goal):
+      queue = deque([(start, 0)])
+      seen = {start}
+      while queue:
+          node, steps = queue.popleft()
+          if node == goal:
+              return steps
+          for nxt in graph.get(node, []):
+              if nxt not in seen:
+                  seen.add(nxt)
+                  queue.append((nxt, steps + 1))
+      return -1
+count-islands: |
+  def count_islands(grid):
+      seen = set()
+      count = 0
+      for r, row in enumerate(grid):
+          for c, cell in enumerate(row):
+              if cell == "1" and (r, c) not in seen:
+                  count += 1
+                  stack = [(r, c)]
+                  seen.add((r, c))
+                  while stack:
+                      y, x = stack.pop()
+                      for ny, nx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                          if 0 <= ny < len(grid) and 0 <= nx < len(row):
+                              if grid[ny][nx] == "1" and (ny, nx) not in seen:
+                                  seen.add((ny, nx))
+                                  stack.append((ny, nx))
+      return count
+course-order-possible: |
+  def can_finish(n, prereqs):
+      indegree = [0] * n
+      after = [[] for _ in range(n)]
+      for a, b in prereqs:
+          indegree[a] += 1
+          after[b].append(a)
+      ready = [i for i in range(n) if indegree[i] == 0]
+      done = 0
+      while ready:
+          node = ready.pop()
+          done += 1
+          for nxt in after[node]:
+              indegree[nxt] -= 1
+              if indegree[nxt] == 0:
+                  ready.append(nxt)
+      return done == n
+climbing-stairs: |
+  def climb_ways(n):
+      a, b = 1, 1
+      for _ in range(n):
+          a, b = b, a + b
+      return a
+house-robber: |
+  def max_non_adjacent(values):
+      take, skip = 0, 0
+      for v in values:
+          take, skip = skip + v, max(take, skip)
+      return max(take, skip)
+fewest-coins: |
+  def fewest_coins(coins, amount):
+      best = [0] + [None] * amount
+      for total in range(1, amount + 1):
+          options = [best[total - c] for c in coins if c <= total and best[total - c] is not None]
+          if options:
+              best[total] = min(options) + 1
+      return -1 if best[amount] is None else best[amount]
+longest-common-subsequence: |
+  def lcs_length(a, b):
+      prev = [0] * (len(b) + 1)
+      for ch in a:
+          cur = [0]
+          for j, other in enumerate(b):
+              cur.append(prev[j] + 1 if ch == other else max(prev[j + 1], cur[j]))
+          prev = cur
+      return prev[-1]

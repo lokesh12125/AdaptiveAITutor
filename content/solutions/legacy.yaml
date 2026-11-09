@@ -1,0 +1,329 @@
+# Reference solutions for the curriculum carried over from the earlier version of this project.
+variable-swap: |
+  def swap_values(a, b):
+      return (b, a)
+type-converter: |
+  def parse_and_sum(str_a, str_b):
+      return int(str_a) + int(str_b)
+format-greeting: |
+  def format_greeting(name, age):
+      return f"Hello {name}, you are {age} years old!"
+even-or-odd-checker: |
+  def is_even(n):
+      return n % 2 == 0
+absolute-value: |
+  def get_abs(n):
+      return -n if n < 0 else n
+sign-of-number: |
+  def sign_description(n):
+      return "positive" if n > 0 else "non-positive"
+compare-numbers: |
+  def compare(a, b):
+      if a > b:
+          return "greater"
+      if a < b:
+          return "less"
+      return "equal"
+leap-year-checker: |
+  def is_leap_year(year):
+      return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+count-multiples: |
+  def count_multiples(n, limit):
+      return sum(1 for x in range(1, limit + 1) if x % n == 0)
+collatz-steps: |
+  def collatz_steps(n):
+      steps = 0
+      while n != 1:
+          n = n // 2 if n % 2 == 0 else 3 * n + 1
+          steps += 1
+      return steps
+first-negative: |
+  def first_negative(numbers):
+      for n in numbers:
+          if n < 0:
+              return n
+      return None
+sum-odds-only: |
+  def sum_odds(numbers):
+      return sum(n for n in numbers if n % 2 != 0)
+multiply-by-two: |
+  def double(n):
+      return n * 2
+power-with-default: |
+  def compute_power(base, exp=2):
+      return base ** exp
+min-and-max-tuple: |
+  def find_extrema(numbers):
+      return (min(numbers), max(numbers))
+first-and-last-char: |
+  def first_and_last(s):
+      return s[0] + s[-1]
+clean-and-uppercase-words: |
+  def clean_words(sentence):
+      return [w.upper() for w in sentence.strip().split()]
+sum-positive-numbers: |
+  def sum_positives(numbers):
+      return sum(n for n in numbers if n > 0)
+sort-and-deduplicate: |
+  def sort_and_remove_duplicates(numbers):
+      return sorted(set(numbers))
+euclidean-distance-squared: |
+  def dist_sq(p1, p2):
+      return (p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2
+shared-elements: |
+  def common_elements(list1, list2):
+      return sorted(set(list1) & set(list2))
+count-frequencies: |
+  def count_frequencies(items):
+      out = {}
+      for item in items:
+          out[item] = out.get(item, 0) + 1
+      return out
+invert-dictionary: |
+  def invert_dict(d):
+      return {v: k for k, v in d.items()}
+every-second-element: |
+  def every_second(lst):
+      return lst[::2]
+square-positives-comprehension: |
+  def square_positives(numbers):
+      return [n * n for n in numbers if n > 0]
+character-count-map: |
+  def word_lengths(words):
+      return {w: len(w) for w in words}
+multiplier-factory: |
+  def make_multiplier(factor):
+      def multiply(x):
+          return x * factor
+      return multiply
+recursive-factorial: |
+  def factorial(n):
+      return 1 if n <= 1 else n * factorial(n - 1)
+sort-tuples-by-second-item: |
+  def sort_by_second(pairs):
+      return sorted(pairs, key=lambda p: p[1])
+map-string-to-ints: |
+  def parse_integers(strings):
+      return list(map(int, strings))
+filter-evens: |
+  def filter_evens(numbers):
+      return list(filter(lambda n: n % 2 == 0, numbers))
+safe-divide: |
+  def safe_divide(a, b):
+      try:
+          return a / b
+      except ZeroDivisionError:
+          return None
+count-lines-from-text: |
+  def count_non_empty_lines(text):
+      return sum(1 for line in text.splitlines() if line.strip())
+circle-area: |
+  import math
+
+  def circle_area(radius):
+      return round(math.pi * radius ** 2, 2)
+normalize-module-name: |
+  def package_path_to_module(path):
+      if path.endswith(".py"):
+          path = path[:-3]
+      return path.replace("/", ".")
+counter-class: |
+  class Counter:
+      def __init__(self):
+          self.count = 0
+
+      def increment(self, step=1):
+          self.count += step
+
+      def get_count(self):
+          return self.count
+point-class: |
+  class Point:
+      def __init__(self, x, y):
+          self.x = x
+          self.y = y
+
+      def move(self, dx, dy):
+          self.x += dx
+          self.y += dy
+rectangle-area: |
+  class Rectangle:
+      def __init__(self, width, height):
+          self.width = width
+          self.height = height
+
+      def area(self):
+          return self.width * self.height
+square-inherits-rectangle: |
+  class Rectangle:
+      def __init__(self, width, height):
+          self.width = width
+          self.height = height
+
+      def area(self):
+          return self.width * self.height
+
+  class Square(Rectangle):
+      def __init__(self, side):
+          super().__init__(side, side)
+custom-range-iterator: |
+  class RangeIterator:
+      def __init__(self, start, stop):
+          self.current = start
+          self.stop = stop
+
+      def __iter__(self):
+          return self
+
+      def __next__(self):
+          if self.current >= self.stop:
+              raise StopIteration
+          value = self.current
+          self.current += 1
+          return value
+even-number-generator: |
+  def even_generator(limit):
+      n = 0
+      while n <= limit:
+          yield n
+          n += 2
+binary-search: |
+  def binary_search(arr, target):
+      lo, hi = 0, len(arr) - 1
+      while lo <= hi:
+          mid = (lo + hi) // 2
+          if arr[mid] == target:
+              return mid
+          if arr[mid] < target:
+              lo = mid + 1
+          else:
+              hi = mid - 1
+      return -1
+bubble-sort-implementation: |
+  def bubble_sort(arr):
+      arr = list(arr)
+      for i in range(len(arr)):
+          for j in range(len(arr) - i - 1):
+              if arr[j] > arr[j + 1]:
+                  arr[j], arr[j + 1] = arr[j + 1], arr[j]
+      return arr
+two-sum-fast: |
+  def two_sum_fast(numbers, target):
+      seen = {}
+      for i, n in enumerate(numbers):
+          if target - n in seen:
+              return [seen[target - n], i]
+          seen[n] = i
+      return None
+valid-parentheses: |
+  def is_valid_parentheses(s):
+      pairs = {")": "(", "]": "[", "}": "{"}
+      stack = []
+      for ch in s:
+          if ch in pairs:
+              if not stack or stack.pop() != pairs[ch]:
+                  return False
+          else:
+              stack.append(ch)
+      return not stack
+recent-counter-queue-processor: |
+  from collections import deque
+
+  def process_queue_requests(requests):
+      queue = deque(requests)
+      out = []
+      while queue:
+          out.append(queue.popleft())
+      return out
+recursive-power: |
+  def fast_pow(x, n):
+      if n == 0:
+          return 1
+      half = fast_pow(x, n // 2)
+      return half * half if n % 2 == 0 else half * half * x
+binary-tree-maximum-depth: |
+  class TreeNode:
+      def __init__(self, val=0, left=None, right=None):
+          self.val = val
+          self.left = left
+          self.right = right
+
+  def max_depth(root):
+      if root is None:
+          return 0
+      return 1 + max(max_depth(root.left), max_depth(root.right))
+invert-binary-tree: |
+  class TreeNode:
+      def __init__(self, val=0, left=None, right=None):
+          self.val = val
+          self.left = left
+          self.right = right
+
+  def invert_tree(root):
+      if root:
+          root.left, root.right = invert_tree(root.right), invert_tree(root.left)
+      return root
+two-pointer-palindrome: |
+  def is_palindrome_fast(s):
+      i, j = 0, len(s) - 1
+      while i < j:
+          if s[i] != s[j]:
+              return False
+          i += 1
+          j -= 1
+      return True
+identify-duplicate-o-n: |
+  def find_first_duplicate(nums):
+      seen = set()
+      for n in nums:
+          if n in seen:
+              return n
+          seen.add(n)
+      return None
+qq-multiplication-table: |
+  def generate_multiplication_table():
+      return [f"{i}x{j}={i * j}" for i in range(1, 10) for j in range(1, 10)]
+list-of-top-3-hills: |
+  def top_three_heights(heights):
+      return sorted(heights, reverse=True)[:3]
+digit-number-of-sum: |
+  def sum_digit_count(a, b):
+      return len(str(a + b))
+greatest-common-divisor-euclid: |
+  def gcd_euclid(x, y):
+      return x if y == 0 else gcd_euclid(y, x % y)
+prime-numbers-count: |
+  def count_primes(numbers):
+      def is_prime(n):
+          if n < 2:
+              return False
+          d = 2
+          while d * d <= n:
+              if n % d == 0:
+                  return False
+              d += 1
+          return True
+      return sum(1 for n in numbers if is_prime(n))
+right-triangle-identifier: |
+  def is_right_triangle(a, b, c):
+      x, y, z = sorted((a, b, c))
+      return x * x + y * y == z * z
+bank-account-class: |
+  class BankAccount:
+      def __init__(self, owner, balance=0):
+          self.owner = owner
+          self.balance = balance
+
+      def deposit(self, amount):
+          if amount > 0:
+              self.balance += amount
+          return self.balance
+
+      def withdraw(self, amount):
+          if 0 < amount <= self.balance:
+              self.balance -= amount
+              return True
+          return False
+
+      def get_balance(self):
+          return self.balance

@@ -1,0 +1,9 @@
+submission_id,problem_id,user_id,date,language,original_language,filename_ext,status,cpu_time,memory,code_size,accuracy
+s1,p90001,u1,100,Python,Python3,py,Wrong Answer,10,100,50,
+s2,p90001,u1,200,Python,Python3,py,Accepted,10,100,55,
+s3,p90001,u2,150,Python,Python3,py,Accepted,12,100,60,
+s4,p90001,u3,120,Python,Python3,py,Runtime Error,5,100,40,
+s5,p90001,u3,130,Python,Python3,py,Wrong Answer,5,100,41,
+s6,p90001,u3,140,Python,Python3,py,Accepted,5,100,42,
+s7,p90001,u4,110,C++,C++14,cpp,Accepted,1,100,90,
+s8,p90001,u5,115,Python,Python3,py,Judge Not Available,0,0,30,

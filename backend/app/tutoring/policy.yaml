@@ -1,0 +1,62 @@
+# Experimental starting values chosen by the project team. None of these are validated research
+# results, and the report does not specify them. They exist in this file so they can be tuned and compared.
+dsda:
+  policy_version: dsda-1.0
+  # Weights for the need-for-help score. Unknown inputs are left out and the rest are rescaled.
+  weights:
+    low_mastery: 0.25
+    low_confidence: 0.10
+    confusion: 0.20
+    cognitive_load: 0.10
+    repeated_issue: 0.20
+    unhelpful_hints: 0.15
+  progress_credit: 0.15        # subtracted when the learner is visibly improving
+  level_thresholds: [0.20, 0.40, 0.60, 0.80]   # score below these maps to L0, L1, L2, L3; above is L4
+  first_contact_max_level: 2   # never start above this level on a new issue
+  explicit_request_floor: 1    # a request for help always gets at least this
+  small_request_max_level: 2   # "just a nudge"
+  l3_min_prior_events: 1       # L3 needs at least this many earlier attempts or hints on the issue
+  l4_min_unhelpful_hints: 2    # L4 needs at least this many earlier hints without progress
+  syntax_max_level: 2
+  high_load_max_level: 3
+  offer_only_mastery: 0.7      # above this, a first unrequested failure earns an offer, not a hint
+  retrieval_min_support: 3
+  retrieval_min_effectiveness: 0.55
+  retrieval_max_level_shift: 1
+  presentation:
+    "1": {format: question, max_sentences: 2, max_words: 45}
+    "2": {format: hint, max_sentences: 3, max_words: 70}
+    "3": {format: outline, max_sentences: 6, max_words: 110}
+    "4": {format: example, max_sentences: 7, max_words: 150}
+    high_load: {max_sentences: 2, max_words: 40}
+
+cognitive:
+  method_version: cs-1.0
+  bkt_guess: 0.20
+  bkt_slip: 0.10
+  bkt_learn: 0.12
+  bkt_prior: 0.20
+  evidence_weights:
+    solved_independently: 1.0
+    solved_with_hints_by_level: [1.0, 0.8, 0.6, 0.35, 0.2]
+    logic_failure: 0.8
+    resource_limit: 0.6
+    syntax_error: 0.15
+    imported_problem_factor: 0.5
+  range_base: 0.35
+  min_evidence_for_band: 1.5
+  slow_factor: 2.0
+  baseline_active_seconds: {easy: 240, medium: 600, hard: 1200}
+  self_confidence_values: {low: 0.2, medium: 0.5, high: 0.85}
+
+reflection:
+  min_events_between_prompts: 3
+  ask_after_failed_attempts: 3
+
+planner:
+  advance_mastery: 0.75
+  advance_min_independent: 2
+  advance_min_evidence: 2.5
+  dependence_ratio: 0.6        # share of assisted solves above which more independent practice comes first
+  prerequisite_gap: 0.45       # prerequisite mastery below this suggests practising it first
+  stuck_attempts: 4

@@ -1,0 +1,25 @@
+# Knowledge checks written for this project: the source for learning gain, and separate from the tutor's
+# own estimates. The two forms were written to be parallel, but they have NOT been statistically validated.
+note: "These short checks measure knowledge outside the tutor. Answer without looking anything up, and it is fine to guess or skip. Results do not affect anything except your starting point."
+pre:
+  title: "Starting check"
+  questions:
+    - {id: a1, unit: python-basics, prompt: "What does this print?", code: "x = 5\ny = x\nx = 10\nprint(y)", options: ["10", "5", "None", "An error"], answer: "5"}
+    - {id: a2, unit: conditionals, prompt: "What does this print when score is 75?", code: "if score >= 90:\n    print('A')\nelif score >= 70:\n    print('B')\nelse:\n    print('C')", options: ["A", "B", "C", "Nothing"], answer: "B"}
+    - {id: a3, unit: loops, prompt: "How many numbers does this print?", code: "for i in range(1, 5):\n    print(i)", options: ["3", "4", "5", "It never stops"], answer: "4"}
+    - {id: a4, unit: functions, prompt: "What does this print?", code: "def f(a):\n    a + 1\nprint(f(2))", options: ["3", "2", "None", "An error"], answer: "None"}
+    - {id: a5, unit: lists-dicts, prompt: "What is the value of d['b'] afterwards?", code: "d = {'a': 1}\nd['b'] = d['a'] + 1", options: ["1", "2", "'a'", "It raises KeyError"], answer: "2"}
+    - {id: a6, unit: strings, prompt: "What does s[1:3] give when s is 'python'?", options: ["'py'", "'yt'", "'yth'", "'pyt'"], answer: "'yt'"}
+    - {id: a7, unit: recursion, prompt: "What does this return for f(3)?", code: "def f(n):\n    if n == 0:\n        return 0\n    return n + f(n - 1)", options: ["3", "6", "0", "It never stops"], answer: "6"}
+    - {id: a8, unit: hashing, prompt: "Which is usually fastest for checking whether a value has been seen?", options: ["Searching a list", "Using a set", "Sorting a list every time", "They are all the same"], answer: "Using a set"}
+post:
+  title: "Follow-up check"
+  questions:
+    - {id: b1, unit: python-basics, prompt: "What does this print?", code: "a = 3\nb = a\na = 8\nprint(b)", options: ["8", "3", "None", "An error"], answer: "3"}
+    - {id: b2, unit: conditionals, prompt: "What does this print when age is 15?", code: "if age >= 18:\n    print('adult')\nelif age >= 13:\n    print('teen')\nelse:\n    print('child')", options: ["adult", "teen", "child", "Nothing"], answer: "teen"}
+    - {id: b3, unit: loops, prompt: "How many numbers does this print?", code: "for i in range(2, 8):\n    print(i)", options: ["5", "6", "7", "It never stops"], answer: "6"}
+    - {id: b4, unit: functions, prompt: "What does this print?", code: "def g(x):\n    y = x * 2\nprint(g(4))", options: ["8", "4", "None", "An error"], answer: "None"}
+    - {id: b5, unit: lists-dicts, prompt: "What is the value of c['y'] afterwards?", code: "c = {'x': 4}\nc['y'] = c['x'] + 2", options: ["4", "6", "'x'", "It raises KeyError"], answer: "6"}
+    - {id: b6, unit: strings, prompt: "What does s[2:4] give when s is 'tutors'?", options: ["'ut'", "'to'", "'tor'", "'tu'"], answer: "'to'"}
+    - {id: b7, unit: recursion, prompt: "What does this return for h(4)?", code: "def h(n):\n    if n == 0:\n        return 0\n    return 1 + h(n - 1)", options: ["3", "4", "0", "It never stops"], answer: "4"}
+    - {id: b8, unit: hashing, prompt: "Which is usually fastest for finding how many times each word appears?", options: ["Nested loops over a list", "A dictionary of counts", "Sorting after every word", "They are all the same"], answer: "A dictionary of counts"}

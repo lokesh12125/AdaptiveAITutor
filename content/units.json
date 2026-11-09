@@ -1,0 +1,823 @@
+[
+ {
+  "id": "python-basics",
+  "title": "Python basics",
+  "order": 1,
+  "track": "foundations",
+  "prerequisites": [],
+  "summary": "What a program is, how Python stores values, and how to write your first function.",
+  "optional": false,
+  "lessons": [
+   {
+    "title": "Variables",
+    "objective": "Understand variable declaration, identifier rules, and value reassignment.",
+    "explanation": "In Python, variables are labels bound to objects in memory. You do not declare types explicitly. Assignment is performed using '='.",
+    "examples": [
+     {
+      "title": "Assigning Variables",
+      "code": "x = 10\nname = 'Alice'\nprint(f'{name} has {x} points')"
+     }
+    ]
+   },
+   {
+    "title": "Data Types",
+    "objective": "Distinguish between numeric and text data types and cast between them.",
+    "explanation": "Python features built-in types such as int, float, str, and bool. The type() function inspects an object's type, and constructor functions like int() or str() perform conversion.",
+    "examples": [
+     {
+      "title": "Type Casting",
+      "code": "num_str = '42'\nnum_int = int(num_str)\npi_float = float('3.14')"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "variables-io",
+  "title": "Variables, input/output and operators",
+  "order": 2,
+  "track": "foundations",
+  "prerequisites": [
+   "python-basics"
+  ],
+  "summary": "Reading input, printing output, and doing arithmetic and comparisons.",
+  "optional": false,
+  "lessons": [
+   {
+    "title": "Input and Output",
+    "objective": "Format output strings accurately using f-strings and understand string templating.",
+    "explanation": "Output is printed using print(). F-strings (f'...') provide concise, readable interpolation of expressions directly within string literals.",
+    "examples": [
+     {
+      "title": "Formatted String",
+      "code": "score = 95\nprint(f'Final Score: {score:.1f}%')"
+     }
+    ]
+   },
+   {
+    "title": "Operators",
+    "objective": "Apply operator precedence and boolean logic effectively.",
+    "explanation": "Arithmetic includes +, -, *, /, // (floor div), % (modulo), and ** (power). Comparison includes ==, !=, <, <=, >, >=. Logical operators are and, or, not.",
+    "examples": [
+     {
+      "title": "Modulo and Division",
+      "code": "even = (10 % 2 == 0)\nfloor = 7 // 2  # 3"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "conditionals",
+  "title": "Conditionals",
+  "order": 3,
+  "track": "foundations",
+  "prerequisites": [
+   "variables-io"
+  ],
+  "summary": "Making decisions in code with if, elif and else.",
+  "optional": false,
+  "lessons": [
+   {
+    "title": "If Statements",
+    "objective": "Execute code blocks conditionally when a predicate evaluates to True.",
+    "explanation": "The 'if' statement evaluates a conditional expression. If the expression evaluates to True, the indented block of code runs.",
+    "examples": [
+     {
+      "title": "Basic If",
+      "code": "if score >= 60:\n    status = 'Passed'"
+     }
+    ]
+   },
+   {
+    "title": "If / Else",
+    "objective": "Handle mutually exclusive logic paths.",
+    "explanation": "An 'if...else' construct executes one block when the condition is True, and the alternative block when it is False.",
+    "examples": [
+     {
+      "title": "If Else",
+      "code": "if age >= 18:\n    access = 'Adult'\nelse:\n    access = 'Minor'"
+     }
+    ]
+   },
+   {
+    "title": "If / Elif / Else",
+    "objective": "Evaluate sequential conditions with a default fallback.",
+    "explanation": "The 'elif' clause allows testing multiple expressions in sequence until one evaluates to True. The optional 'else' clause catches any remaining cases.",
+    "examples": [
+     {
+      "title": "Letter Grade",
+      "code": "if score >= 90:\n    grade = 'A'\nelif score >= 80:\n    grade = 'B'\nelse:\n    grade = 'C'"
+     }
+    ]
+   },
+   {
+    "title": "Nested Conditions",
+    "objective": "Manage multi-tiered logical constraints with clean indentation.",
+    "explanation": "Conditions placed inside other conditional blocks allow nuanced evaluation of dependent criteria.",
+    "examples": [
+     {
+      "title": "Nested Check",
+      "code": "if user_active:\n    if user_role == 'admin':\n        grant_full_access()"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "loops",
+  "title": "Loops",
+  "order": 4,
+  "track": "foundations",
+  "prerequisites": [
+   "conditionals"
+  ],
+  "summary": "Repeating work with for and while, and controlling when loops stop.",
+  "optional": false,
+  "lessons": [
+   {
+    "title": "For Loops",
+    "objective": "Use range() and iterate over sequences efficiently.",
+    "explanation": "A for loop iterates over each item in an iterable sequence (such as a list, string, or range) in order.",
+    "examples": [
+     {
+      "title": "Sum with Range",
+      "code": "total = 0\nfor i in range(1, 6):\n    total += i"
+     }
+    ]
+   },
+   {
+    "title": "While Loops",
+    "objective": "Implement iteration that repeats until a state condition is met.",
+    "explanation": "A while loop repeats its body as long as its condition remains True. State must be updated within the loop to avoid infinite loops.",
+    "examples": [
+     {
+      "title": "Countdown",
+      "code": "count = 5\nwhile count > 0:\n    count -= 1"
+     }
+    ]
+   },
+   {
+    "title": "Break",
+    "objective": "Exit loops immediately when an early stopping criterion is satisfied.",
+    "explanation": "The 'break' statement terminates the innermost loop immediately, jumping execution to the first statement outside the loop.",
+    "examples": [
+     {
+      "title": "Early Exit",
+      "code": "for x in [1, 3, -1, 5]:\n    if x < 0:\n        break"
+     }
+    ]
+   },
+   {
+    "title": "Continue",
+    "objective": "Bypass the remainder of a loop body for specific elements.",
+    "explanation": "The 'continue' statement stops execution of the current iteration and jumps directly to the next iteration of the loop.",
+    "examples": [
+     {
+      "title": "Skip Evens",
+      "code": "for i in range(10):\n    if i % 2 == 0:\n        continue\n    print(i)"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "functions",
+  "title": "Functions",
+  "order": 5,
+  "track": "foundations",
+  "prerequisites": [
+   "loops"
+  ],
+  "summary": "Packaging logic into reusable functions, parameters and return values.",
+  "optional": false,
+  "lessons": [
+   {
+    "title": "Functions",
+    "objective": "Organize code into callable abstractions.",
+    "explanation": "Functions group reusable logic under a name. They are defined using the 'def' keyword and invoked with parentheses.",
+    "examples": [
+     {
+      "title": "Simple Function",
+      "code": "def greet():\n    return 'Hello, Python!'"
+     }
+    ]
+   },
+   {
+    "title": "Parameters",
+    "objective": "Design flexible function signatures.",
+    "explanation": "Parameters define values expected by a function. Default arguments assign fallback values when an argument is omitted during invocation.",
+    "examples": [
+     {
+      "title": "Default Parameter",
+      "code": "def power(base, exp=2):\n    return base ** exp"
+     }
+    ]
+   },
+   {
+    "title": "Return Values",
+    "objective": "Send computed results back to the caller cleanly.",
+    "explanation": "The 'return' statement exits a function and hands the specified value back to the caller. Omitting return implicitly returns None.",
+    "examples": [
+     {
+      "title": "Multiple Returns",
+      "code": "def min_max(lst):\n    return min(lst), max(lst)"
+     }
+    ]
+   },
+   {
+    "title": "Scope",
+    "objective": "Understand variable resolution order and lexical closures.",
+    "explanation": "Python resolves variables via LEGB: Local first, then Enclosing (closure), Global (module level), and Built-in.",
+    "examples": [
+     {
+      "title": "Closure Counter",
+      "code": "def make_adder(x):\n    def add(y):\n        return x + y\n    return add"
+     }
+    ]
+   },
+   {
+    "title": "Lambda Functions",
+    "objective": "Write concise inline callables for sorting and transformations.",
+    "explanation": "Lambda expressions provide a syntax for anonymous functions: lambda args: expression. They are restricted to a single evaluated expression.",
+    "examples": [
+     {
+      "title": "Sort by Key",
+      "code": "pairs = [(1, 'b'), (2, 'a')]\npairs.sort(key=lambda item: item[1])"
+     }
+    ]
+   },
+   {
+    "title": "map()",
+    "objective": "Utilize functional programming mappings across collections.",
+    "explanation": "map(function, iterable) yields items resulting from applying the function to each element of the iterable.",
+    "examples": [
+     {
+      "title": "Map to Lengths",
+      "code": "lengths = list(map(len, ['ant', 'bear']))"
+     }
+    ]
+   },
+   {
+    "title": "filter()",
+    "objective": "Extract subsets of collections lazily using predicate functions.",
+    "explanation": "filter(predicate, iterable) extracts elements for which the predicate returns True.",
+    "examples": [
+     {
+      "title": "Filter Positives",
+      "code": "pos = list(filter(lambda x: x > 0, [-1, 2, -3, 4]))"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "strings",
+  "title": "Strings",
+  "order": 6,
+  "track": "foundations",
+  "prerequisites": [
+   "functions"
+  ],
+  "summary": "Working with text: indexing, slicing and common methods.",
+  "optional": false,
+  "lessons": [
+   {
+    "title": "Strings",
+    "objective": "Access characters via 0-based and negative indexing.",
+    "explanation": "Strings in Python are immutable text sequences. Character elements can be indexed using bracket syntax, e.g., text[0] or text[-1].",
+    "examples": [
+     {
+      "title": "String Indexing",
+      "code": "word = 'Python'\nfirst = word[0]  # 'P'\nlast = word[-1]   # 'n'"
+     }
+    ]
+   },
+   {
+    "title": "String Methods",
+    "objective": "Manipulate and sanitize text using standard string methods.",
+    "explanation": "Strings provide helper methods such as .lower(), .upper(), .strip(), .replace(), and .split(). Since strings are immutable, methods return a new string.",
+    "examples": [
+     {
+      "title": "Split and Join",
+      "code": "words = 'apple,banana,orange'.split(',')\nclean = ' - '.join(words)"
+     }
+    ]
+   },
+   {
+    "title": "Slicing",
+    "objective": "Extract sub-lists and reverse sequences with step values.",
+    "explanation": "Sequence slicing syntax [start:stop:step] extracts a portion of a sequence. Negative steps iterate backwards (e.g. [::-1] reverses).",
+    "examples": [
+     {
+      "title": "Reverse Slice",
+      "code": "text = 'hello'\nrev = text[::-1]  # 'olleh'"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "lists-dicts",
+  "title": "Lists and dictionaries",
+  "order": 7,
+  "track": "foundations",
+  "prerequisites": [
+   "functions"
+  ],
+  "summary": "The everyday collections: lists, tuples, sets and dictionaries.",
+  "optional": false,
+  "lessons": [
+   {
+    "title": "Lists",
+    "objective": "Construct, read, and mutate list collections.",
+    "explanation": "Lists are mutable sequences defined using brackets: [item1, item2]. Elements can be modified in place: items[0] = new_value.",
+    "examples": [
+     {
+      "title": "List Mutation",
+      "code": "nums = [1, 2, 3]\nnums[0] = 10\nprint(nums)  # [10, 2, 3]"
+     }
+    ]
+   },
+   {
+    "title": "List Methods",
+    "objective": "Mutate lists using in-place methods vs returning new lists.",
+    "explanation": ".append(x) adds an item to the end, .pop() removes and returns an item, and .sort() orders the list in place.",
+    "examples": [
+     {
+      "title": "List Mutation Methods",
+      "code": "stack = []\nstack.append(1)\nval = stack.pop()"
+     }
+    ]
+   },
+   {
+    "title": "Tuples",
+    "objective": "Utilize tuples for fixed-structure data records and unpacking.",
+    "explanation": "Tuples are immutable sequences created using parentheses: (a, b). They are hashable (can be dict keys) and prevent accidental modification.",
+    "examples": [
+     {
+      "title": "Tuple Unpacking",
+      "code": "point = (10, 20)\nx, y = point"
+     }
+    ]
+   },
+   {
+    "title": "Sets",
+    "objective": "Execute set operations (union, intersection, difference) for O(1) membership.",
+    "explanation": "Sets store distinct hashable elements. They provide mathematical operations such as union (|), intersection (&), and difference (-).",
+    "examples": [
+     {
+      "title": "Set Intersection",
+      "code": "a = {1, 2, 3}\nb = {2, 3, 4}\ncommon = a & b  # {2, 3}"
+     }
+    ]
+   },
+   {
+    "title": "Dictionaries",
+    "objective": "Map unique keys to values and access values in O(1) average time.",
+    "explanation": "Dictionaries store key-value associations: {key: value}. Keys must be immutable and hashable; values can be any object.",
+    "examples": [
+     {
+      "title": "Dictionary Lookup",
+      "code": "ages = {'Ada': 36, 'Alan': 41}\nprint(ages['Ada'])"
+     }
+    ]
+   },
+   {
+    "title": "Dictionary Methods",
+    "objective": "Use safe key retrieval with defaults and iterate over key-value pairs.",
+    "explanation": "dict.get(key, default) avoids KeyError when a key may be absent. .items() yields (key, value) pairs during iteration.",
+    "examples": [
+     {
+      "title": "Safe Get",
+      "code": "user = {'name': 'Sam'}\nrole = user.get('role', 'guest')"
+     }
+    ]
+   },
+   {
+    "title": "List Comprehensions",
+    "objective": "Write readable, idiomatic one-line list transformations.",
+    "explanation": "List comprehensions follow the form: [expression for item in iterable if condition]. They are faster and more concise than manual append loops.",
+    "examples": [
+     {
+      "title": "Squares of Evens",
+      "code": "evens = [x**2 for x in range(10) if x % 2 == 0]"
+     }
+    ]
+   },
+   {
+    "title": "Dictionary Comprehensions",
+    "objective": "Transform key-value mappings declaratively.",
+    "explanation": "Dict comprehensions allow constructing dictionaries in one expression: {key_expr: val_expr for item in iterable if condition}.",
+    "examples": [
+     {
+      "title": "Word Lengths",
+      "code": "words = ['cat', 'elephant']\nlengths = {w: len(w) for w in words}"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "recursion",
+  "title": "Recursion",
+  "order": 8,
+  "track": "algorithms",
+  "prerequisites": [
+   "functions"
+  ],
+  "summary": "Solving a problem by solving a smaller version of itself.",
+  "optional": false,
+  "lessons": [
+   {
+    "title": "Recursion",
+    "objective": "Formulate divide-and-conquer logic with sound base cases.",
+    "explanation": "A recursive function calls itself to solve smaller sub-problems. Every recursive function must define a base case to terminate execution.",
+    "examples": [
+     {
+      "title": "Factorial",
+      "code": "def fact(n):\n    return 1 if n <= 1 else n * fact(n - 1)"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "searching-sorting",
+  "title": "Searching and sorting",
+  "order": 9,
+  "track": "algorithms",
+  "prerequisites": [
+   "lists-dicts"
+  ],
+  "summary": "Finding and ordering data, and reasoning about how long it takes.",
+  "optional": false,
+  "lessons": [
+   {
+    "title": "Searching",
+    "objective": "Implement binary search and recognize when sorted order enables logarithmic time.",
+    "explanation": "Binary search repeatedly divides a sorted search interval in half. Comparing the target with the middle element eliminates half the candidates.",
+    "examples": [
+     {
+      "title": "Binary Search",
+      "code": "def bin_search(arr, x):\n    low, high = 0, len(arr) - 1"
+     }
+    ]
+   },
+   {
+    "title": "Sorting",
+    "objective": "Understand in-place vs out-of-place sorting and stability.",
+    "explanation": "Sorting orders elements according to a comparator. Bubble sort swaps adjacent inverted pairs; merge sort divides and merges sorted halves in O(n log n).",
+    "examples": [
+     {
+      "title": "Bubble Sort",
+      "code": "# repeated swaps"
+     }
+    ]
+   },
+   {
+    "title": "Algorithmic Complexity / Big-O",
+    "objective": "Analyze asymptotic upper bounds and select optimal data structures.",
+    "explanation": "Big-O notation describes how execution time or space requirements scale asymptotically as the input size n approaches infinity.",
+    "examples": [
+     {
+      "title": "Comparing Complexities",
+      "code": "# O(1) hash lookup vs O(n) linear search"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "arrays-two-pointers",
+  "title": "Arrays and two pointers",
+  "order": 10,
+  "track": "dsa",
+  "prerequisites": [
+   "lists-dicts"
+  ],
+  "summary": "Walking through arrays with two indices and sliding windows.",
+  "optional": false,
+  "lessons": [
+   {
+    "title": "Two-pointer Problems",
+    "objective": "Optimize linear sequence problems from O(n^2) to O(n) using pointer convergence.",
+    "explanation": "Two pointers iterate from both ends toward each other or travel at different speeds to solve partitioned array problems in a single pass.",
+    "examples": [
+     {
+      "title": "Two Pointer Palindrome",
+      "code": "left, right = 0, len(s) - 1\nwhile left < right:\n    if s[left] != s[right]: return False\n    left += 1; right -= 1\nreturn True"
+     }
+    ]
+   },
+   {
+    "title": "Sliding windows",
+    "explanation": "To examine consecutive ranges, update the previous result instead of recomputing it. Add the value entering the window and subtract the one leaving.",
+    "examples": []
+   }
+  ]
+ },
+ {
+  "id": "hashing",
+  "title": "Hashing",
+  "order": 11,
+  "track": "dsa",
+  "prerequisites": [
+   "lists-dicts"
+  ],
+  "summary": "Trading memory for speed with dictionaries and sets.",
+  "optional": false,
+  "lessons": [
+   {
+    "title": "Hash-map Problems",
+    "objective": "Trade space for time by caching seen elements in a hash map.",
+    "explanation": "Hash maps provide O(1) expected time key lookups. By storing complements or previously seen elements, quadratic brute-force searches can be reduced to linear time.",
+    "examples": [
+     {
+      "title": "Two Sum with Map",
+      "code": "seen = {}\nfor i, num in enumerate(arr):\n    comp = target - num\n    if comp in seen: return [seen[comp], i]\n    seen[num] = i"
+     }
+    ]
+   },
+   {
+    "title": "Why dictionaries are fast",
+    "explanation": "Looking up a key in a dict or set takes about the same time however large it grows. Many nested-loop solutions become single loops by remembering what you have already seen.",
+    "examples": []
+   }
+  ]
+ },
+ {
+  "id": "stacks-queues",
+  "title": "Stacks and queues",
+  "order": 12,
+  "track": "dsa",
+  "prerequisites": [
+   "lists-dicts"
+  ],
+  "summary": "Last-in first-out and first-in first-out structures.",
+  "optional": false,
+  "lessons": [
+   {
+    "title": "Stack",
+    "objective": "Utilize stacks for undo mechanisms, syntax parsing, and depth-first traversals.",
+    "explanation": "A stack enforces LIFO ordering. Elements are added with push/append and removed from the top with pop().",
+    "examples": [
+     {
+      "title": "Balanced Parentheses",
+      "code": "stack = []\nfor ch in s:\n    if ch == '(': stack.append(ch)\n    elif ch == ')':\n        if not stack: return False\n        stack.pop()"
+     }
+    ]
+   },
+   {
+    "title": "Queue",
+    "objective": "Model sequential service buffers using collections.deque.",
+    "explanation": "A queue enforces FIFO ordering. Elements are inserted at the back and removed from the front.",
+    "examples": [
+     {
+      "title": "Queue with Deque",
+      "code": "from collections import deque\nq = deque()\nq.append(1)\nfirst = q.popleft()"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "linked-lists",
+  "title": "Linked lists",
+  "order": 13,
+  "track": "dsa",
+  "prerequisites": [
+   "lists-dicts"
+  ],
+  "summary": "Chains of nodes connected by references, and pointer techniques.",
+  "optional": false,
+  "lessons": [
+   {
+    "title": "Nodes and references",
+    "explanation": "A linked list stores each value in a node that also holds a reference to the next node. Moving through the list means following those references, so keep track of which node you are on and be careful not to lose the rest of the chain when you change a reference.",
+    "examples": [
+     {
+      "title": "Walking a list",
+      "code": "node = head\nwhile node is not None:\n    print(node.val)\n    node = node.next"
+     }
+    ]
+   },
+   {
+    "title": "Fast and slow pointers",
+    "explanation": "Moving one reference two steps for every one step of another finds the middle of a list and detects cycles, using almost no extra memory.",
+    "examples": []
+   }
+  ]
+ },
+ {
+  "id": "trees",
+  "title": "Trees",
+  "order": 14,
+  "track": "dsa",
+  "prerequisites": [
+   "recursion",
+   "linked-lists"
+  ],
+  "summary": "Hierarchical data, traversals and binary search trees.",
+  "optional": false,
+  "lessons": [
+   {
+    "title": "Binary trees",
+    "explanation": "A binary tree node has a value and up to two children. Most tree problems become simple when you ask what to do at one node, and let recursion handle the subtrees.",
+    "examples": [
+     {
+      "title": "Counting nodes",
+      "code": "def size(node):\n    if node is None:\n        return 0\n    return 1 + size(node.left) + size(node.right)"
+     }
+    ]
+   },
+   {
+    "title": "Binary search trees",
+    "explanation": "In a binary search tree, smaller values are on the left and larger values are on the right, so each comparison lets you ignore a whole subtree.",
+    "examples": []
+   }
+  ]
+ },
+ {
+  "id": "graphs",
+  "title": "Graphs",
+  "order": 15,
+  "track": "dsa",
+  "prerequisites": [
+   "trees",
+   "hashing",
+   "stacks-queues"
+  ],
+  "summary": "Networks of nodes, breadth-first and depth-first search.",
+  "optional": false,
+  "lessons": [
+   {
+    "title": "Representing graphs",
+    "explanation": "An adjacency list maps each node to its neighbours. In Python, a dictionary of lists works well.",
+    "examples": [
+     {
+      "title": "Adjacency list",
+      "code": "graph = {'a': ['b', 'c'], 'b': [], 'c': ['b']}"
+     }
+    ]
+   },
+   {
+    "title": "Breadth-first and depth-first search",
+    "explanation": "Search visits nodes while remembering which were already seen, so cycles cannot trap you. A queue explores level by level, which gives the fewest steps. A stack or recursion explores deeply.",
+    "examples": []
+   }
+  ]
+ },
+ {
+  "id": "dynamic-programming",
+  "title": "Dynamic programming",
+  "order": 16,
+  "track": "dsa",
+  "prerequisites": [
+   "recursion",
+   "hashing"
+  ],
+  "summary": "Reusing answers to overlapping subproblems.",
+  "optional": false,
+  "lessons": [
+   {
+    "title": "Overlapping subproblems",
+    "explanation": "If a recursive solution computes the same smaller answer many times, store each answer the first time. That turns exponential work into something practical.",
+    "examples": [
+     {
+      "title": "Memoization",
+      "code": "memo = {}\ndef fib(n):\n    if n < 2:\n        return n\n    if n not in memo:\n        memo[n] = fib(n - 1) + fib(n - 2)\n    return memo[n]"
+     }
+    ]
+   },
+   {
+    "title": "Building a table",
+    "explanation": "You can also fill answers from smallest to largest in a list. First define in words what each entry means, then how it depends on earlier entries.",
+    "examples": []
+   }
+  ]
+ },
+ {
+  "id": "python-toolkit",
+  "title": "Python toolkit (optional)",
+  "order": 17,
+  "track": "elective",
+  "prerequisites": [
+   "functions"
+  ],
+  "summary": "Optional extras: exceptions, modules, classes, iterators and generators.",
+  "optional": true,
+  "lessons": [
+   {
+    "title": "Exceptions",
+    "objective": "Catch specific runtime errors and maintain program stability.",
+    "explanation": "Exceptions signal runtime errors. A try-except block allows intercepting expected errors (e.g. ValueError, ZeroDivisionError) gracefully.",
+    "examples": [
+     {
+      "title": "Safe Division",
+      "code": "try:\n    res = a / b\nexcept ZeroDivisionError:\n    res = 0"
+     }
+    ]
+   },
+   {
+    "title": "File Handling",
+    "objective": "Manage I/O streams and guarantee resource disposal via context managers.",
+    "explanation": "The 'with open(path, mode)' statement manages file streams and automatically closes them when the block exits, even if exceptions occur.",
+    "examples": [
+     {
+      "title": "Read Lines",
+      "code": "with open('data.txt', 'r') as f:\n    lines = f.readlines()"
+     }
+    ]
+   },
+   {
+    "title": "Modules",
+    "objective": "Import and reuse modular functions from the Python Standard Library.",
+    "explanation": "A module is a Python file containing executable code and definitions. Modules are loaded with 'import module_name'.",
+    "examples": [
+     {
+      "title": "Math Import",
+      "code": "import math\nroot = math.sqrt(25)  # 5.0"
+     }
+    ]
+   },
+   {
+    "title": "Packages",
+    "objective": "Structure multi-file Python applications into packages.",
+    "explanation": "Packages are directory structures that group related modules, providing dotted module names.",
+    "examples": [
+     {
+      "title": "Package Structure",
+      "code": "# from package.submodule import helper"
+     }
+    ]
+   },
+   {
+    "title": "Classes",
+    "objective": "Model real-world entities using object-oriented abstractions.",
+    "explanation": "Classes serve as blueprints for objects. Methods defined inside a class accept 'self' as their first argument referring to the instance.",
+    "examples": [
+     {
+      "title": "Simple Class",
+      "code": "class Dog:\n    def speak(self):\n        return 'Woof!'"
+     }
+    ]
+   },
+   {
+    "title": "Objects",
+    "objective": "Manipulate instance state and call instance methods.",
+    "explanation": "An object is a concrete instance of a class, possessing its own unique attribute values.",
+    "examples": [
+     {
+      "title": "Instantiating",
+      "code": "c1 = Counter()\nc2 = Counter()"
+     }
+    ]
+   },
+   {
+    "title": "Constructors",
+    "objective": "Set up instance attributes during instantiation.",
+    "explanation": "The __init__ method is invoked automatically when a new instance is created to set initial attributes.",
+    "examples": [
+     {
+      "title": "Constructor",
+      "code": "class User:\n    def __init__(self, username):\n        self.username = username"
+     }
+    ]
+   },
+   {
+    "title": "Inheritance",
+    "objective": "Derive specialized child classes from common parent abstractions.",
+    "explanation": "Inheritance enables a child class to inherit attributes and methods from a parent class, using super() to invoke parent behaviors.",
+    "examples": [
+     {
+      "title": "Subclass",
+      "code": "class Animal:\n    pass\nclass Cat(Animal):\n    pass"
+     }
+    ]
+   },
+   {
+    "title": "Iterators",
+    "objective": "Implement custom stream iterators following Python's protocol.",
+    "explanation": "An iterator is an object that implements __iter__() (returning self) and __next__() (returning the next value or raising StopIteration).",
+    "examples": [
+     {
+      "title": "Iterator Protocol",
+      "code": "class Countdown:\n    def __init__(self, n):\n        self.n = n\n    def __iter__(self):\n        return self\n    def __next__(self):\n        if self.n <= 0: raise StopIteration\n        self.n -= 1; return self.n + 1"
+     }
+    ]
+   },
+   {
+    "title": "Generators",
+    "objective": "Construct memory-efficient data streams.",
+    "explanation": "Generators are functions that yield values one at a time using 'yield', suspending and resuming their state between calls.",
+    "examples": [
+     {
+      "title": "Fibonacci Generator",
+      "code": "def fib(n):\n    a, b = 0, 1\n    for _ in range(n):\n        yield a\n        a, b = b, a + b"
+     }
+    ]
+   }
+  ]
+ }
+]
