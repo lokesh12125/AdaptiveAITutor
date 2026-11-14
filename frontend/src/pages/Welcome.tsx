@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { Sparkles } from "lucide-react";
+import { BookOpen, ListChecks, MessageCircleQuestion, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
@@ -9,11 +9,10 @@ import { LogoMark, ThemeToggle } from "@/components/Shell";
 import { Button, errorText, Field, Notice } from "@/components/ui";
 import { useSession } from "@/lib/session";
 
-const RUNGS = [
-  ["L1", "A question that gets you thinking"],
-  ["L2", "A hint pointing at the issue"],
-  ["L3", "A step-by-step outline"],
-  ["L4", "A worked example on a different problem"],
+const STEPS = [
+  { icon: BookOpen, title: "Read a clear lesson", text: "Every topic explains the idea first, with examples you can run and change." },
+  { icon: ListChecks, title: "Practise, topic by topic", text: "Over 300 problems, grouped by the technique they use, from easy to hard." },
+  { icon: MessageCircleQuestion, title: "Ask when you are stuck", text: "Select the lines that confuse you and ask. You get help with your code, never the whole answer." },
 ];
 
 export function Welcome() {
@@ -39,20 +38,22 @@ export function Welcome() {
     <div className="welcome">
       <section className="welcome-story">
         <div className="row-between">
-          <span className="logo"><LogoMark /> Trellis</span>
+          <span className="logo"><LogoMark /> CodePath</span>
           <ThemeToggle />
         </div>
-        <div className="stack">
-          <h1 style={{ fontSize: "clamp(1.8rem, 1.4rem + 2vw, 2.6rem)", maxWidth: "18ch" }}>Learn Python with just enough help.</h1>
-          <p className="muted prose" style={{ fontSize: "1.05rem" }}>Trellis watches how your attempts go, then gives the smallest hint that keeps you moving. It will not write the answer for you, so what you learn stays with you.</p>
-        </div>
-        <div className="ladder" aria-label="The four levels of help">
-          {RUNGS.map(([level, text]) => <div className="ladder-rung" key={level}><b>{level}</b><span>{text}</span></div>)}
-        </div>
-        <p className="subtle prose">Beginner or preparing for coding interviews, you use the same workspace. You can also bring in a question from anywhere.</p>
+        <h1>Learn Python, <em>one small step</em> at a time.</h1>
+        <p className="lede">A patient tutor that gives you just enough help to keep going, so the understanding stays yours.</p>
+        <ol className="welcome-steps">
+          {STEPS.map((step) => (
+            <li key={step.title}>
+              <span className="step-icon"><step.icon size={18} aria-hidden /></span>
+              <span><strong>{step.title}</strong><br /><span className="muted">{step.text}</span></span>
+            </li>
+          ))}
+        </ol>
       </section>
-      <main className="welcome-form" id="main">
-        <div className="stack-s">
+      <main className="welcome-card" id="main">
+        <div className="stack-s" style={{ gap: 4 }}>
           <h2>{mode === "signin" ? "Sign in" : "Create your account"}</h2>
           <p className="muted">{mode === "signin" ? "Pick up where you left off." : "Your progress is saved to your account."}</p>
         </div>

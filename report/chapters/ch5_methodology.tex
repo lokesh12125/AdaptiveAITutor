@@ -1,0 +1,412 @@
+\chapter{Proposed Methodology}
+\section{Design (architecture) or conceptual framework}
+CodePath is a three-tier web application, with a separate, isolated service for running student code. Figure~\ref{fig:architecture} shows the components and how they communicate.
+
+\begin{figure}[htbp]\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[every node/.style={font=\small}]
+\tikzset{col/.style={box, text width=#1, align=center}}
+% Left column: browser and execution service
+\node[col=3.3cm, fill=green!5] (spa) at (0,-1.0) {\textbf{Web application}\\[2pt]\footnotesize React 18, TypeScript, Vite\\[3pt] workspace with editor and tutor pane; lessons; practice; progress and profile; teacher dashboard};
+\node[note, above=1mm of spa] {Learner or teacher browser};
+\node[col=3.3cm, fill=orange!10] (exec) at (0,-5.4) {\textbf{Execution service}\\[2pt]\footnotesize FastAPI job queue\\[3pt]\textbf{Docker sandbox}\\ one container per job; no network; read-only; limits};
+% Middle column: backend
+\node[col=4.0cm, fill=blue!4] (api) at (5.9,0) {\textbf{FastAPI backend}\\[2pt]\footnotesize routers, sessions, rate limits};
+\node[col=4.0cm, fill=blue!4] (svc) at (5.9,-2.0) {\textbf{Tutoring service}\\[2pt]\footnotesize worker pool, per-learner queue};
+\node[col=4.0cm, fill=blue!10] (graph) at (5.9,-4.1) {\textbf{LangGraph learning cycle}\\[2pt]\footnotesize six agents, typed contracts};
+\node[col=4.0cm, fill=gray!8, dashed] (llm) at (5.9,-6.3) {\textbf{LLM gateway} (optional)\\[2pt]\footnotesize wording only; off by default};
+% Right column: data stores and provider
+\node[store, text width=2.7cm, minimum height=2.4cm] (pg) at (11.7,-1.0) {\textbf{PostgreSQL 16}\\\footnotesize 25 tables, graph checkpoints};
+\node[store, text width=2.7cm] (chroma) at (11.7,-4.1) {\textbf{ChromaDB}\\\footnotesize situation vectors};
+\node[col=2.8cm, fill=gray!8, dashed] (prov) at (11.7,-6.3) {\textbf{Model provider}\\\footnotesize OpenAI, Anthropic, Ollama};
+% Arrows
+\draw[darrow] (spa.east |- api.west) -- node[above, note, pos=0.42]{HTTPS, JSON} (api.west);
+\draw[arrow] (api) -- (svc);
+\draw[arrow] (svc) -- (graph);
+\draw[darrow] (api.east) -- node[above, note]{SQL} (api.east -| pg.west);
+\draw[darrow] (graph.north east) -- node[above, note, sloped]{history, state} (pg.south west);
+\draw[darrow] (graph.east) -- node[above, note]{cosine} (chroma.west);
+\draw[arrow] (svc.west) -- ++(-0.45,0) |- (exec.east);
+\node[note, align=right, anchor=east] at ($(svc.west)+(-0.55,-1.75)$) {code\\and tests};
+\draw[arrow, dashed] (graph) -- (llm);
+\draw[arrow, dashed] (llm.east) -- node[above, note]{optional} (prov.west);
+\end{tikzpicture}}
+\caption{System architecture of CodePath}\label{fig:architecture}
+\end{figure}
+
+The web application is a single-page React application. It provides the learner workspace (editor, test cases, results and the tutor pane), the learning path with lessons, the practice library, search, progress and profile pages, settings and the teacher dashboard. It talks to the backend only through a typed JSON API, and its TypeScript types are generated from the backend's OpenAPI schema.
+
+In the backend, FastAPI routers handle authentication (Argon2-hashed passwords and server-side sessions), the workspace (drafts, runs, submissions, hints, questions and reflections), content, imports, learner data and teacher views. The tutoring service queues each learner's actions so that they are processed in order. It attaches an idempotency key, so a double click creates one record, and it starts the agent pipeline in a worker thread. The browser polls the run and shows the real status of each stage.
+
+The six agents run as nodes of a LangGraph graph (Section~\ref{sec:cycle}). Each agent has a typed input and output contract, written as Pydantic models, and reads the learner's stored history from the database.
+
+There are two data stores. PostgreSQL holds the 25 application tables (Section~\ref{sec:data}) and the LangGraph checkpoints, which let a paused learning cycle resume. ChromaDB stores the 14-dimensional situation vectors used for similar-learner retrieval and searches them with cosine similarity over an HNSW index \cite{chroma,malkov2020}. The outcomes behind each vector are stored in PostgreSQL.
+
+Student code is never run inside the API process. A separate execution service receives the code and tests over HTTP, starts a fresh, locked-down Docker container for each job, runs the tests through a small trusted harness and returns structured results.
+
+The LLM gateway is optional. It is a provider-neutral adapter that can call OpenAI, Anthropic or a local Ollama model to reword hints, and it is off by default (\code{LLM\_PROVIDER=none}). Every caller has a deterministic built-in alternative, so tutoring never depends on a model.
+
+\section{Proposed approach and procedure}
+
+\subsection{The learning cycle}\label{sec:cycle}
+The same graph processes every learner action, whether it is a Run, a Submit, a hint request or a typed question (Figure~\ref{fig:cycle}). The graph state (\code{TutorState}) carries only the current cycle. A history loader reads anything earlier from the database, and this is how the agents remember earlier hints, attempts and answers across requests.
+
+\begin{figure}[htbp]\centering
+\resizebox{\ifdim\width>\textwidth\textwidth\else\width\fi}{!}{%
+\begin{tikzpicture}[node distance=4.5mm, every node/.style={font=\small}]
+\node[box, fill=gray!8, minimum width=3.4cm] (intake) {intake: load problem, history};
+\node[box, fill=orange!10, below=of intake, minimum width=3.4cm] (eval) {evaluate: sandbox and grading};
+\node[agent, below=of eval] (diag) {1. Diagnostic};
+\node[agent, below=of diag] (cog) {2. Cognitive State};
+\node[agent, below=of cog] (ret) {3. Similar Learner Retrieval};
+\node[agent, below=of ret, fill=blue!12] (dsda) {4. DSDA policy};
+\node[agent, right=20mm of dsda, fill=blue!12] (gen) {4. Generate hint};
+\node[agent, below=of gen, fill=blue!12] (val) {4. Validate hint};
+\node[agent, below=12mm of dsda] (refl) {5. Reflection};
+\node[agent, below=of refl] (plan) {6. Learning Planner};
+\node[box, fill=gray!8, below=of plan, minimum width=3.4cm] (fin) {finalize: persist, compose view};
+\node[box, fill=yellow!15, below=of fin, minimum width=3.4cm] (wait) {await learner (interrupt, checkpoint)};
+\draw[arrow] (intake) -- (eval);
+\draw[arrow] (eval) -- (diag);
+\draw[arrow] (diag) -- (cog);
+\draw[arrow] (cog) -- (ret);
+\draw[arrow] (ret) -- (dsda);
+\draw[arrow] (dsda) -- node[above, note]{give help} (gen);
+\draw[arrow] (gen) -- (val);
+\draw[arrow] (val.east) -- ++(0.5,0) |- node[right, note, pos=0.25]{rejected,\\attempts $<3$} (gen.east);
+\draw[arrow] (val.south) |- node[below, note, pos=0.75]{accepted, or fallback} (refl.east);
+\draw[arrow] (dsda) -- node[left, note]{offer, wait, none} (refl);
+\draw[arrow] (refl) -- (plan);
+\draw[arrow] (plan) -- (fin);
+\draw[arrow] (fin) -- (wait);
+\draw[arrow] (wait.west) -- ++(-1.6,0) |- node[left, note, pos=0.25]{next learner\\action} (intake.west);
+\draw[arrow, dashed] (eval.east) -- (eval.east -| {$(val.east)+(2.9,0)$}) node[above left, note, align=right]{service failure: agents skipped} |- (fin.east);
+\draw[arrow, dashed] (cog.west) -- ++(-0.9,0) node[left, note]{solved} |- (dsda.west);
+\end{tikzpicture}}
+\caption{The cyclic learning workflow implemented as a LangGraph graph}\label{fig:cycle}
+\end{figure}
+
+The graph has four conditional edges, implemented by the routing functions in \code{graph.py}.
+\begin{itemize}
+\item After \code{evaluate}, if the code could not be checked (service failure or cancellation), every agent is recorded as skipped and the cycle goes straight to \code{finalize}. A service problem is therefore never treated as a learner mistake.
+\item After the Cognitive State agent, retrieval is skipped when the problem is solved, because there is no help to choose.
+\item After DSDA, hint generation runs only when the decision is to show help. An offer generates nothing, and accepting it starts a new cycle.
+\item After validation, a rejected draft returns to generation at the same level and strategy, at most three times in total.
+\end{itemize}
+After \code{finalize}, the \code{await\_learner} node calls LangGraph's \code{interrupt}. The PostgreSQL checkpointer saves the state under a thread for that learner and problem, and nothing runs until the learner acts again. No loop in the graph can generate more help by itself.
+
+Each node runs inside a guard. The guard records an \code{agent\_steps} row (status, input and output summaries, retries, duration). If the node fails, the guard substitutes a safe fallback output so that the cycle still completes.
+
+\subsection{Code execution and grading}
+Table~\ref{tab:sandbox} lists the isolation applied to every job. Inside the container, the harness also sets operating-system resource limits (CPU time, address space, file size and open files). When a learner asks about selected lines, it records a trace of those lines.
+
+\begingroup\small
+\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.15}
+\begin{longtable}{|R{4.2cm}|R{9.4cm}|}
+\caption{Isolation applied to each code-execution container}\label{tab:sandbox}\\\hline
+\textbf{Setting} & \textbf{Effect}\\\hline\endfirsthead
+\hline\textbf{Setting} & \textbf{Effect}\\\hline\endhead
+\code{--network none} & No network access.\\\hline
+\code{--read-only}, \code{--tmpfs /tmp} (32~MB, \code{noexec}) & Read-only root filesystem; a small temporary folder from which programs cannot be executed.\\\hline
+\code{--memory 256m}, \code{--cpus 1}, \code{--pids-limit 64} & Bounded memory, CPU and number of processes.\\\hline
+\code{--cap-drop ALL}, \code{no-new-privileges}, \code{--user 65534} & No Linux capabilities, no privilege escalation, unprivileged user.\\\hline
+\code{--ipc private}, \code{--log-driver none}, core dumps off & No shared memory with the host, no logs kept, no core files.\\\hline
+Image \code{python:3.12-slim} without \code{pip} & Only the standard library and the trusted harness are available.\\\hline
+\end{longtable}
+\endgroup
+
+To grade a test, the service converts the returned value and the expected value to a canonical form and compares them. Integers must match exactly. Floating-point values are equal within a relative and absolute tolerance of $10^{-9}$. Booleans equal only Booleans. Lists are compared element by element and dictionaries by keys and values, and for tasks where order does not matter both lists are sorted first. Printed output is compared after normalising line endings and trailing spaces. Each test receives a category (passed, wrong answer, runtime error, time limit and so on). The overall verdict is \emph{accepted} if all tests pass, \emph{syntax error} if the code cannot be parsed, \emph{partial} if some tests pass, and otherwise the most serious failure. The inputs, expected values and printed output of hidden tests never leave the server.
+
+\subsection{Agent 1: Diagnostic}
+The Diagnostic agent explains what went wrong in this exact version of the code and gives its evidence. It keeps observed facts separate from inferred misconceptions.
+
+Its inputs are the verdict and per-test results, the code, the problem (function name, concepts), recent issue labels, the previous attempt and the number of hint requests on the same code.
+
+It outputs a category and a stable issue label such as \code{logic:\allowbreak off\_by\_one}. It also outputs facts, each tagged with its source (runner, tests or code analysis), inferences with a confidence, the affected lines, a confidence value in $[0,1]$ and the repeat count. The remaining outputs are the failing visible example (input, value returned, value expected), facts about the main loop (its line, source and variable, and the variable it builds up), and a comparison with the previous version.
+
+The agent is rule-based and deterministic. It uses Python's \code{ast} module to analyse the structure of the code without running it, regular expressions over Python's error messages, and \code{difflib} to find changed lines. Table~\ref{tab:diag} summarises the main rules.
+
+\begingroup\small
+\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.15}
+\begin{longtable}{|R{3.1cm}|R{6.3cm}|R{4.2cm}|}
+\caption{Main diagnostic rules}\label{tab:diag}\\\hline
+\textbf{Verdict} & \textbf{Evidence used} & \textbf{Issue label}\\\hline\endfirsthead
+\hline\textbf{Verdict} & \textbf{Evidence used} & \textbf{Issue label}\\\hline\endhead
+Syntax error & Python's message, e.g.\ ``expected ':'', ``was never closed'', indentation errors, unterminated strings, ``maybe you meant '=='\,''; line from Python & \code{syntax:\allowbreak missing\_colon}, \code{syntax:\allowbreak unbalanced\_bracket}, \code{syntax:\allowbreak indentation}, \ldots\\\hline
+Time limit & A \code{while} loop whose condition variables are never updated in its body; a recursive function with no base case & \code{timeout:\allowbreak loop\_no\_progress}, \code{timeout:\allowbreak recursion\_no\_base}, \code{timeout:\allowbreak general}\\\hline
+Runtime error & Exception type and message matched against a table of causes; for \code{NameError} and \code{UnboundLocalError}, where the name is defined relative to where it is used & \code{runtime:\allowbreak TypeError:\allowbreak mix\_text\_number}, \code{runtime:\allowbreak UnboundLocalError:\allowbreak used\_before\_assignment}, \ldots\\\hline
+All answers \code{None} & Empty body; \code{print} instead of \code{return}; no \code{return} & \code{logic:\allowbreak not\_implemented}, \code{logic:\allowbreak print\_instead\_of\_return}, \code{logic:\allowbreak missing\_return}\\\hline
+Wrong answer & A \code{return} as a direct child of a loop body & \code{logic:\allowbreak early\_return\_in\_loop}\\\hline
+Wrong answer & Every numeric answer differs by exactly 1, or by exactly one of the input's end values, plus a \code{range} loop & \code{logic:\allowbreak off\_by\_one}\\\hline
+Wrong answer & Same items in a different order; only spacing or capitalisation differs; wrong type & \code{logic:\allowbreak wrong\_order}, \code{logic:\allowbreak text\_format}, \code{logic:\allowbreak wrong\_return\_type}\\\hline
+\end{longtable}
+\endgroup
+
+Take the code in Figure~\ref{fig:hint}, which loops over \code{range(1, n)}. The call \code{sum\_to\_n(3)} returns 3 where 6 is expected. The difference, 3, equals the input $n=3$, which is an end value of the range, so the agent reports \code{logic:\allowbreak off\_by\_one} on line~3. The comparison with the previous version records whether the code changed, which lines changed, whether the issue is the same, and whether the new version gets further. Getting further is judged by the order syntax error $<$ crash $<$ wrong answer $<$ partial $<$ accepted and by the change in tests passed.
+
+\subsection{Agent 2: Cognitive State}
+The Cognitive State agent estimates topic mastery, confidence, confusion, cognitive load and progress, each with its evidence. When there is not enough evidence for a value, the agent leaves it unknown.
+
+Its inputs are the topic's previous mastery and evidence weight, the current result (category, pass ratio, graded or not, same code as before), the problem's difficulty and origin, earlier attempts on the problem, the hints used and their highest level, hints not followed by progress, active time, the learner's own ratings, the latest reflection answer and requests on unchanged code.
+
+For mastery the agent uses a weighted form of Bayesian Knowledge Tracing, built on the two-state knowledge tracing model of Corbett and Anderson \cite{corbett1995}. With prior mastery $p$, guess probability $g=0.20$, slip probability $s=0.10$ and learning probability $t=0.12$ (fixed in \code{policy.yaml}), the posterior after an observation is
+\begin{equation}
+p_{\mid\text{obs}}=
+\begin{cases}
+\dfrac{p(1-s)}{p(1-s)+(1-p)\,g} & \text{if solved,}\\[10pt]
+\dfrac{p\,s}{p\,s+(1-p)(1-g)} & \text{otherwise,}
+\end{cases}
+\qquad
+p_{\text{learn}} = p_{\mid\text{obs}} + (1-p_{\mid\text{obs}})\,t .
+\end{equation}
+Standard BKT applies this update in full. Our version weights it by how much the attempt counts as evidence:
+\begin{equation}
+p_{\text{new}} = p + w\,(p_{\text{learn}} - p),
+\end{equation}
+where the weight $w$ is given in Table~\ref{tab:weights}. Runs, hint requests and resubmissions of unchanged code have $w=0$, so they leave mastery unchanged. Mastery starts at $0.20$. From there, one failed attempt ($w=0.8$) gives $0.157$ and one solve without help ($w=1$) gives $0.586$.
+
+\begin{table}[htbp]\centering\small
+\caption{Evidence weight of each kind of attempt}\label{tab:weights}
+\begin{tabular}{|R{7.2cm}|R{4.5cm}|}\hline
+\textbf{Attempt} & \textbf{Weight $w$}\\\hline
+Solved without hints & 1.0\\\hline
+Solved after hints, by highest hint level L0 to L4 & 1.0, 0.8, 0.6, 0.35, 0.2\\\hline
+Logic failure (wrong answer, partial, runtime error, missing function) & 0.8\\\hline
+Time, memory or output limit & 0.6\\\hline
+Syntax error & 0.15\\\hline
+Imported (learner-added) problem & weight above $\times\,0.5$\\\hline
+Run, hint request, or the same code resubmitted & 0\\\hline
+\end{tabular}
+\end{table}
+
+The total evidence $E$ is the sum of the weights so far. Mastery is shown with a range $p \pm 0.35/\sqrt{1+E}$, clipped to $[0,1]$, so the range narrows as evidence accumulates. It is also shown with a band: ``not enough evidence'' while $E<1.5$, then starting ($p<0.40$), developing ($<0.65$), proficient ($<0.85$) or strong.
+
+Confusion is estimated by counting signals. The signals are: the same issue in two or more attempts in a row; a hint not followed by progress; the kind of error changing across three attempts; the learner saying they feel stuck; an unsure reflection answer; two or more requests on unchanged code; and a hint marked unhelpful. With no history and no signals the value is \emph{unknown}, because one failure is not evidence of confusion. One signal gives moderate, and two or more give high.
+
+Cognitive load is counted in the same way. Its signals are active time above twice the usual for the difficulty (easy 4, medium 10, hard 20 minutes), three or more hints on the problem, three attempts in a row passing no tests, and the learner saying the task feels like a lot. A single long pause is treated as moderate at most, because it may be a break.
+
+Progress is one of solved, improving (the code gets further, or more tests pass than the best so far), regressing, stalled (the same issue repeating), steady or unknown. Confidence comes only from the learner's own rating. The agent never infers it.
+
+\subsection{Agent 3: Similar Learner Retrieval}
+The Similar Learner Retrieval agent looks for past situations similar to the current one and reports which kind of help was followed by progress. If there is no reliable match, it reports that.
+
+Each situation is stored as a vector. Eight state values are mapped from $[0,1]$ to $[-1,1]$ by $c(x)=2(x-0.5)$ and six category slots are added, giving the 14-dimensional vector
+\begin{equation}
+\mathbf{v}=\big(c(m),\,c(\kappa),\,c(f),\,c(\ell),\,c(r),\,c(d),\,c(\min(a,6)/6),\,c(\min(h,4)/4),\,\mathbf{e}\big),
+\end{equation}
+where $m$ is mastery, $\kappa$ confidence, $f$ confusion, $\ell$ load, $r$ progress, $d$ difficulty, $a$ attempts, $h$ hints and $\mathbf{e}$ has 0.8 for the current error category (syntax, runtime, wrong answer, partial, timeout, resource) and $-0.1$ for the others. The centring is needed because cosine similarity ignores vector length. Without it, a weak learner and a strong learner would point in the same direction. Similarity is
+\begin{equation}
+\operatorname{sim}(\mathbf{u},\mathbf{v})=\frac{\mathbf{u}\cdot\mathbf{v}}{\lVert\mathbf{u}\rVert\,\lVert\mathbf{v}\rVert}.
+\end{equation}
+
+Retrieval works as follows. ChromaDB returns up to 150 nearest stored situations in the same category group. The agent then reads the corresponding outcome records from PostgreSQL and filters them. A case is kept only if it belongs to another learner (owners are compared by a SHA-256 hash), has similarity of at least 0.72, has a usable outcome, differs in difficulty by at most 0.35, and shares the issue or the topic. At least five such candidates are required. Measured (``live'') cases are preferred when at least five exist. Otherwise labelled synthetic cases may be used. The candidates are grouped by (level, strategy), leaving out strategies this learner has already seen on the issue, and the agent chooses the group with the best cautious success rate:
+\begin{equation}
+\hat p=\frac{k+1}{n+2},\qquad \text{LB}=\hat p-\sqrt{\frac{\hat p(1-\hat p)}{n+2}},
+\end{equation}
+where $k$ of the group's $n$ cases were followed by progress or a solve. With this bound, one success out of one cannot outrank eight out of ten. The chosen group must contain at least three cases. The output gives the suggested level and strategy, the smoothed effectiveness $\hat p$, the support $n$, the provenance (live, synthetic or mixed) and the mean similarity. It never contains an identity or code.
+
+DSDA uses a suggestion only when its support is at least 3 and its effectiveness at least 0.55, and the suggestion may move the level by at most one. We do not treat similarity as proof that a kind of help will work.
+
+\subsection{Agent 4: Adaptive Scaffolding (DSDA)}
+The Dynamic Scaffolding Decision Algorithm has three separate steps. A \emph{policy} decides whether and how much to help, \emph{generation} writes the words, and \emph{validation} checks them. When an LLM is configured, it may only write the words. It cannot change the level, the strategy, the length limits, the solution constraint or the decision to wait. Figure~\ref{fig:dsda} summarises the flow.
+
+\begin{figure}[htbp]\centering
+\begin{tikzpicture}[node distance=4mm, every node/.style={font=\small}]
+\node[box, text width=11.5cm, fill=gray!6] (in) {\textbf{Inputs:} learner action and request size; diagnosis (issue, repeats, failing example); mastery, confidence, confusion, load, progress; hints on this issue and their outcomes; strategies used; requests on unchanged code; time since last hint; retrieval suggestion};
+\node[box, below=of in, text width=11.5cm, fill=blue!5] (score) {\textbf{1. Support score} $S$: weighted mean of the known inputs, minus 0.15 when improving; level $L$ from thresholds 0.2, 0.4, 0.6, 0.8};
+\node[box, below=of score, text width=11.5cm, fill=blue!5] (rules) {\textbf{2. Situation rules and caps:} first contact at most L2; asked again: next unused step; at most one level above the last; L3 needs an earlier event, L4 two earlier hints; high load at most L3 and 40 words; explicit request at least L1; ``small nudge'' at most L2};
+\node[box, below=of rules, text width=11.5cm, fill=blue!5] (ladder) {\textbf{3. Strategy ladder:} first unused step at or above the level floor, within the ceiling; reliable retrieval may prefer its strategy};
+\node[box, below=of ladder, text width=11.5cm, fill=blue!5] (timing) {\textbf{4. Timing:} asked $\Rightarrow$ show; solved $\Rightarrow$ none; not asked $\Rightarrow$ offer if L0, auto-hints off, improving, a hint already shown on this issue, or a strong learner's first failure; ladder used up on unchanged code $\Rightarrow$ wait};
+\node[box, below left=5mm and -3.6cm of timing, text width=5.2cm, fill=green!6] (gen) {\textbf{Generation:} built-in text filled with the learner's own evidence, or LLM wording};
+\node[box, right=6mm of gen, text width=5.2cm, fill=green!6] (val) {\textbf{Validation:} 21 rejection codes; retry up to 3 attempts, then labelled built-in fallback};
+\draw[arrow] (in) -- (score);
+\draw[arrow] (score) -- (rules);
+\draw[arrow] (rules) -- (ladder);
+\draw[arrow] (ladder) -- (timing);
+\draw[arrow] (timing.south) ++(-2.9,0) -- node[left, note]{show} (gen.north);
+\draw[arrow] (gen) -- (val);
+\end{tikzpicture}
+\caption{Decision flow of the Dynamic Scaffolding Decision Algorithm}\label{fig:dsda}
+\end{figure}
+
+The support score is computed first. Let $K$ be the set of inputs whose value is known. The score is a weighted mean over $K$, so an unknown value never counts as a number:
+\begin{equation}
+S=\operatorname{clip}_{[0,1]}\Big(\sum_{k\in K}\frac{w_k}{\sum_{j\in K}w_j}\,x_k\;-\;0.15\cdot[\text{improving}]\Big).
+\end{equation}
+The inputs $x_k\in[0,1]$ and their weights $w_k$ are as follows: low mastery $1-m$ (0.5 with no evidence), weight 0.22; confusion (low 0.2, moderate 0.55, high 0.9), 0.18; repeated issue $(\text{repeats}-1)/3$, 0.16; hints not followed by progress $/2$, 0.12; requests on unchanged code $/3$, 0.12; low confidence $1-\kappa$, 0.08; load (as confusion), 0.08; stalled time (seconds since last action$/600$), 0.04. The level is L0 if $S<0.20$, L1 if $S<0.40$, L2 if $S<0.60$, L3 if $S<0.80$ and L4 otherwise.
+
+Table~\ref{tab:levels} lists the help levels with their presentation limits, and Table~\ref{tab:ladders} lists the strategy ladders. Each issue climbs its own ladder one unused step at a time, and this is what stops help from repeating.
+
+\begin{table}[htbp]\centering\small
+\caption{Help levels and presentation limits}\label{tab:levels}
+\begin{tabular}{|c|R{3.6cm}|R{4.4cm}|R{3.2cm}|}\hline
+\textbf{Level} & \textbf{Name} & \textbf{Format} & \textbf{Limit}\\\hline
+L0 & Independent attempt & No hint; an offer of help & None\\\hline
+L1 & Conceptual question & A question & 2 sentences, 45 words\\\hline
+L2 & Targeted hint & Points at what to examine & 3 sentences, 70 words\\\hline
+L3 & Step-by-step outline & Numbered steps, no code & 6 sentences, 110 words\\\hline
+L4 & Analogous worked example & Code on a \emph{different} task & 7 sentences, 150 words\\\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]\centering\small
+\caption{Strategy ladders (level in parentheses)}\label{tab:ladders}
+\begin{tabular}{|c|R{3.9cm}|R{4.2cm}|R{3.9cm}|}\hline
+\textbf{Step} & \textbf{Most issues} & \textbf{Syntax errors} & \textbf{Missing names}\\\hline
+1 & conceptual question (1) & syntax pinpoint (2) & conceptual question (1)\\\hline
+2 & targeted hint (2) & read the tokens (2) & targeted hint (2)\\\hline
+3 & trace the failing case (2) & syntax checklist (3) & name options (2)\\\hline
+4 & print debugging (2) & analogous line (4) & step outline (3)\\\hline
+5 & step outline (3) & exact fix (4) & analogous example (4)\\\hline
+6 & analogous example (4) & & direct pointer (4)\\\hline
+7 & direct pointer (4) & & \\\hline
+\end{tabular}
+\end{table}
+
+Once the level and strategy are chosen, Algorithm~\ref{alg:timing} makes the timing decision. After a first hint on an issue, help that the learner did not ask for is offered and is not shown. Help therefore never climbs the ladder unless the learner asks.
+
+\begin{algorithm}[htbp]
+\caption{DSDA timing decision}\label{alg:timing}
+\small
+\begin{algorithmic}[1]
+\If{solved and no question asked} \Return \textsc{none} (\code{SOLVED})
+\EndIf
+\If{service failure or no tests} \Return \textsc{wait}
+\EndIf
+\State choose level and strategy (score, rules, ladder)
+\If{no unused step and code unchanged since last hint} \Return \textsc{wait} (\code{LADDER\_EXHAUSTED})
+\EndIf
+\If{learner asked (hint, ``more'', ``nudge'' or question)} \Return \textsc{show}
+\EndIf
+\If{level is L0 and not a syntax error} \Return \textsc{offer}
+\EndIf
+\If{automatic hints switched off} \Return \textsc{offer} (\code{AUTO\_HINTS\_OFF})
+\EndIf
+\If{learner is improving and not a syntax error} \Return \textsc{offer} (\code{PROGRESS\_NO\_HELP})
+\EndIf
+\If{same issue and at least one hint already shown on it} \Return \textsc{offer} (\code{OFFER\_NEXT\_STEP})
+\EndIf
+\If{first failure, mastery $\geq 0.7$ with evidence} \Return \textsc{offer} (\code{OFFER\_INDEPENDENT})
+\EndIf
+\State \Return \textsc{show}
+\end{algorithmic}
+\end{algorithm}
+
+As a worked example, take a learner's second wrong submission with the same off-by-one bug. Mastery is 0.25 (evidence present), confusion is moderate, the issue has been seen in two attempts and one earlier hint was not followed by progress. Confidence, load and time are unknown and are left out. The known weights sum to 0.80 and the score components are $0.22\cdot0.75/0.80=0.206$, $0.18\cdot0.55/0.80=0.124$, $0.16\cdot0.33/0.80=0.067$ and $0.12\cdot0.50/0.80=0.075$, giving $S=0.472$ and level L2. The next unused step at or above L2 is \code{targeted\_hint}. This was a submission and not a request, and a hint had already been shown on the issue, so the decision is to \emph{offer} the hint (reason codes \code{SUPPORT\_NEEDED}, \code{ESCALATE\_NO\_PROGRESS}, \code{OFFER\_NEXT\_STEP}). We recomputed these values by running the implemented functions, and \code{test\_worked\_example\_in\_the\_documentation\_is\_accurate} also checks them.
+
+For generation, built-in text is chosen by strategy and filled only with observed evidence. For ten common logic and timeout issues, the hint quotes the learner's own failing call, the values returned and expected, the loop's line and source and its variable. Other builders produce trace instructions, exactly what to print and where, analogous examples on a different task, and direct pointers in words. Text is trimmed to the level's sentence and word limits without cutting inside quoted code. When an LLM is configured, its prompt contains the task, the learner's code (marked as data), the evidence, the limits and every earlier hint. It never contains the reference solution or hidden tests.
+
+Validation happens before anything is shown. The validator rejects a draft that contains a code block or code-like lines below L4, defines the function the learner must write, overlaps the reference solution or rewrites the learner's own code. It rejects a draft that reveals hidden-test values or mentions internal details, is too long, is not a question at L1, repeats an earlier hint, or is vague with nothing specific. A draft is also rejected if it names a line that does not exist or test counts that match neither result, contradicts the diagnosis, ignores the diagnosed cause or only repeats Python's error message. LLM text is rejected as well if it names nothing concrete from the learner's code. Two of the checks are quantitative. Solution overlap uses token 6-grams:
+\begin{equation}
+\text{overlap}(h,\sigma)=\frac{\lvert N_6(\sigma)\cap N_6(h)\rvert}{\lvert N_6(\sigma)\rvert}\geq 0.25\;\Rightarrow\;\text{reject},
+\end{equation}
+where $N_6(x)$ is the set of six-token sequences of text $x$ and $\sigma$ is the reference solution. Repetition uses
+\begin{equation}
+\operatorname{rep}(a,b)=\max\big(\text{SeqMatch}(a,b),\;J(a,b)\big)\geq 0.8\;\Rightarrow\;\text{reject},
+\end{equation}
+where SeqMatch is the in-order word match ratio of Python's \code{difflib.SequenceMatcher} and $J$ is the Jaccard overlap of the word sets. A rejected draft is regenerated, and each time the generator is told what was wrong. After three attempts a labelled built-in hint is used. If that hint would repeat an earlier one, the next unused step is tried, and if nothing passes, nothing is shown.
+
+The outcome of each hint is recorded. On the learner's next checked attempt with changed code, each pending hint is marked \emph{solved}, \emph{progress} (more tests pass on the same kind of check, or the issue changed without getting worse) or \emph{no progress}. These outcomes feed DSDA's ``hints not followed by progress'' input and the confusion estimate. For consenting real accounts they also go into the anonymous retrieval pool.
+
+\subsection{Agent 5: Reflection}
+The Reflection agent asks one short question that makes the learner explain their own reasoning, when such a question helps. It then replies to the answer as a tutor would, with no grading, no code and no fix.
+
+The agent does not always ask. It defers when load is high. It skips the question when one is still unanswered, when there is no learning event, for a syntax slip on unsolved code, before three failed attempts, within three events of the last question, when the question would repeat the hint, or when it was already asked. After a solve it asks about the technique, and this question has three variants: solved with help, solved on the first try, and other.
+
+The question is built from the cycle's evidence. For the example above it reads: ``Trace \code{sum\_to\_n(3)} by hand: which values does \code{i} take in \code{for i in range(1, n):}, and which values does the answer need?'' Anything that was not observed is left out, and no placeholder is shown in its place.
+
+To reply, Algorithm~\ref{alg:reply} classifies the answer. It uses regular expressions for the key ideas of the issue or technique (for example ``where \code{range} stops'' or ``keeping a running total''), for reasoning words (because, so, since, therefore) and for honest uncertainty (``I don't know'', ``not sure''). It also checks whether the answer is concrete (backticks, numbers, or the learner's own variable names).
+
+\begin{algorithm}[htbp]
+\caption{Reflection reply classification}\label{alg:reply}
+\small
+\begin{algorithmic}[1]
+\State $M \gets$ key ideas matched; $R \gets$ reasoning words present; $C \gets$ answer is concrete
+\If{uncertainty expressed and not $R$ and not ($C$ and $M\neq\emptyset$)} \Return \textsc{unsure}: kind reply and one small thing to try
+\EndIf
+\If{fewer than 3 words and $M=\emptyset$} \Return \textsc{brief}: ask for a little more
+\EndIf
+\If{$M\neq\emptyset$ and ($C$ or $R$)} \Return \textsc{specific}: name what was right, push one step further
+\EndIf
+\If{$M\neq\emptyset$ or at least 8 words} \Return \textsc{partial}: one concrete thing to check
+\EndIf
+\State \Return \textsc{brief}
+\end{algorithmic}
+\end{algorithm}
+
+The question, answer, reply and quality are stored, and they affect the other agents. In the next cycle an unsure answer counts as one confusion signal. After a solve, an unsure answer holds back a plan that was moving on, and the planner suggests one more problem of the same technique first. If the plan shown with the question already gives one more problem of that technique, the plan stands, so the learner is not told the same thing twice. Clear, partial and short answers leave the plan unchanged.
+
+\subsection{Agent 6: Learning Planner}
+The Learning Planner recommends what to do next and gives a reason. It moves the learner step by step from where they are towards harder work.
+
+Its inputs are topic mastery and evidence, prerequisites, each topic's techniques in lesson order, and each problem's technique, difficulty and status. The status includes whether the problem was solved fluently, meaning that the first graded submission was accepted with no hint shown before it. The planner also takes the current problem, the attempts, the highest hint level, and the learner's goal and experience.
+
+It outputs an action, a title, a reason, reason codes, a problem and topic, whether the current task stays active, alternatives and a \emph{route}. The route is the current topic and up to three topics ahead in course order.
+
+\begin{algorithm}[htbp]
+\caption{Next-step selection after an attempt}\label{alg:plan}
+\small
+\begin{algorithmic}[1]
+\If{problem not solved}
+  \If{4 or more attempts and a prerequisite topic is weak (mastery $<0.45$ with evidence)} \Return practise prerequisite (task kept)
+  \EndIf
+  \State \Return stay on this problem (\code{UNRESOLVED})
+\EndIf
+\If{solved with L3+ help, or with hints while over 60\% of the topic's solves used hints} \Return same technique, same difficulty, on your own
+\EndIf
+\If{topic secure: mastery $\geq0.75$, $\geq2$ solves without help, evidence $\geq2.5$} \Return harder problem, else the next topic forward
+\EndIf
+\For{level in easy, medium, hard}
+  \For{technique in lesson order}
+    \If{not practised at this level (easy: 2 solves or 1 fluent solve; above: 1 solve) and an unsolved problem exists}
+      \State \Return that problem (\code{CONSOLIDATE\_TECHNIQUE}, \code{NEXT\_TECHNIQUE} or \code{STEP\_UP\_DIFFICULTY})
+    \EndIf
+  \EndFor
+\EndFor
+\State \Return next topic forward (\code{UNIT\_EXHAUSTED})
+\end{algorithmic}
+\end{algorithm}
+
+The next topic is the next one forward in the learner's track order. An earlier topic comes back only when it has work in it and is not yet secure. A weak prerequisite holds a topic back only while it still has problems to practise. A held-back topic also holds back every topic that builds on it, so the planner never jumps past it. The route is a preview in course order and always shows the topic after the current one. The home screen applies the same rules as the plan shown after a submission, so the two always suggest the same next step.
+
+\subsection{Persistence and data model}\label{sec:data}
+The schema has 25 tables, created and changed through five Alembic migrations. Figure~\ref{fig:er} shows the core entities used by the learning cycle.
+
+\begin{figure}[htbp]\centering
+\begin{tikzpicture}[every node/.style={font=\footnotesize}]
+\tikzset{ent/.style={draw, rounded corners=1pt, align=left, fill=white, text width=3.5cm, inner sep=3pt}}
+\node[ent] (units) at (10.4,2.3) {\textbf{units}\\ id, track, order, prerequisites, lesson guide};
+\node[ent] (users) at (0,0) {\textbf{users}\\ id, role, goal, experience, preferences};
+\node[ent] (snap) at (5.2,0) {\textbf{code\_snapshots}\\ id, user, problem, code};
+\node[ent] (problems) at (10.4,0) {\textbf{problems}\\ id, unit, difficulty, technique};
+\node[ent] (state) at (0,-2.3) {\textbf{learner\_topic\_state}\\ user, unit, mastery, evidence weight};
+\node[ent] (evals) at (5.2,-2.3) {\textbf{evaluations}\\ snapshot, kind, verdict, passed, total};
+\node[ent] (tests) at (10.4,-2.3) {\textbf{problem\_tests}\\ problem, visibility, origin, category, expected};
+\node[ent] (hints) at (0,-4.6) {\textbf{hints}\\ run, issue, level, strategy, text, validation, outcome};
+\node[ent] (runs) at (5.2,-4.6) {\textbf{pipeline\_runs}\\ id, user, problem, trigger, status, response};
+\node[ent] (records) at (10.4,-4.6) {\textbf{interaction\_records}\\ run, diagnostic, cognitive, retrieval, decision};
+\node[ent] (refl) at (0,-6.9) {\textbf{reflections}\\ run, kind, prompt, answer, feedback, quality};
+\node[ent] (steps) at (5.2,-6.9) {\textbf{agent\_steps}\\ run, stage, status, input and output summaries};
+\node[ent] (cases) at (10.4,-6.9) {\textbf{intervention\_cases}\\ vector, issue, level, strategy, outcome, owner hash};
+\draw[thick] (users) -- (snap);
+\draw[thick] (snap) -- (problems);
+\draw[thick] (units) -- (problems);
+\draw[thick] (problems) -- (tests);
+\draw[thick] (snap) -- (evals);
+\draw[thick] (evals) -- (runs);
+\draw[thick] (runs) -- (steps);
+\draw[thick] (runs) -- (records);
+\draw[thick] (users) -- (state);
+\draw[thick] (runs) -- (hints);
+\draw[thick] (runs.south west) -- (refl.north east);
+\draw[thick, dashed] (hints.west) -- ++(-0.35,0) |- ($(cases.south)+(0,-0.45)$) node[pos=0.75, below, font=\scriptsize]{resolved hint outcomes, pooled anonymously} -- (cases.south);
+\end{tikzpicture}
+\caption{Core entities of the data model (simplified; lines show references)}\label{fig:er}
+\end{figure}
+
+Every learning cycle writes one \code{interaction\_records} row with the outputs of all agents, so the next cycle can read what the tutor concluded and decided before. A hint is stored with its validation result and the starting pass ratio, which lets its outcome be judged later. \code{learner\_topic\_state} holds the current estimate per topic. \code{learner\_state\_snapshots} holds the history of that estimate, and the profile page shows it. Hidden-test contents, reference solutions and prompts are not stored in these records.
+
+\subsection{Learner and teacher interfaces}
+In the workspace, the problem, lesson, submissions and tutor are in tabs beside the editor and the test results (Figure~\ref{fig:hint}). Run, Submit and Ask for a hint are separate buttons, and a hint is never graded. The tutor pane shows the current hint with its level, its concept and a link to the matching lesson section. It also has a collapsible ``Why this hint?'' explanation, ``I need more help'', a box for typed questions, the reflection card and the suggested next step with the route.
+
+The teacher dashboard computes class measures from stored data. These are completion rate (problems solved divided by problems with at least one graded attempt), hints per solved problem, median active time to the first accepted submission, satisfaction (median of four Likert items) and learning gain $\frac{\text{post}-\text{pre}}{\text{max}-\text{pre}}$. Learning gain is shown only for learners who have taken both knowledge checks. The dashboard also lists learners who may need support, with the evidence behind each flag.

@@ -18,6 +18,7 @@ class TestSpec(BaseModel):
     setup: str | None = Field(default=None, max_length=20000)
     expr: str | None = Field(default=None, max_length=4000)
     stdin: str | None = Field(default=None, max_length=1_000_000)
+    trace_lines: list[int] | None = Field(default=None, max_length=30)
 
 
 class JobRequest(BaseModel):
@@ -42,6 +43,7 @@ class TestOutcome(BaseModel):
     phase: str | None = None
     name: str | None = None
     signal: int | None = None
+    trace: list[dict[str, Any]] | None = None
 
 
 class JobResponse(BaseModel):

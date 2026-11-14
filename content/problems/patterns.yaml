@@ -1,0 +1,91 @@
+# Which practice group each earlier curriculum problem belongs to. New problems name theirs directly.
+say-hello: First programs
+variable-swap: Values and types
+type-converter: Values and types
+format-greeting: Formatting output
+even-or-odd-checker: Arithmetic and operators
+add-two-numbers-input: Reading input
+absolute-value: Simple decisions
+sign-of-number: Multiple branches
+compare-numbers: Multiple branches
+leap-year-checker: Combined conditions
+right-triangle-identifier: Combined conditions
+fizz-word: Multiple branches
+count-multiples: Counting and searching
+collatz-steps: Counting and searching
+first-negative: Counting and searching
+sum-odds-only: Running totals
+qq-multiplication-table: Nested loops
+prime-numbers-count: Counting and searching
+sum-to-n: Running totals
+largest-in-list: Running totals
+multiply-by-two: Parameters and return values
+power-with-default: Default and keyword arguments
+min-and-max-tuple: Parameters and return values
+multiplier-factory: Functions as values
+sort-tuples-by-second-item: Functions as values
+map-string-to-ints: Functions as values
+filter-evens: Functions as values
+first-and-last-char: Indexing and slicing
+clean-and-uppercase-words: String methods
+every-second-element: Indexing and slicing
+digit-number-of-sum: Counting characters
+reverse-words: String methods
+sum-positive-numbers: List basics
+sort-and-deduplicate: List basics
+euclidean-distance-squared: List basics
+shared-elements: List basics
+count-frequencies: Grouping and counting
+invert-dictionary: Dictionary basics
+square-positives-comprehension: Comprehensions
+character-count-map: Grouping and counting
+recursive-factorial: Linear recursion
+recursive-power: Linear recursion
+greatest-common-divisor-euclid: Linear recursion
+safe-divide: Errors and exceptions
+count-lines-from-text: Standard library
+circle-area: Standard library
+normalize-module-name: Standard library
+counter-class: Classes and objects
+point-class: Classes and objects
+rectangle-area: Classes and objects
+square-inherits-rectangle: Classes and objects
+custom-range-iterator: Iterators and generators
+even-number-generator: Iterators and generators
+bank-account-class: Classes and objects
+binary-search: Linear and binary search
+bubble-sort-implementation: Sorting algorithms
+identify-duplicate-o-n: Linear and binary search
+list-of-top-3-hills: Custom sort keys
+merge-sorted-lists-simple: Merge and partition
+two-sum-fast: Complement lookup
+first-unique-character: Frequency maps
+group-anagrams: Grouping by key
+longest-consecutive-run: Seen sets
+valid-parentheses: Matching and parsing
+recent-counter-queue-processor: Queue and deque
+evaluate-rpn: Matching and parsing
+next-warmer-day: Monotonic stack
+queue-from-two-stacks: Design with stacks and queues
+binary-tree-maximum-depth: Depth-first traversal
+invert-binary-tree: Tree properties
+inorder-traversal: Depth-first traversal
+search-bst: Binary search trees
+level-order: Breadth-first traversal
+two-pointer-palindrome: Two pointers from both ends
+remove-duplicates-sorted: Fast and slow pointers
+pair-with-target-sum: Two pointers from both ends
+move-zeros-to-end: In-place updates
+max-window-sum: Sliding window
+reverse-linked-list: Pointer rewiring
+middle-of-linked-list: Fast and slow pointers
+merge-two-linked-lists: Merging and dummy heads
+detect-cycle: Fast and slow pointers
+graph-has-path: Depth-first search
+bfs-shortest-steps: Breadth-first search
+count-islands: Grids as graphs
+course-order-possible: Topological order
+climbing-stairs: One-dimensional DP
+house-robber: Choices and subsets
+fewest-coins: Choices and subsets
+longest-common-subsequence: Strings and sequences

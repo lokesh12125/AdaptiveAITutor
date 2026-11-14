@@ -36,7 +36,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="CSMASF Adaptive Python Tutor", version="1.0.0", lifespan=lifespan, docs_url=None if settings.is_production else "/api/docs", openapi_url=None if settings.is_production else "/api/openapi.json")
+app = FastAPI(title="CodePath Adaptive Python Tutor (CSMASF)", version="1.0.0", lifespan=lifespan, docs_url=None if settings.is_production else "/api/docs", openapi_url=None if settings.is_production else "/api/openapi.json")
 app.add_middleware(CORSMiddleware, allow_origins=settings.cors_list, allow_credentials=True, allow_methods=["GET", "POST", "PUT", "DELETE"], allow_headers=["Content-Type"])
 
 

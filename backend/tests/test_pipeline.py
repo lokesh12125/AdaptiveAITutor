@@ -1,5 +1,6 @@
 """End-to-end: real PostgreSQL, real execution service, real LangGraph. Only the model is scripted."""
 import json
+import re
 import threading
 import time
 
@@ -70,7 +71,7 @@ def test_agents_receive_each_others_outputs(learner):
     trace = learner.client.get(f"/api/runs/{run['id']}/trace").json()
     by_stage = {s["stage"]: s for s in trace["steps"]}
     assert by_stage["diagnostic"]["output"]["issue_key"] == "logic:missing_return"
-    assert by_stage["dsda"]["output"]["strategy"] == "return_value", "DSDA acted on the diagnostic issue"
+    assert by_stage["dsda"]["output"]["strategy"] == "conceptual_question", "the first hint on an issue starts with the idea involved"
     assert by_stage["generate_hint"]["input"]["strategy"] == by_stage["dsda"]["output"]["strategy"]
     text = run["response"]["tutor"]["text"].lower()
     assert "return" in text or "result back" in text, "the hint addresses the diagnosed issue"
@@ -128,7 +129,8 @@ def test_hint_request_is_not_a_graded_attempt(learner):
     assert response["tutor"] and 1 <= response["tutor"]["level"] <= 2
     assert run["evaluation"]["kind"] == "hint_probe"
     after = learner.client.get("/api/progress").json()["metrics"]
-    assert after["graded_attempts"] == before["graded_attempts"] == 0 and after["started"] == 0
+    assert after["graded_attempts"] == before["graded_attempts"] == 0 and after["submitted"] == 0
+    assert after["started"] == 1 and after["solved"] == 0 and after["completion_rate"] == 0.0, "asking for help on a problem starts it, so it counts against completion"
     state = topic_state(learner.id)
     assert state["graded"] == 0 and state["mastery"] == pytest.approx(0.2)
 
@@ -201,11 +203,16 @@ def test_older_results_never_overwrite_newer_state(learner):
 
 
 def test_repeated_errors_escalate_gradually_and_explainably(learner):
+    """The first hint comes with the failed submission. Later ones are offered, and escalate one step when the learner asks."""
     levels, reasons = [], []
     for attempt in range(5):
         code = OFF_BY_ONE + f"# attempt {attempt}\n"
         response = learner.submit(PROBLEM, code)["response"]
         assert response["diagnostics"]["issue_key"] == "logic:off_by_one"
+        if attempt:
+            assert response["tutor"] is None and response["offer"], f"attempt {attempt}: help was pushed without a request"
+            assert "already had a hint" in response["offer"]["why"]
+            response = learner.hint(PROBLEM, code)["response"]
         assert response["tutor"], f"attempt {attempt}: {response.get('offer')}"
         levels.append(response["tutor"]["level"])
         reasons.append(response["tutor"]["why"])
@@ -240,7 +247,8 @@ def test_progress_reduces_support(learner):
 
 def test_hint_outcomes_are_recorded_from_the_next_attempt(learner):
     learner.submit(PROBLEM, NO_RETURN)
-    learner.submit(PROBLEM, NO_RETURN + "# unchanged logic\n")
+    learner.submit(PROBLEM, NO_RETURN + "# unchanged logic\n")  # the second hint is offered, so the learner asks for it
+    learner.hint(PROBLEM, NO_RETURN + "# unchanged logic\n")
     with session_scope() as db:
         rows = db.scalars(select(Hint).where(Hint.user_id == learner.id).order_by(Hint.created_at)).all()
         assert rows[0].outcome == "no_progress" and rows[1].outcome is None
@@ -278,12 +286,17 @@ def test_partial_flow(learner):
     assert hidden and all(set(r) == {"id", "name", "visibility", "passed", "category", "origin"} for r in hidden)
 
 
+def _without_ids(payload) -> str:
+    """The payload as text, minus random ids and timestamps, so an id that happens to contain 5050 is not mistaken for a leak."""
+    return re.sub(r"\b[0-9a-f]{32}\b|\d{4}-\d\d-\d\dT[\d:.+]+Z?", "", json.dumps(payload))
+
+
 def test_hidden_tests_never_reach_the_client(learner):
     # 5050 is the expected answer of a hidden test for this problem.
-    assert "5050" not in json.dumps(learner.client.get(f"/api/problems/{PROBLEM}").json())
-    assert "5050" not in json.dumps(learner.client.get(f"/api/problems/{PROBLEM}/workspace").json())
+    assert "5050" not in _without_ids(learner.client.get(f"/api/problems/{PROBLEM}").json())
+    assert "5050" not in _without_ids(learner.client.get(f"/api/problems/{PROBLEM}/workspace").json())
     run = learner.submit(PROBLEM, "def sum_to_n(n):\n    print('input was', n)\n    return 1\n")
-    assert "5050" not in json.dumps(run)
+    assert "5050" not in _without_ids(run)
     assert "input was 100" not in json.dumps(run), "stdout from hidden tests is withheld"
 
 
@@ -431,7 +444,7 @@ def test_model_cannot_override_the_chosen_level(learner, scripted_model):
     scripted_model(['{"message": "' + "word " * 300 + '"}'] * 3)
     run = learner.submit(PROBLEM, OFF_BY_ONE)
     trace = learner.client.get(f"/api/runs/{run['id']}/trace").json()
-    dsda_level = next(s for s in trace["steps"] if s["stage"] == "dsda")["output"]["level"]
+    dsda_level = next(s for s in trace["steps"] if s["stage"] == "dsda")["output"]["selected_level"]
     assert run["response"]["tutor"]["level"] == dsda_level and run["response"]["tutor"]["source"] == "built_in"
 
 

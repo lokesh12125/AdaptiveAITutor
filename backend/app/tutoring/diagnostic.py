@@ -8,11 +8,23 @@ student summary or the LLM prompt.
 from __future__ import annotations
 
 import ast
+import difflib
 import json
 import logging
+import re
+from dataclasses import dataclass
 from typing import Any
 
-from .contracts import DiagnosticOutput, Fact, Inference
+from . import error_analysis
+from .contracts import (
+    AttemptComparison,
+    DiagnosticOutput,
+    ErrorDiagnosis,
+    Fact,
+    FailingExample,
+    HintEvidence,
+    Inference,
+)
 from .llm import LLMUnavailable, gateway
 
 log = logging.getLogger("csmasf.diagnostic")
@@ -32,6 +44,193 @@ ISSUE_TITLES = {
     "service_failure": "We could not check your code",
     "cancelled": "The check was cancelled",
 }
+
+
+# How far a version of the code got before failing. Moving up is progress even if no more tests pass yet.
+STAGE_RANK = {"syntax": 0, "missing_function": 1, "runtime": 2, "timeout": 2, "memory": 2, "output_limit": 2, "wrong_answer": 3, "partial": 4, "accepted": 5}
+_TOKEN_AT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*|\d+(?:\.\d+)?|==|!=|<=|>=|//|\*\*|->|:=|\S")
+
+
+@dataclass
+class PreviousAttempt:
+    """The most recent earlier cycle on a different version of the code."""
+
+    snapshot_id: str
+    code: str | None
+    issue_key: str
+    category: str
+    evaluation_kind: str | None
+    tests_passed: int
+    tests_total: int
+
+
+def changed_line_numbers(old: str, new: str) -> list[int]:
+    """Line numbers in the new code that differ from the old code."""
+    changed: list[int] = []
+    matcher = difflib.SequenceMatcher(a=old.splitlines(), b=new.splitlines(), autojunk=False)
+    for tag, _, _, j1, j2 in matcher.get_opcodes():
+        if tag != "equal":
+            changed.extend(range(j1 + 1, j2 + 1))
+    return changed
+
+
+def compare_with_previous(output: DiagnosticOutput, code: str, previous: PreviousAttempt | None, evaluation_kind: str | None) -> AttemptComparison:
+    if previous is None:
+        return AttemptComparison()
+    same_issue = previous.issue_key == output.issue_key
+    same_measure = previous.evaluation_kind == evaluation_kind and previous.tests_total == output.tests_total and output.tests_total > 0
+    now_rank, then_rank = STAGE_RANK.get(output.category), STAGE_RANK.get(previous.category)
+    known = now_rank is not None and then_rank is not None
+    return AttemptComparison(
+        has_previous=True, previous_snapshot_id=previous.snapshot_id, code_changed=True,
+        changed_lines=changed_line_numbers(previous.code, code)[:40] if previous.code is not None else [],
+        previous_issue_key=previous.issue_key, same_issue=same_issue, issue_changed=not same_issue,
+        moved_further=known and now_rank > then_rank, moved_back=known and now_rank < then_rank, same_measure=same_measure,
+        previous_passed=previous.tests_passed, previous_total=previous.tests_total,
+        tests_delta=(output.tests_passed - previous.tests_passed) if same_measure else None,
+    )
+
+
+def _source_line(code: str, line: int | None) -> str | None:
+    lines = code.splitlines()
+    if not line or line < 1 or line > len(lines):
+        return None  # a line number we cannot verify is never repeated to the learner
+    text = lines[line - 1].strip()
+    return text[:90] or None
+
+
+def _token_at(raw_line: str | None, column: int | None) -> str | None:
+    if not raw_line or not column or column < 1 or column > len(raw_line):
+        return None
+    match = _TOKEN_AT.search(raw_line, column - 1)
+    return match.group(0) if match and match.start() == column - 1 else None
+
+
+def _failing_example(internal: list[dict[str, Any]]) -> FailingExample | None:
+    """The first failing test the learner is allowed to see. Hidden tests are skipped."""
+    from ..grading import display
+
+    for row in internal:
+        if row.get("visibility") == "public" and row.get("passed") is False and row.get("input") and row.get("category") != "syntax_error":
+            input_text = str(row["input"]).splitlines()[-1][:160]
+            if row.get("category") == "wrong_answer":
+                return FailingExample(input=input_text, got=display(row.get("value"))[:160], expected=display(row.get("expected"))[:160])
+            return FailingExample(input=input_text)
+    return None
+
+
+def build_evidence(internal: list[dict[str, Any]], code: str, category: str, facts: list[Fact]) -> HintEvidence:
+    evidence = HintEvidence(failing_example=_failing_example(internal))
+    error_row = None
+    if category == "syntax":
+        error_row = next((r for r in internal if r.get("status") == "syntax_error"), None)
+    elif category == "runtime":
+        error_row = next((r for r in internal if r.get("category") == "runtime_error" and r.get("visibility") == "public"), None) or next((r for r in internal if r.get("category") == "runtime_error"), None)
+    if error_row:
+        error = error_row.get("error") or {}
+        evidence.error_type, evidence.line = error.get("type"), error.get("line")
+        evidence.source_line = _source_line(code, evidence.line)
+        if error_row.get("visibility") == "public" or category == "syntax":
+            evidence.message = error.get("message")
+        if category == "syntax":
+            lines = code.splitlines()
+            raw = lines[evidence.line - 1] if evidence.line and 1 <= evidence.line <= len(lines) else error.get("text")
+            evidence.column = error.get("column")
+            evidence.token = _token_at(raw, evidence.column)
+            if evidence.token and raw and evidence.column:
+                before = _TOKEN_AT.findall(raw[: evidence.column - 1])
+                evidence.previous_token = before[-1] if before else None
+    else:
+        located = next((f.line for f in facts if f.line), None)
+        evidence.line = located
+        evidence.source_line = _source_line(code, located)
+    evidence.probe_line, evidence.probe_names = _probe(code, evidence.line)
+    if category not in ("syntax", "runtime"):
+        loop_line, loop_names = _loop_probe(code)
+        if loop_line and loop_names:
+            evidence.probe_line, evidence.probe_names, evidence.probe_inside_loop = loop_line, loop_names, True
+        evidence.loop_line, evidence.loop_variable, evidence.result_name = _loop_facts(code)
+        evidence.loop_source = _source_line(code, evidence.loop_line)
+    return evidence
+
+
+def _loop_facts(code: str) -> tuple[int | None, str | None, str | None]:
+    """The first loop's line, its loop variable, and the name it builds up (set before the loop, updated inside it)."""
+    try:
+        tree = ast.parse(code)
+    except (SyntaxError, ValueError):
+        return None, None, None
+    loop = next((n for n in ast.walk(tree) if isinstance(n, (ast.For, ast.While))), None)
+    if loop is None:
+        return None, None, None
+    variable = loop.target.id if isinstance(loop, ast.For) and isinstance(loop.target, ast.Name) else None
+    enclosing = error_analysis._enclosing(tree, loop.lineno)
+    created = error_analysis._created_in(enclosing) if enclosing else error_analysis._created_in(tree)
+    updated: list[str] = []
+    for node in ast.walk(loop):
+        if isinstance(node, ast.AugAssign) and isinstance(node.target, ast.Name):
+            updated.append(node.target.id)
+        elif isinstance(node, ast.Expr) and isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Attribute) and isinstance(node.value.func.value, ast.Name) \
+                and node.value.func.attr in ("append", "add", "extend", "update"):
+            updated.append(node.value.func.value.id)
+    result = next((name for name in updated if name != variable and created.get(name, 10**9) < loop.lineno), None)
+    return loop.lineno, variable, result
+
+
+def _loop_probe(code: str) -> tuple[int | None, list[str]]:
+    """The main loop, and the values worth printing inside it: its loop variable and what it updates."""
+    try:
+        tree = ast.parse(code)
+    except (SyntaxError, ValueError):
+        return None, []
+    loops = [n for n in ast.walk(tree) if isinstance(n, (ast.For, ast.While))]
+    if not loops:
+        return None, []
+    loop = loops[0]
+    enclosing = error_analysis._enclosing(tree, loop.lineno)
+    created = error_analysis._created_in(enclosing) if enclosing else error_analysis._created_in(tree)
+    params = set(error_analysis._params(enclosing))
+    names: list[str] = []
+    if isinstance(loop, ast.For):
+        names += [n.id for n in ast.walk(loop.target) if isinstance(n, ast.Name)]
+    else:
+        names += [n.id for n in ast.walk(loop.test) if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load)]
+    for node in ast.walk(loop):
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target] if isinstance(node, (ast.AugAssign, ast.AnnAssign)) else []
+        for target in targets:
+            names += [n.id for n in ast.walk(target) if isinstance(n, ast.Name)]
+    # Only values that exist when the loop body starts: the loop variable, parameters, and names set before the loop.
+    usable = [n for n in dict.fromkeys(names) if n in params or (created.get(n, 10**9) < loop.lineno) or (isinstance(loop, ast.For) and n in {x.id for x in ast.walk(loop.target) if isinstance(x, ast.Name)})]
+    return loop.lineno, usable[:4]
+
+
+def _probe(code: str, known_line: int | None) -> tuple[int | None, list[str]]:
+    """A line worth inspecting, and the variables on it. Prefers a reported line, then a return, then a loop."""
+    try:
+        tree = ast.parse(code)
+    except (SyntaxError, ValueError):
+        return known_line, []
+    returns = [n for n in ast.walk(tree) if isinstance(n, ast.Return) and n.value is not None]
+    loops = [n for n in ast.walk(tree) if isinstance(n, (ast.For, ast.While))]
+    statements = [n for n in ast.walk(tree) if isinstance(n, ast.stmt) and not isinstance(n, (ast.FunctionDef, ast.ClassDef))]
+    target = None
+    if known_line:
+        target = next((n for n in statements if n.lineno == known_line), None)
+    target = target or (returns[-1] if returns else None) or (loops[0] if loops else None)
+    if target is None:
+        return known_line, []
+    names: list[str] = []
+    # Only what the line reads, and only names that already exist there. A loop variable has no value before its own loop starts.
+    header = [target.iter] if isinstance(target, ast.For) else ([target.test] if isinstance(target, ast.While) else [target])
+    called = {n.func.id for part in header for n in ast.walk(part) if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
+    enclosing = error_analysis._enclosing(tree, target.lineno)
+    created = error_analysis._created_in(enclosing) if enclosing else error_analysis._created_in(tree)
+    known = set(error_analysis._params(enclosing)) | {name for name, line in created.items() if line < target.lineno}
+    for part in header:
+        for node in ast.walk(part):
+            if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load) and node.id not in called and node.id in known and node.id not in names:
+                names.append(node.id)
+    return target.lineno, names[:3]
 
 
 def _classify_syntax(error: dict[str, Any]) -> tuple[str, str]:
@@ -291,7 +490,8 @@ def _analyse_wrong_answers(internal: list[dict[str, Any]], code: CodeFacts) -> t
 
 def run_diagnostic(
     verdict: str, internal: list[dict[str, Any]], code: str, problem: dict[str, Any],
-    previous_issue_keys: list[str], use_llm: bool = True,
+    previous_issue_keys: list[str], use_llm: bool = True, previous: PreviousAttempt | None = None, evaluation_kind: str | None = None,
+    same_code_requests: int = 0,
 ) -> tuple[DiagnosticOutput, dict[str, Any] | None]:
     passed = sum(1 for r in internal if r["passed"])
     total = len(internal)
@@ -301,6 +501,7 @@ def run_diagnostic(
     inferences: list[Inference] = []
     lines: list[int] = []
     llm_meta: dict[str, Any] | None = None
+    precise: ErrorDiagnosis | None = None
 
     if verdict == "accepted":
         category, issue, confidence = "accepted", "accepted", 1.0
@@ -368,6 +569,19 @@ def run_diagnostic(
             lines.append(line)
         where = f" on line {line}" if line else ""
         summary = f"Your code stopped with {kind}{where}."
+        # A name comes from the learner's own code, so reading it from a hidden test's error reveals nothing.
+        precise = error_analysis.analyse_name_error(code, error, problem) if kind in ("NameError", "UnboundLocalError") else None
+        if precise is None:
+            precise = error_analysis.analyse_other_error(code, error, visible)
+        if precise.cause != kind:
+            issue = f"runtime:{kind}:{precise.cause}"
+        confidence = precise.confidence
+        if precise.name:
+            # Say what Python could not find now. Why it is missing is for the help to reach step by step.
+            summary = f"{summary} Python cannot find anything named \"{precise.name}\"."
+            facts.append(Fact(kind="name_analysis", source="code_analysis", line=precise.location, text=precise.evidence[0]))
+        else:
+            inferences.append(Inference(misconception=precise.likely_cause, confidence="high" if precise.confidence >= 0.8 else "medium", evidence=["exception"]))
     else:
         category = "partial" if verdict == "partial" else "wrong_answer"
         issue, facts_found, inferences, lines = _analyse_wrong_answers(internal, analysis)
@@ -392,10 +606,36 @@ def run_diagnostic(
         category=category, issue_key=issue, title=ISSUE_TITLES.get(category, "Result"), student_summary=summary.strip(),
         facts=facts, inferences=inferences, concepts=concepts, affected_lines=sorted(set(lines)), confidence=confidence,
         uncertain=confidence < 0.5, repeat_count=repeat, tests_passed=passed, tests_total=total,
+        evidence=build_evidence(internal, code, category, facts),
     )
+    output.diagnosis = precise or error_analysis.describe_other(category, issue, summary.strip(), [f.text for f in facts if f.kind != "repeated_issue"], output.affected_lines[0] if output.affected_lines else None, confidence)
+    if output.diagnosis.name:
+        output.affected_lines = sorted(set(output.affected_lines) | ({output.diagnosis.location} if output.diagnosis.location else set()))
+    output.comparison = compare_with_previous(output, code, previous, evaluation_kind)
+    output.facts.extend(comparison_facts(output, same_code_requests))
     if use_llm and gateway.enabled and output.uncertain and category in ("wrong_answer", "partial"):
         output, llm_meta = _refine_with_llm(output, code, problem, internal)
     return output, llm_meta
+
+
+def comparison_facts(output: DiagnosticOutput, same_code_requests: int) -> list[Fact]:
+    """Observations about change between versions. Never a claim about why, which would be an inference."""
+    comparison = output.comparison
+    facts: list[Fact] = []
+    if same_code_requests > 0:
+        facts.append(Fact(kind="code_unchanged", source="code_analysis", text="The code has not changed since the last hint."))
+    if not comparison.has_previous or output.category == "accepted":
+        return facts
+    if comparison.same_issue and comparison.changed_lines:
+        where = ", ".join(str(n) for n in comparison.changed_lines[:3])
+        plural = "s" if len(comparison.changed_lines) > 1 else ""
+        facts.append(Fact(kind="issue_persisted", source="code_analysis", text=f"Line{plural} {where} changed since the previous version, and the same issue is still present."))
+    if comparison.moved_further:
+        facts.append(Fact(kind="moved_further", source="tests", text="This version gets further than the previous one before failing."))
+    if comparison.tests_delta:
+        word = "more" if comparison.tests_delta > 0 else "fewer"
+        facts.append(Fact(kind="tests_delta", source="tests", text=f"{abs(comparison.tests_delta)} {word} test(s) pass than in the previous version."))
+    return facts
 
 
 def _dominant(internal: list[dict[str, Any]]) -> str | None:

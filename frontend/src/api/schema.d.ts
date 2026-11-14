@@ -160,6 +160,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/problems/{problem_id}/learn": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Problem Learning
+         * @description The Learn panel beside a problem. Built only from the task, visible examples and topic notes.
+         */
+        get: operations["problem_learning_api_problems__problem_id__learn_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search
+         * @description Search across topics, lesson sections, glossary terms, techniques and problems.
+         */
+        get: operations["search_api_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/problems/{problem_id}": {
         parameters: {
             query?: never;
@@ -211,6 +251,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/problems/{problem_id}/submissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Submissions
+         * @description Every graded submission of this problem by this learner, newest first, with the code that was submitted.
+         */
+        get: operations["submissions_api_problems__problem_id__submissions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/problems/{problem_id}/run": {
         parameters: {
             query?: never;
@@ -225,6 +285,26 @@ export interface paths {
          * @description Run public examples or the learner's own input. Not graded, and no agents run.
          */
         post: operations["run_code_api_problems__problem_id__run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/playground/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run Playground
+         * @description Run any code from a lesson, in the same sandbox as everything else. Never graded, and no agents run.
+         */
+        post: operations["run_playground_api_playground_run_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -589,6 +669,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Profile
+         * @description Everything the learner has done, how they have improved, and the estimates the tutor keeps about them.
+         */
+        get: operations["my_profile_api_me_profile_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me/export": {
         parameters: {
             query?: never;
@@ -822,6 +922,18 @@ export interface components {
                 [key: string]: string;
             };
         };
+        /**
+         * CaseIn
+         * @description One test case to run: an unchanged example by id, or the learner's own values, one Python value per parameter.
+         */
+        CaseIn: {
+            /** Test Id */
+            test_id?: string | null;
+            /** Args */
+            args?: string[] | null;
+            /** Stdin */
+            stdin?: string | null;
+        };
         /** ClassCreateIn */
         ClassCreateIn: {
             /** Name */
@@ -955,6 +1067,13 @@ export interface components {
             request_size?: ("nudge" | "more") | null;
             /** Question */
             question?: string | null;
+            /**
+             * Focus Start
+             * @description First line the learner pointed at
+             */
+            focus_start?: number | null;
+            /** Focus End */
+            focus_end?: number | null;
         };
         /** HintRow */
         HintRow: {
@@ -964,6 +1083,14 @@ export interface components {
             level: number;
             /** Level Name */
             level_name: string;
+            /** Strategy */
+            strategy?: string | null;
+            /** Question */
+            question?: string | null;
+            /** Focus Start */
+            focus_start?: number | null;
+            /** Focus End */
+            focus_end?: number | null;
             /** Text */
             text: string;
             /** Why */
@@ -1030,8 +1157,12 @@ export interface components {
             source_url?: string | null;
             /** Source Retrieved At */
             source_retrieved_at?: string | null;
+            /** Learner Notes */
+            learner_notes?: string | null;
             /** Missing Fields */
             missing_fields?: string[];
+            /** Extracted Fields */
+            extracted_fields?: string[];
             /** Warnings */
             warnings?: string[];
         };
@@ -1101,13 +1232,33 @@ export interface components {
         LookupOut: {
             /** Supported */
             supported: boolean;
+            /**
+             * Status
+             * @default failed
+             * @enum {string}
+             */
+            status: "extracted" | "partial" | "metadata_only" | "url_only" | "failed" | "invalid";
+            /** Reason Code */
+            reason_code?: string | null;
             /** Source Name */
-            source_name: string | null;
+            source_name?: string | null;
+            /** Source Url */
+            source_url?: string | null;
+            /**
+             * Access
+             * @default none
+             * @enum {string}
+             */
+            access: "official_api" | "public_page" | "url_only" | "none";
             /** Message */
             message: string;
             /** Guidance */
             guidance?: string | null;
             draft?: components["schemas"]["ImportDraft"] | null;
+            /** Extracted Fields */
+            extracted_fields?: string[];
+            /** Missing Fields */
+            missing_fields?: string[];
         };
         /** OnboardingIn */
         OnboardingIn: {
@@ -1136,6 +1287,12 @@ export interface components {
         ParseIn: {
             /** Text */
             text: string;
+            /** Source Url */
+            source_url?: string | null;
+            /** Unit Id */
+            unit_id?: string | null;
+            /** Notes */
+            notes?: string | null;
         };
         /** PathOut */
         PathOut: {
@@ -1193,6 +1350,13 @@ export interface components {
             examples: components["schemas"]["ExampleOut"][];
             /** Hidden Test Count */
             hidden_test_count: number;
+            /**
+             * Hidden Test Categories
+             * @description How many hidden tests of each kind, and what that kind checks. Never inputs or answers.
+             */
+            hidden_test_categories?: {
+                [key: string]: unknown;
+            }[];
             /** Source Type */
             source_type: string;
             /** Source Name */
@@ -1203,8 +1367,20 @@ export interface components {
             source_note: string | null;
             /** Source Retrieved At */
             source_retrieved_at: string | null;
+            /** Learner Notes */
+            learner_notes?: string | null;
             /** Is Mine */
             is_mine: boolean;
+            /** Pattern */
+            pattern?: string | null;
+            /** Topic Notes */
+            topic_notes?: {
+                [key: string]: unknown;
+            } | null;
+            /** Sample Cases */
+            sample_cases?: components["schemas"]["SampleCase"][];
+            /** Param Names */
+            param_names?: string[];
         };
         /** ProblemSummary */
         ProblemSummary: {
@@ -1238,6 +1414,10 @@ export interface components {
              * @default false
              */
             recommended_first: boolean;
+            /** Pattern */
+            pattern?: string | null;
+            /** Created At */
+            created_at?: string | null;
         };
         /** ReflectionAnswerIn */
         ReflectionAnswerIn: {
@@ -1277,6 +1457,8 @@ export interface components {
             custom_args?: string | null;
             /** Custom Stdin */
             custom_stdin?: string | null;
+            /** Cases */
+            cases?: components["schemas"]["CaseIn"][] | null;
         };
         /** RunOut */
         RunOut: {
@@ -1310,6 +1492,21 @@ export interface components {
             created_at: string;
             /** Finished At */
             finished_at: string | null;
+        };
+        /** SampleCase */
+        SampleCase: {
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Params */
+            params: {
+                [key: string]: string;
+            }[];
+            /** Expected */
+            expected: string | null;
+            /** Editable */
+            editable: boolean;
         };
         /** SaveImportIn */
         SaveImportIn: {
@@ -1443,6 +1640,10 @@ export interface components {
             }[];
             /** Lessons */
             lessons: components["schemas"]["LessonOut"][];
+            /** Guide */
+            guide?: {
+                [key: string]: unknown;
+            } | null;
             /** Problems */
             problems: components["schemas"]["ProblemSummary"][];
         };
@@ -1835,6 +2036,76 @@ export interface operations {
             };
         };
     };
+    problem_learning_api_problems__problem_id__learn_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                problem_id: string;
+            };
+            cookie?: {
+                csmasf_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_api_search_get: {
+        parameters: {
+            query?: {
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                csmasf_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_problem_api_problems__problem_id__get: {
         parameters: {
             query?: never;
@@ -1932,6 +2203,41 @@ export interface operations {
             };
         };
     };
+    submissions_api_problems__problem_id__submissions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                problem_id: string;
+            };
+            cookie?: {
+                csmasf_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     run_code_api_problems__problem_id__run_post: {
         parameters: {
             query?: never;
@@ -1939,6 +2245,41 @@ export interface operations {
             path: {
                 problem_id: string;
             };
+            cookie?: {
+                csmasf_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RunIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Accepted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_playground_api_playground_run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
             cookie?: {
                 csmasf_session?: string | null;
             };
@@ -2741,6 +3082,39 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_profile_api_me_profile_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                csmasf_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
             };
             /** @description Validation Error */
             422: {

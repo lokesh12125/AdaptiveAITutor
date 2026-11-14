@@ -3,19 +3,32 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Trellis: an adaptive Python tutor that gives the right amount of help at the right time." />
+    <meta name="description" content="CodePath: an adaptive Python tutor that gives the right amount of help at the right time." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>Trellis</title>
+    <title>CodePath</title>
     <script>
       // Set the theme before first paint, so there is no flash of the wrong one.
       (function () {
+        var theme = "light";
         try {
-          var saved = localStorage.getItem("trellis.theme");
-          var theme = saved === "light" || saved === "dark" ? saved : window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-          document.documentElement.dataset.theme = theme;
+          // A link opened from another CodePath tab carries the theme on screen there (?theme=dark), so a new tab or
+          // window, even one in a browser that has not saved the choice, opens in the same mode. It is saved and removed from the address.
+          var params = new URLSearchParams(location.search);
+          var carried = params.get("theme");
+          if (carried === "dark" || carried === "light") {
+            theme = carried;
+            params.delete("theme");
+            var rest = params.toString();
+            history.replaceState(history.state, "", location.pathname + (rest ? "?" + rest : "") + location.hash);
+            try { localStorage.setItem("codepath.theme", carried); } catch (e) { /* storage blocked: the theme still applies to this page */ }
+          } else {
+            var saved = localStorage.getItem("codepath.theme") || localStorage.getItem("trellis.theme");
+            theme = saved === "dark" ? "dark" : saved === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          }
         } catch (e) {
-          document.documentElement.dataset.theme = "light";
+          /* storage unavailable: light */
         }
+        document.documentElement.dataset.theme = theme;
       })();
     </script>
   </head>

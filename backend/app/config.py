@@ -43,6 +43,13 @@ class Settings(BaseSettings):
     rate_hint_per_minute: int = 15
     rate_auth_per_minute: int = 12
     rate_import_per_minute: int = 20
+    import_page_fetch: bool = True  # False turns off opening external pages. Paste and official APIs still work.
+    import_blocked_domains: str = ""  # comma-separated domains this server will never open
+
+    @property
+    def import_blocked_domain_list(self) -> list[str]:
+        return [d.strip().lower() for d in self.import_blocked_domains.split(",") if d.strip()]
+
 
     @property
     def is_production(self) -> bool:

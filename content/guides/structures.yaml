@@ -1,0 +1,330 @@
+hashing:
+  reading_minutes: 10
+  overview: |
+    Hashing is the single most useful speed-up in everyday programming. A set or dictionary finds an item in about one step, so many problems that seem to need nested loops can be solved in one pass.
+  you_will_learn:
+    - How sets and dictionaries get their speed
+    - How to remember what you have already seen
+    - How to count with frequency maps
+    - How to look up a complement instead of searching for it
+  before_you_start:
+    - You should know dictionaries from Lists and dictionaries.
+    - You should understand why x in a_list can be slow.
+  sections:
+    - id: how-hashing-works
+      title: Why it is so fast
+      body: |
+        A hash function turns a key into a position in a table, so Python can jump straight to it rather than search. That gives about one step per lookup. Keys must be **immutable**: strings, numbers and tuples work, but lists do not. When you need a list as a key, convert it with `tuple(items)`, or use a sorted string.
+
+        | Operation | List | Set or dictionary |
+        |---|---|---|
+        | Is x present? | up to n steps | about 1 step |
+        | Add an item | about 1 step | about 1 step |
+
+        The price is extra memory, and sets and dictionaries do not keep values in sorted order.
+      examples:
+        - title: A set remembers
+          code: |
+            seen = set()
+            for n in [3, 1, 3, 2, 1]:
+                if n in seen:
+                    print("repeat:", n)
+                seen.add(n)
+            print(sorted(seen))
+    - id: frequency-maps
+      title: Frequency maps
+      body: |
+        Count each item, then answer from the counts. This solves questions about the most common item, items appearing once, and whether two collections hold the same things. `collections.Counter` does the counting for you, and is worth knowing, although writing it by hand is good practice.
+      examples:
+        - title: Counting two ways
+          code: |
+            from collections import Counter
+
+            counts = {}
+            for ch in "hello":
+                counts[ch] = counts.get(ch, 0) + 1
+            print(counts)
+            print(Counter("hello").most_common(1))
+    - id: complement
+      title: Looking up a complement
+      body: |
+        To find two items that combine to a target, do not search for a partner. As you walk through, ask whether the **partner you need** has been seen already. For a sum, the partner of `x` is `target - x`. This turns about `n * n` steps into about `n` steps.
+      examples:
+        - title: Two values adding to a target
+          code: |
+            def has_sum(nums, target):
+                seen = set()
+                for x in nums:
+                    if target - x in seen:
+                        return True
+                    seen.add(x)
+                return False
+
+            print(has_sum([2, 7, 11, 15], 9))
+    - id: grouping
+      title: Grouping by a key
+      body: |
+        To group items that are alike in some way, compute a **key** that is the same for items in one group, and collect them in a dictionary. For anagrams, the sorted letters make a good key.
+      examples:
+        - title: Grouping anagrams
+          code: |
+            groups = {}
+            for word in ["eat", "tea", "tan", "ate"]:
+                key = "".join(sorted(word))
+                groups.setdefault(key, []).append(word)
+            print(list(groups.values()))
+  patterns:
+    - name: Seen sets
+      when: You need to spot repeats, or check whether something appeared earlier.
+      how: Walk through once, checking the set before adding to it.
+    - name: Frequency maps
+      when: The answer depends on how many times things appear.
+      how: Count first, then read the answer from the counts.
+    - name: Complement lookup
+      when: You need two items that combine to a target.
+      how: For each item, check whether the partner it needs has already been seen.
+    - name: Grouping by key
+      when: You need to collect items that share a property.
+      how: Choose a key that is equal exactly when items belong together.
+  mistakes:
+    - mistake: Using a list as a dictionary key.
+      fix: Lists cannot be keys. Convert with tuple(items).
+    - mistake: Adding to the set before checking it.
+      fix: In complement problems this can pair an item with itself. Check first, then add.
+    - mistake: Using x in a_list inside a loop.
+      fix: Build a set first, so each check takes one step.
+  key_ideas:
+    - Sets and dictionaries look up in about one step.
+    - Trade a little memory for a lot of speed.
+    - Check for the complement rather than searching for it.
+
+stacks-queues:
+  reading_minutes: 11
+  overview: |
+    Stacks and queues are lists with one rule about where items enter and leave. That simple rule makes them the right tool for matching brackets, undo features, walking through graphs, and many clever one-pass algorithms.
+  you_will_learn:
+    - How stacks and queues work, and how to write them in Python
+    - How stacks handle nesting and matching
+    - What a monotonic stack is, and why it is so effective
+    - When to use a deque
+  before_you_start:
+    - You should know lists, append and pop.
+    - You should be comfortable with while loops.
+  sections:
+    - id: stacks
+      title: Stacks
+      body: |
+        A **stack** is last in, first out, like a pile of plates. In Python, a list works well: `append` pushes, `pop` removes the last item, and `items[-1]` looks at the top. All of these take about one step. Check that it is not empty before popping.
+      examples:
+        - title: Push and pop
+          code: |
+            stack = []
+            stack.append(1)
+            stack.append(2)
+            print(stack[-1])
+            print(stack.pop())
+            print(stack)
+    - id: matching
+      title: Matching and nesting
+      body: |
+        Whenever things nest, such as brackets, tags or function calls, the most recent thing opened must be closed first. That is exactly what a stack does.
+      examples:
+        - title: Balanced brackets
+          code: |
+            def balanced(text):
+                pairs = {")": "(", "]": "[", "}": "{"}
+                stack = []
+                for ch in text:
+                    if ch in "([{":
+                        stack.append(ch)
+                    elif not stack or stack.pop() != pairs[ch]:
+                        return False
+                return not stack
+
+            print(balanced("([]{})"), balanced("(]"))
+    - id: monotonic
+      title: Monotonic stacks
+      body: |
+        For "the next greater item", keep a stack of items still waiting for an answer, in decreasing order. When a bigger item arrives, it answers everything smaller on the stack. Each item is pushed and popped at most once, so the whole thing takes about `n` steps even though it has a nested loop.
+      examples:
+        - title: Next greater value
+          code: |
+            def next_greater(nums):
+                out = [-1] * len(nums)
+                stack = []
+                for i, n in enumerate(nums):
+                    while stack and nums[stack[-1]] < n:
+                        out[stack.pop()] = n
+                    stack.append(i)
+                return out
+
+            print(next_greater([2, 1, 3]))
+          note: The stack holds positions rather than values, so that answers can be stored in the right place.
+    - id: queues
+      title: Queues and deques
+      body: |
+        A **queue** is first in, first out, like a line of people. Do not use `list.pop(0)`, because it shifts every item and takes `n` steps. `collections.deque` adds and removes at both ends in about one step. Queues are the engine of breadth-first search. A deque also solves "maximum of each window" neatly.
+      examples:
+        - title: A deque
+          code: |
+            from collections import deque
+
+            queue = deque()
+            queue.append("first")
+            queue.append("second")
+            print(queue.popleft())
+            print(queue)
+  patterns:
+    - name: Stack basics
+      when: You need the most recent item, or to undo the last action.
+      how: Use a list with append and pop.
+    - name: Matching and parsing
+      when: The input nests, like brackets or expressions.
+      how: Push when something opens, pop and check when it closes.
+    - name: Monotonic stack
+      when: You need the next or previous greater or smaller item.
+      how: Keep the stack in order, and pop everything a new item resolves.
+    - name: Queue and deque
+      when: Items should be handled in arrival order, or a window moves along.
+      how: Use collections.deque, and popleft to remove the oldest.
+    - name: Design with stacks and queues
+      when: You must build one structure from others.
+      how: Decide what each operation must do, and keep any extra information in a second structure.
+  mistakes:
+    - mistake: Popping from an empty stack.
+      fix: Check if stack first, or you get an IndexError.
+    - mistake: Using list.pop(0) as a queue.
+      fix: It takes n steps. Use deque.popleft().
+    - mistake: Returning True without checking the stack is empty.
+      fix: Leftover items mean something was never closed.
+  key_ideas:
+    - A stack is last in, first out. A queue is first in, first out.
+    - Nesting means a stack.
+    - Each item is pushed and popped at most once.
+
+linked-lists:
+  reading_minutes: 11
+  overview: |
+    A linked list is a chain of nodes, where each node knows only the next one. Working with them trains careful thinking about references, and the techniques come up again in trees and graphs.
+  you_will_learn:
+    - How nodes and references form a list
+    - How to walk through a list safely
+    - How to rewire links without losing part of the list
+    - When fast and slow pointers and placeholder nodes help
+  before_you_start:
+    - You should be confident with loops and functions.
+    - You should know that assigning a variable does not copy an object.
+  sections:
+    - id: nodes
+      title: Nodes and references
+      body: |
+        Each node holds a value and a reference to the next node. The last node's `next` is `None`, and an empty list is just `None`. To reach the fifth item you must walk from the head, so reading position `i` takes `i` steps. Changing links at a known node takes one step.
+
+        | Operation | List | Linked list |
+        |---|---|---|
+        | Read position i | 1 step | i steps |
+        | Add at the front | n steps | 1 step |
+      examples:
+        - title: Building and walking a list
+          code: |
+            class ListNode:
+                def __init__(self, val=0, next=None):
+                    self.val = val
+                    self.next = next
+
+            head = ListNode(1, ListNode(2, ListNode(3)))
+            node = head
+            while node:
+                print(node.val)
+                node = node.next
+    - id: rewiring
+      title: Rewiring links
+      body: |
+        The golden rule: **save a reference before you overwrite it**, or the rest of the list is lost. Drawing the nodes on paper really does help. Reversing a list shows the classic three-step dance.
+      examples:
+        - title: Reversing a list
+          code: |
+            class ListNode:
+                def __init__(self, val=0, next=None):
+                    self.val = val
+                    self.next = next
+
+            def reverse(head):
+                prev = None
+                while head:
+                    next_node = head.next
+                    head.next = prev
+                    prev = head
+                    head = next_node
+                return prev
+
+            node = reverse(ListNode(1, ListNode(2, ListNode(3))))
+            while node:
+                print(node.val)
+                node = node.next
+    - id: fast-slow
+      title: Fast and slow pointers
+      body: |
+        Move one pointer two steps at a time and another one step. When the fast one reaches the end, the slow one is at the middle. If there is a loop, they will eventually meet. Moving one pointer k steps ahead first gives you the k-th node from the end.
+      examples:
+        - title: Finding the middle
+          code: |
+            class ListNode:
+                def __init__(self, val=0, next=None):
+                    self.val = val
+                    self.next = next
+
+            head = ListNode(1, ListNode(2, ListNode(3, ListNode(4, ListNode(5)))))
+            slow = fast = head
+            while fast and fast.next:
+                slow = slow.next
+                fast = fast.next.next
+            print(slow.val)
+    - id: dummy
+      title: Placeholder nodes
+      body: |
+        Removing or inserting at the head is a special case, since there is no node before it. A **dummy** node in front removes that special case: every real node now has a node before it. Return `dummy.next` at the end.
+      examples:
+        - title: Removing a value with a dummy
+          code: |
+            class ListNode:
+                def __init__(self, val=0, next=None):
+                    self.val = val
+                    self.next = next
+
+            def remove(head, x):
+                dummy = ListNode(0, head)
+                node = dummy
+                while node.next:
+                    if node.next.val == x:
+                        node.next = node.next.next
+                    else:
+                        node = node.next
+                return dummy.next
+
+            node = remove(ListNode(1, ListNode(2, ListNode(1))), 1)
+            print(node.val, node.next)
+  patterns:
+    - name: Traversal
+      when: You need to read through the list.
+      how: Use while node, and move with node = node.next.
+    - name: Pointer rewiring
+      when: You need to change the order of nodes.
+      how: Save next first, change the link, then move on. Draw it before you code it.
+    - name: Fast and slow pointers
+      when: You need the middle, a loop, or a position from the end.
+      how: Move two pointers at different speeds, or with a fixed gap between them.
+    - name: Merging and dummy heads
+      when: You are building a new list, or the head might change.
+      how: Start from a placeholder node, and return dummy.next.
+  mistakes:
+    - mistake: Overwriting node.next before saving it.
+      fix: Save it in a variable first, or you lose the rest of the list.
+    - mistake: Reading .val on None.
+      fix: Check the node exists first. With fast pointers, check fast and fast.next.
+    - mistake: Not handling an empty list or a single node.
+      fix: Test both, since they often need no change at all.
+  key_ideas:
+    - Save a reference before you overwrite it.
+    - A dummy node removes the special case at the head.
+    - Draw the links before you write the code.

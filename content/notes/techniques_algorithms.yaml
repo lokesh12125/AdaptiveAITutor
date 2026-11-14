@@ -1,0 +1,196 @@
+# Approach guidance for each technique. All wording was written for this project.
+# This describes how to think about a kind of problem. It never contains the solution to a specific problem.
+
+Linear recursion:
+  idea: "Solve the smallest case directly, then build each answer from the answer for one size smaller."
+  observations: ["Each call waits for the call inside it.", "If you can state the answer for n using n - 1, recursion fits."]
+  steps: ["Write the smallest input and its answer.", "Say how n relates to n - 1, in words.", "Write the base case first.", "Write the recursive line, and trust it."]
+  approaches:
+    - {level: "Recursion", idea: "One call on a smaller input.", time: "O(n)", space: "O(n) for the stack"}
+    - {level: "Loop", idea: "The same work, built up with a loop.", time: "O(n)", space: "O(1)"}
+  mistakes: ["No base case, or one never reached.", "Forgetting to return the recursive result.", "A call that does not get smaller."]
+  edge_cases: ["The smallest input, often 0 or 1.", "Very deep inputs, which hit Python's limit."]
+
+Recursion on sequences:
+  idea: "Handle the first item, and let a recursive call handle the rest."
+  observations: ["An empty sequence is usually the base case.", "Passing a position avoids making a new slice each time."]
+  steps: ["Decide the answer for an empty sequence.", "Decide what to do with one item.", "Combine it with the answer for the rest.", "Trace a two-item example."]
+  approaches:
+    - {level: "Slicing", idea: "Call on items[1:].", time: "O(n²), because each slice copies", space: "O(n²)"}
+    - {level: "Passing a position", idea: "Call with position + 1.", time: "O(n)", space: "O(n) for the stack"}
+  mistakes: ["No base case for empty input.", "Combining the results in the wrong order.", "Forgetting to return."]
+  edge_cases: ["An empty sequence.", "A single item.", "Nested lists, if the task allows them."]
+
+Divide and conquer:
+  idea: "Split the problem into parts, solve each, then combine the answers."
+  observations: ["Halving gives about log n levels of work.", "The combine step is usually the real work."]
+  steps: ["Find the smallest case.", "Decide how to split.", "Assume each part is solved.", "Write how to combine them."]
+  approaches:
+    - {level: "Direct", idea: "Handle everything in one pass or two loops.", time: "Often O(n²)", space: "O(1)"}
+    - {level: "Divide and conquer", idea: "Split in half, then combine.", time: "Often O(n log n)", space: "O(log n) or O(n)"}
+  mistakes: ["Splitting so one part stays the same size.", "Losing the middle item.", "A combine step that costs too much."]
+  edge_cases: ["Empty input.", "One item.", "An odd number of items."]
+
+Backtracking:
+  idea: "Make a choice, explore what follows, then undo it and try the next choice."
+  observations: ["It explores a tree of choices.", "Stopping early on a dead end saves a great deal of work.", "Store a copy of the path, not the path itself."]
+  steps: ["Define what a complete answer looks like.", "List the choices at each step.", "Choose, recurse, then undo.", "Skip choices that cannot work."]
+  approaches:
+    - {level: "Try everything", idea: "Generate every possibility, then filter.", time: "Often O(2^n) or O(n!)", space: "O(n) plus the results"}
+    - {level: "Backtracking with pruning", idea: "Abandon a path as soon as it cannot work.", time: "Same worst case, far faster in practice", space: "O(n) plus the results"}
+  mistakes: ["Forgetting to undo the choice.", "Appending the path itself rather than a copy.", "Not skipping duplicates when the input repeats."]
+  edge_cases: ["Empty input, which may have one empty answer.", "Repeated values.", "No valid answer."]
+
+Linear and binary search:
+  idea: "Without order you check every item. With sorted data you can halve the range each step."
+  observations: ["Binary search needs sorted data.", "Move past the middle, or it may never stop.", "With duplicates, decide which match you want."]
+  steps: ["Is the data sorted?", "Keep low and high.", "Compare with the middle, and discard half.", "Decide what to return when it is missing."]
+  approaches:
+    - {level: "Linear search", idea: "Check items one at a time.", time: "O(n)", space: "O(1)"}
+    - {level: "Binary search", idea: "Halve a sorted range.", time: "O(log n)", space: "O(1)"}
+  mistakes: ["Using < where <= is needed in the loop.", "Setting low = mid, which can loop forever.", "Using it on unsorted data."]
+  edge_cases: ["An empty list.", "The first and last items.", "A value that is missing.", "Duplicates."]
+
+Binary search on answers:
+  idea: "If you can check whether an answer works, search for the boundary between yes and no."
+  observations: ["The answers must go from no to yes without switching back.", "There may be no list to search at all, only a range of answers."]
+  steps: ["Find the smallest and largest possible answers.", "Write a check for one candidate.", "Confirm that once it says yes, larger values also say yes.", "Binary search for the first yes."]
+  approaches:
+    - {level: "Try every answer", idea: "Check each candidate in turn.", time: "O(range × check)", space: "O(1)"}
+    - {level: "Binary search", idea: "Halve the range of answers.", time: "O(log(range) × check)", space: "O(1)"}
+  mistakes: ["A check that is not one-directional.", "The wrong search bounds.", "Stopping at a yes that is not the first one."]
+  edge_cases: ["The smallest possible answer.", "The largest possible answer.", "Exact boundaries."]
+
+Sorting algorithms:
+  idea: "Every sort works by comparing items and moving them, and the methods differ in how much work that takes."
+  observations: ["Simple sorts take about n² steps.", "Merge sort takes about n log n steps.", "Knowing how they work matters more than rewriting them in practice."]
+  steps: ["Work through the method by hand on four items.", "Find what is sorted after each pass.", "Write one pass.", "Repeat it until everything is sorted."]
+  approaches:
+    - {level: "Bubble, selection, insertion", idea: "Repeatedly swap or pick items.", time: "O(n²)", space: "O(1)"}
+    - {level: "Merge sort", idea: "Split, sort each half, then merge.", time: "O(n log n)", space: "O(n)"}
+    - {level: "Built-in sorted()", idea: "Use Python's own sort when allowed.", time: "O(n log n)", space: "O(n)"}
+  mistakes: ["A loop that runs one pass too few.", "Going past the end while comparing j + 1.", "Returning before finishing."]
+  edge_cases: ["Empty and one item.", "Already sorted.", "Reversed.", "Duplicates."]
+
+Custom sort keys:
+  idea: "A key function says what to compare for each item, while the items stay as they are."
+  observations: ["A tuple key sorts by the first part, then the second.", "Negating a number reverses just that part.", "Python's sort is stable."]
+  steps: ["Say the order you want in words.", "Write what to compare for one item.", "Use a tuple if there is a tie-break.", "Check that ties come out correctly."]
+  approaches:
+    - {level: "Write your own sort", idea: "Compare the items by hand.", time: "O(n²)", space: "O(1)"}
+    - {level: "sorted with key", idea: "Give a key function.", time: "O(n log n)", space: "O(n)"}
+  mistakes: ["Writing key=len() rather than key=len.", "Storing the result of .sort().", "Forgetting the tie-break."]
+  edge_cases: ["Ties.", "An empty list.", "Upper and lower case in text."]
+
+Merge and partition:
+  idea: "Merging joins two sorted lists by repeatedly taking the smaller front. Partitioning splits items around a value."
+  observations: ["Merging keeps a position in each list.", "When one list runs out, the rest of the other follows.", "Partitioning groups items, without fully sorting them."]
+  steps: ["Keep a position in each input.", "Compare the fronts, and take the smaller.", "Advance only that position.", "Add whatever remains."]
+  approaches:
+    - {level: "Combine, then sort", idea: "Join everything, and call sorted.", time: "O(n log n)", space: "O(n)"}
+    - {level: "Merge", idea: "Use the existing order.", time: "O(n)", space: "O(n)"}
+  mistakes: ["Forgetting what remains after the loop.", "Advancing the wrong position.", "Losing stability on ties."]
+  edge_cases: ["One input is empty.", "All of one list comes first.", "Duplicates across lists."]
+
+Two pointers from both ends:
+  idea: "Start one position at each end, and move them inwards, ruling out items at each step."
+  observations: ["On sorted data, moving left makes the sum bigger, and moving right makes it smaller.", "Each step rules out a whole set of pairs.", "The pointers can never pass each other."]
+  steps: ["Check the data is sorted, or that the problem compares both ends.", "Set one pointer at each end.", "Compare, and decide which pointer to move.", "Keep going until they meet."]
+  approaches:
+    - {level: "Brute force", idea: "Check every pair with two loops.", time: "O(n²)", space: "O(1)"}
+    - {level: "Using a set", idea: "Remember the values seen in one pass.", time: "O(n)", space: "O(n)"}
+    - {level: "Two pointers", idea: "Use the sorted order to rule pairs out.", time: "O(n)", space: "O(1)"}
+  mistakes: ["Only moving one pointer, so the loop misses answers or never ends.", "Using i <= j when two different positions are required.", "Using this on unsorted data."]
+  edge_cases: ["Empty and one-item lists.", "No valid pair.", "Duplicates."]
+
+Fast and slow pointers:
+  idea: "Two positions moving at different speeds find a middle, or detect a cycle, without extra memory."
+  observations: ["If one moves twice as fast, it reaches the end when the other reaches the middle.", "In a cycle, a faster pointer must catch the slower one.", "In a list, a slow pointer can mark where to write the next kept item."]
+  steps: ["Decide what each pointer means.", "Move them at their speeds.", "Decide when to stop, checking for the end safely.", "Use where they ended up."]
+  approaches:
+    - {level: "Use extra memory", idea: "Store what you have seen, or copy to a list.", time: "O(n)", space: "O(n)"}
+    - {level: "Fast and slow", idea: "Use two positions and nothing else.", time: "O(n)", space: "O(1)"}
+  mistakes: ["Reading fast.next.next without checking fast.next.", "A wrong starting position.", "Forgetting the even-length case."]
+  edge_cases: ["Empty.", "One item.", "Even and odd lengths.", "A cycle back to the first item."]
+
+Sliding window:
+  idea: "Keep a connected stretch of items, and update its value as it moves rather than recomputing it."
+  observations: ["The stretch must be connected, so a subset is not a window.", "A fixed window adds one item and removes one.", "A variable window grows on the right, and shrinks on the left when it breaks the rule."]
+  steps: ["Decide what you track about the window.", "Add the item entering on the right.", "Shrink from the left while the rule is broken.", "Record the best answer."]
+  approaches:
+    - {level: "Brute force", idea: "Try every stretch, and compute each from scratch.", time: "O(n²) or O(n³)", space: "O(1)"}
+    - {level: "Sliding window", idea: "Adjust only what changed.", time: "O(n)", space: "O(1) or O(k)"}
+  mistakes: ["Being off by one on the window's size.", "Recording the answer before shrinking.", "Forgetting to remove the item leaving on the left."]
+  edge_cases: ["A window larger than the list.", "An empty list.", "All items the same."]
+
+Prefix sums:
+  idea: "Store running totals once, then any range total is one subtraction."
+  observations: ["The sum from a to b is prefix[b + 1] - prefix[a].", "It pays off when there are many range questions.", "Storing a leading 0 removes a special case."]
+  steps: ["Build the running totals, starting with 0.", "Write a range total as a subtraction.", "Check it on a small example.", "Answer each question using the formula."]
+  approaches:
+    - {level: "Try every stretch", idea: "For each start and each end, add up the items in between.", time: "O(n²) or more", space: "O(1)"}
+    - {level: "Prefix sums", idea: "Build once, then subtract.", time: "O(n) to build, then O(1) per question", space: "O(n)"}
+  mistakes: ["Off by one in the formula.", "Forgetting the leading 0.", "Rebuilding the totals for each question."]
+  edge_cases: ["A range of one item.", "The whole list.", "Negative numbers."]
+
+Kadane and running best:
+  idea: "At each item, decide whether to extend the current stretch or start again, and remember the best so far."
+  observations: ["A running sum below zero can only hurt what follows.", "You need two values: the current one and the best one."]
+  steps: ["Decide what the current value means.", "Update it with each item.", "Update the best.", "Check the all-negative case."]
+  approaches:
+    - {level: "Brute force", idea: "Try every stretch.", time: "O(n²)", space: "O(1)"}
+    - {level: "Running best", idea: "One pass, tracking current and best.", time: "O(n)", space: "O(1)"}
+  mistakes: ["Starting the best at 0, which fails when all numbers are negative.", "Updating the best before the current value.", "Resetting too eagerly."]
+  edge_cases: ["All negative numbers.", "A single item.", "Zeros."]
+
+In-place updates:
+  idea: "Use a write position to overwrite the list as you go, using no second list."
+  observations: ["The write position never overtakes the read position.", "Sometimes working from the end avoids overwriting what you still need."]
+  steps: ["Decide what the write position means.", "Go through the items with a read position.", "Write only what you keep.", "Return what the task asks, such as the new length."]
+  approaches:
+    - {level: "New list", idea: "Build a new list, then copy it back.", time: "O(n)", space: "O(n)"}
+    - {level: "In place", idea: "Read and write within the same list.", time: "O(n)", space: "O(1)"}
+  mistakes: ["Overwriting a value before reading it.", "Returning a new list when the task wants the same one changed.", "Forgetting to trim what is left over."]
+  edge_cases: ["An empty list.", "Nothing to remove.", "Everything to remove."]
+
+Seen sets:
+  idea: "Keep a set of what you have seen, so each new item is checked in about constant time."
+  observations: ["Checking a set is far faster than checking a list.", "Check before adding, so an item does not match itself.", "A set loses order, so keep a list as well if order matters."]
+  steps: ["Decide what you need to remember.", "Start with an empty set.", "For each item, check, then add.", "Decide what to give back."]
+  approaches:
+    - {level: "Brute force", idea: "Compare each item with all the others.", time: "O(n²)", space: "O(1)"}
+    - {level: "Sort first", idea: "Sort, then compare neighbours.", time: "O(n log n)", space: "O(1) or O(n)"}
+    - {level: "Seen set", idea: "One pass with a set.", time: "O(n)", space: "O(n)"}
+  mistakes: ["Adding before checking.", "Using a list, which makes each check O(n).", "Expecting a set to keep order."]
+  edge_cases: ["Empty input.", "No repeats.", "All the same."]
+
+Frequency maps:
+  idea: "Count each item in a dictionary, then answer questions from the counts."
+  observations: ["Two collections are the same up to order exactly when their counts match.", "collections.Counter does this for you."]
+  steps: ["Decide what to count.", "Go through the items once, building the counts.", "Read the answer from the counts.", "Check the tie rule, if there is one."]
+  approaches:
+    - {level: "Repeated .count()", idea: "Count each item separately.", time: "O(n²)", space: "O(n)"}
+    - {level: "Frequency map", idea: "One pass with a dictionary.", time: "O(n)", space: "O(k) for k distinct items"}
+  mistakes: ["Reading a key before it exists.", "Ignoring how ties should be broken.", "Comparing lists when order should not matter."]
+  edge_cases: ["Empty input.", "All the same.", "Ties for the most common."]
+
+Complement lookup:
+  idea: "For each item, work out what you would need to pair with it, and check whether you have already seen that."
+  observations: ["One pass replaces a nested loop.", "A dictionary can also remember where you saw each value."]
+  steps: ["Write what the partner of an item must be.", "Look for it among what you have seen.", "If it is there, you have your answer.", "Otherwise, record this item."]
+  approaches:
+    - {level: "Brute force", idea: "Check every pair.", time: "O(n²)", space: "O(1)"}
+    - {level: "Sort and two pointers", idea: "Sort, then move in from both ends.", time: "O(n log n)", space: "O(1)"}
+    - {level: "Complement lookup", idea: "One pass with a dictionary.", time: "O(n)", space: "O(n)"}
+  mistakes: ["Recording before checking, so an item pairs with itself.", "Losing the original positions by sorting.", "Mishandling repeated values."]
+  edge_cases: ["No pair exists.", "A pair of equal values.", "Negative numbers."]
+
+Grouping by key:
+  idea: "Items with the same computed key land in the same group."
+  observations: ["Choosing the key is the whole problem.", "Sorted letters are a good key for anagrams.", "Lists cannot be keys, so use text or a tuple."]
+  steps: ["Find what group members have in common.", "Write that as a key.", "Add each item to its group.", "Return the groups in the required order."]
+  approaches:
+    - {level: "Compare every pair", idea: "Check each item against the others.", time: "O(n²)", space: "O(n)"}
+    - {level: "Group by key", idea: "One pass with a dictionary of lists.", time: "O(n) key computations", space: "O(n)"}
+  mistakes: ["Using a list as the key.", "A key that is too broad or too narrow.", "Ignoring the required order."]
+  edge_cases: ["Empty input.", "Everything in one group.", "Empty strings as items."]

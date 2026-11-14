@@ -1,0 +1,517 @@
+trees:
+  reading_minutes: 12
+  overview: |
+    Trees store data in a hierarchy, and they appear in file systems, databases and web pages. Almost every tree problem has the same short shape: deal with an empty tree, then use the answers from the two subtrees.
+  you_will_learn:
+    - The vocabulary of binary trees
+    - The three depth-first orders, and breadth-first order
+    - How to compute properties using recursion
+    - How binary search trees keep things sorted
+  before_you_start:
+    - You should be comfortable with recursion, and with base cases.
+    - Linked lists help, because tree nodes also use references.
+    - Queues are used for level-by-level traversal.
+  sections:
+    - id: vocabulary
+      title: Binary trees
+      body: |
+        Each node has a value and up to two children, `left` and `right`. The top node is the **root**, and a node with no children is a **leaf**. The **height** is the number of levels. An empty tree is `None`, and that is your base case in nearly every problem.
+
+        The shape that solves most tree problems is:
+
+        ```
+        def solve(node):
+            if not node:
+                return <answer for an empty tree>
+            left = solve(node.left)
+            right = solve(node.right)
+            return <combine node.val, left and right>
+        ```
+      examples:
+        - title: Height of a tree
+          code: |
+            class TreeNode:
+                def __init__(self, val=0, left=None, right=None):
+                    self.val = val
+                    self.left = left
+                    self.right = right
+
+            def height(node):
+                if not node:
+                    return 0
+                return 1 + max(height(node.left), height(node.right))
+
+            root = TreeNode(1, TreeNode(2, TreeNode(3)), TreeNode(4))
+            print(height(root))
+    - id: traversals
+      title: Traversal orders
+      body: |
+        Depth-first orders differ only in when you visit the node itself:
+
+        - **Preorder:** node, left, right. Good for copying a tree.
+        - **Inorder:** left, node, right. Gives sorted order in a search tree.
+        - **Postorder:** left, right, node. Good when children must be finished first.
+
+        **Breadth-first** visits one level at a time, using a queue or a list of the current level.
+      examples:
+        - title: Level by level
+          code: |
+            class TreeNode:
+                def __init__(self, val=0, left=None, right=None):
+                    self.val = val
+                    self.left = left
+                    self.right = right
+
+            root = TreeNode(1, TreeNode(2, TreeNode(4)), TreeNode(3))
+            level = [root]
+            while level:
+                print([node.val for node in level])
+                level = [c for node in level for c in (node.left, node.right) if c]
+    - id: properties
+      title: Computing tree properties
+      body: |
+        Sometimes one value is not enough. To check balance, a call needs both the height and whether the subtree is balanced. To find the longest path, track the best seen so far in an outer variable, and use `nonlocal` to update it from the inner function.
+      examples:
+        - title: Tracking a best value
+          code: |
+            class TreeNode:
+                def __init__(self, val=0, left=None, right=None):
+                    self.val = val
+                    self.left = left
+                    self.right = right
+
+            def diameter(root):
+                best = 0
+                def height(node):
+                    nonlocal best
+                    if not node:
+                        return 0
+                    left, right = height(node.left), height(node.right)
+                    best = max(best, left + right)
+                    return 1 + max(left, right)
+                height(root)
+                return best
+
+            print(diameter(TreeNode(1, TreeNode(2, TreeNode(4), TreeNode(5)), TreeNode(3))))
+    - id: bst
+      title: Binary search trees
+      body: |
+        In a **binary search tree**, everything in a node's left subtree is smaller, and everything in its right subtree is larger. So you can discard half the tree at each step while searching, about `log n` steps when the tree is balanced. An inorder walk visits the values in sorted order.
+
+        When validating one, checking only each node's direct children is not enough. Pass the allowed range down.
+      examples:
+        - title: Searching a search tree
+          code: |
+            class TreeNode:
+                def __init__(self, val=0, left=None, right=None):
+                    self.val = val
+                    self.left = left
+                    self.right = right
+
+            def contains(node, x):
+                while node:
+                    if x == node.val:
+                        return True
+                    node = node.left if x < node.val else node.right
+                return False
+
+            root = TreeNode(5, TreeNode(3), TreeNode(8))
+            print(contains(root, 8), contains(root, 4))
+  patterns:
+    - name: Depth-first traversal
+      when: You need to visit every node, or combine answers from subtrees.
+      how: Handle an empty node, recurse on both children, and combine.
+    - name: Breadth-first traversal
+      when: The question is about levels, or the nearest something.
+      how: Process one level at a time with a list or a queue.
+    - name: Tree properties
+      when: You are asked about the shape of the tree.
+      how: Decide what each call must return, and keep any global best in an outer variable.
+    - name: Binary search trees
+      when: The tree is ordered.
+      how: Use the order to go left or right, and use inorder for sorted output.
+    - name: Path problems
+      when: The question is about routes from the root to leaves.
+      how: Pass the remaining total or path down, and check when you reach a leaf.
+  mistakes:
+    - mistake: No base case for an empty tree.
+      fix: Start each function with if not node.
+    - mistake: Validating a search tree by checking only direct children.
+      fix: A value deep in the left subtree must still be smaller. Pass limits down.
+    - mistake: Treating an empty child as a leaf.
+      fix: A leaf has no left and no right child. Check both.
+  key_ideas:
+    - An empty tree is the base case.
+    - Trust the answers from the two subtrees.
+    - Inorder on a search tree gives sorted order.
+
+graphs:
+  reading_minutes: 13
+  overview: |
+    A graph is a set of nodes joined by edges. Maps, social networks, task dependencies and grids are all graphs, so a small set of techniques solves a remarkable range of problems.
+  you_will_learn:
+    - How to represent a graph in code
+    - How breadth-first and depth-first search work
+    - How to treat a grid as a graph
+    - How to order tasks with a topological sort
+  before_you_start:
+    - You should be comfortable with dictionaries and sets, from Hashing.
+    - You should know stacks and queues, because they drive these searches.
+    - Tree traversal gives you a head start.
+  sections:
+    - id: representation
+      title: Representing a graph
+      body: |
+        The usual form is an **adjacency list**: for each node, a list of its neighbours. Edges may be **directed** (one way) or **undirected** (both ways). A graph can have loops, unlike a tree, so you need to remember where you have been.
+      examples:
+        - title: From edges to neighbours
+          code: |
+            edges = [[0, 1], [1, 2], [0, 3]]
+            graph = {}
+            for a, b in edges:
+                graph.setdefault(a, []).append(b)
+                graph.setdefault(b, []).append(a)
+            print(graph)
+    - id: bfs
+      title: Breadth-first search
+      body: |
+        BFS explores everything one step away, then two steps, and so on, using a queue. Because of that order, the first time it reaches a node is by a route with the **fewest edges**. It is the right tool for shortest paths when every edge counts the same. Mark a node as seen when you add it to the queue, not when you remove it.
+      examples:
+        - title: Fewest steps
+          code: |
+            from collections import deque
+
+            graph = {0: [1, 2], 1: [3], 2: [3], 3: []}
+            distance = {0: 0}
+            queue = deque([0])
+            while queue:
+                node = queue.popleft()
+                for next_node in graph[node]:
+                    if next_node not in distance:
+                        distance[next_node] = distance[node] + 1
+                        queue.append(next_node)
+            print(distance)
+    - id: dfs
+      title: Depth-first search
+      body: |
+        DFS goes as deep as it can, then backs up. It is usually written with recursion or a stack, and it is ideal for questions about connection, groups and loops. Always keep a `seen` set, or a loop in the graph will keep it running forever.
+      examples:
+        - title: Counting connected groups
+          code: |
+            graph = {0: [1], 1: [0], 2: [3], 3: [2], 4: []}
+            seen = set()
+
+            def visit(node):
+                seen.add(node)
+                for next_node in graph[node]:
+                    if next_node not in seen:
+                        visit(next_node)
+
+            groups = 0
+            for node in graph:
+                if node not in seen:
+                    groups += 1
+                    visit(node)
+            print(groups)
+    - id: grids
+      title: Grids are graphs
+      body: |
+        Each cell is a node, and its neighbours are the cells up, down, left and right. You rarely need to build a graph: just compute neighbours as you go, and check they are inside the grid. Island and maze problems all work this way.
+      examples:
+        - title: Neighbours of a cell
+          code: |
+            grid = [[1, 1, 0], [0, 1, 0]]
+            r, c = 0, 1
+            for a, b in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):
+                if 0 <= a < len(grid) and 0 <= b < len(grid[0]):
+                    print((a, b), grid[a][b])
+    - id: topological
+      title: Topological order
+      body: |
+        When tasks depend on others, a **topological order** lists each task after everything it needs. Count how many things each task is waiting on, start with those waiting on nothing, and as each finishes, reduce the counts of those depending on it. If some tasks are never reached, there is a loop, and no valid order exists.
+      examples:
+        - title: Ordering tasks
+          code: |
+            from collections import deque
+
+            needs = {"wash": [], "dry": ["wash"], "fold": ["dry"]}
+            waiting = {task: len(deps) for task, deps in needs.items()}
+            after = {task: [] for task in needs}
+            for task, deps in needs.items():
+                for dep in deps:
+                    after[dep].append(task)
+            ready = deque(task for task, count in waiting.items() if count == 0)
+            order = []
+            while ready:
+                task = ready.popleft()
+                order.append(task)
+                for next_task in after[task]:
+                    waiting[next_task] -= 1
+                    if waiting[next_task] == 0:
+                        ready.append(next_task)
+            print(order)
+  patterns:
+    - name: Graph representation
+      when: You are given a list of edges.
+      how: Build a list of neighbours for each node first.
+    - name: Breadth-first search
+      when: You want the fewest steps.
+      how: Use a queue, and mark nodes as seen when you add them. With edge costs, use a heap instead.
+    - name: Depth-first search
+      when: You are asking about connection, groups or loops.
+      how: Use recursion or a stack, with a seen set.
+    - name: Grids as graphs
+      when: The input is a table of cells.
+      how: Work out the neighbours as you go, and check the bounds.
+    - name: Topological order
+      when: Tasks depend on other tasks.
+      how: Start with tasks waiting on nothing, and reduce the counts as each finishes.
+  mistakes:
+    - mistake: Forgetting the seen set.
+      fix: A graph can loop, so without it your search may never end.
+    - mistake: Marking nodes as seen only when you remove them from the queue.
+      fix: Mark them when you add them, or nodes get added many times.
+    - mistake: Adding an undirected edge in only one direction.
+      fix: Add both a to b and b to a.
+    - mistake: Using BFS for shortest paths when edges have different costs.
+      fix: Use Dijkstra's algorithm, with a heap.
+  key_ideas:
+    - BFS finds the fewest steps. DFS explores connections.
+    - Always remember where you have been.
+    - A grid is a graph you do not have to build.
+
+dynamic-programming:
+  reading_minutes: 14
+  overview: |
+    Dynamic programming solves a problem by combining answers to smaller versions of it, storing each so that it is only worked out once. It has a reputation for being hard, but it follows a repeatable recipe.
+  you_will_learn:
+    - How to spot a dynamic programming problem
+    - The recipe of state, choice and base case
+    - The difference between memoisation and tables
+    - The common shapes of problem, from one dimension to subsets, grids and strings
+  before_you_start:
+    - You should be confident with recursion, because the recurrence comes first.
+    - You should know dictionaries, lists and nested lists.
+  sections:
+    - id: when
+      title: When to use it
+      body: |
+        Look for two signs. First, the task asks for the **best** of something, or **how many ways**. Second, the same smaller problems come up again and again.
+
+        Plain recursive Fibonacci works out the same values a huge number of times. Storing them removes all that repeated work.
+
+        **The recipe:**
+
+        1. **State:** what do you need to know to describe a smaller problem? Say what it means in words.
+        2. **Choice:** how does the answer for this state relate to smaller states?
+        3. **Base case:** what are the smallest answers?
+      examples:
+        - title: With and without storing results
+          code: |
+            def fib(n, memo={}):
+                if n < 2:
+                    return n
+                if n not in memo:
+                    memo[n] = fib(n - 1) + fib(n - 2)
+                return memo[n]
+
+            print(fib(80))
+          note: Without the memo, fib(80) would take longer than you would ever wait. Using a shared default dictionary is safe here only because results never change.
+    - id: memo-vs-table
+      title: Memoisation or a table
+      body: |
+        **Memoisation** keeps the recursive form and stores results. It is easiest to write, since you can start from the recurrence. `functools.lru_cache` will do the storing for you.
+
+        **A table** builds from the smallest answers up, using loops. It avoids deep recursion, and often needs only the last row or two, which saves memory.
+      examples:
+        - title: Climbing stairs as a table
+          code: |
+            def climb(n):
+                a, b = 1, 1
+                for _ in range(n):
+                    a, b = b, a + b
+                return a
+
+            print(climb(5))
+    - id: one-dimension
+      title: One-dimensional problems
+      body: |
+        The state is usually "the answer for the first i items". The choice is often whether to take or skip item i. For non-touching values, the best up to i is the larger of skipping it, or taking it plus the best up to i - 2.
+      examples:
+        - title: Largest total with no two neighbours
+          code: |
+            def best_no_neighbours(nums):
+                skip, take = 0, 0
+                for n in nums:
+                    skip, take = take, max(take, skip + n)
+                return take
+
+            print(best_no_neighbours([2, 7, 9, 3, 1]))
+    - id: subsets
+      title: Choices and subsets
+      body: |
+        In a knapsack problem, each item is either taken or left. The state is the capacity. Looping capacity **downwards** means each item is used at most once. Looping it upwards allows repeats, which is what you want for coin problems.
+      examples:
+        - title: Knapsack
+          code: |
+            def knapsack(weights, values, capacity):
+                best = [0] * (capacity + 1)
+                for w, v in zip(weights, values):
+                    for c in range(capacity, w - 1, -1):
+                        best[c] = max(best[c], best[c - w] + v)
+                return best[capacity]
+
+            print(knapsack([1, 3, 4], [15, 20, 30], 4))
+    - id: two-dimensions
+      title: Grids and strings
+      body: |
+        For grids, each cell depends on the cells above and to the left. For two strings, the state is "the first i characters of one and the first j of the other", and a table fills in row by row. If the characters match, extend the diagonal. If they do not, take the best of the neighbours.
+      examples:
+        - title: Longest common subsequence
+          code: |
+            def lcs(a, b):
+                table = [[0] * (len(b) + 1) for _ in range(len(a) + 1)]
+                for i, x in enumerate(a, 1):
+                    for j, y in enumerate(b, 1):
+                        if x == y:
+                            table[i][j] = table[i - 1][j - 1] + 1
+                        else:
+                            table[i][j] = max(table[i - 1][j], table[i][j - 1])
+                return table[-1][-1]
+
+            print(lcs("abcde", "ace"))
+  patterns:
+    - name: One-dimensional DP
+      when: The answer for position i depends on earlier positions.
+      how: Define the answer for the first i items, and often you only need the last one or two values.
+    - name: Choices and subsets
+      when: Each item is taken or left, within some limit.
+      how: Let the limit be the state. Loop it downwards for one use of each item, and upwards for repeats.
+    - name: Two-dimensional grids
+      when: You move through a table.
+      how: Each cell combines the cells you could have come from.
+    - name: Strings and sequences
+      when: You are comparing or transforming two sequences.
+      how: Use a table over positions in both, with an extra row and column for the empty case.
+    - name: Memoisation
+      when: You can write the recursion, but it repeats work.
+      how: Store each result in a dictionary, keyed by the arguments.
+  mistakes:
+    - mistake: Starting to code before defining the state in words.
+      fix: Write "best[i] means..." first. Most mistakes start here.
+    - mistake: Getting the base case wrong.
+      fix: Work out the empty case by hand, and make the table one larger if that helps.
+    - mistake: Looping capacity upwards when each item may only be used once.
+      fix: Loop downwards, so that an item cannot count twice.
+    - mistake: Using a greedy choice where it does not work.
+      fix: Try a small counter-example first. The biggest coin first does not always give the fewest coins.
+  key_ideas:
+    - Look for "best" or "how many", with repeated smaller problems.
+    - Define the state in words before anything else.
+    - Memoise the recursion, or build a table from the bottom up.
+    - You can often keep just the last row.
+
+python-toolkit:
+  reading_minutes: 11
+  overview: |
+    This optional topic covers the Python features that make larger programs manageable: classes, error handling, iterators, and the most useful parts of the standard library.
+  you_will_learn:
+    - How to write a class with data and methods
+    - How inheritance reuses behaviour
+    - How to handle errors with try and except
+    - How iterators and generators produce values lazily
+  before_you_start:
+    - You should be comfortable with functions.
+    - This topic is optional, and nothing else depends on it.
+  sections:
+    - id: classes
+      title: Classes and objects
+      body: |
+        A **class** bundles data with the functions that work on it. `__init__` sets up a new object, and `self` refers to that object. A subclass inherits from a parent, and can add to it or change it. Use classes when data and behaviour naturally belong together.
+      examples:
+        - title: A class and a subclass
+          code: |
+            class Rectangle:
+                def __init__(self, width, height):
+                    self.width = width
+                    self.height = height
+
+                def area(self):
+                    return self.width * self.height
+
+            class Square(Rectangle):
+                def __init__(self, side):
+                    super().__init__(side, side)
+
+            print(Rectangle(2, 3).area(), Square(4).area())
+    - id: exceptions
+      title: Handling errors
+      body: |
+        `try` runs code that might fail, and `except` handles a specific kind of failure. Catch only the errors you expect, so that real bugs still show up. `raise` signals a problem from your own code.
+      examples:
+        - title: Handling a bad value
+          code: |
+            def safe_int(text):
+                try:
+                    return int(text)
+                except ValueError:
+                    return None
+
+            print(safe_int("42"), safe_int("hello"))
+    - id: iterators
+      title: Iterators and generators
+      body: |
+        A generator is a function that uses `yield` to produce values one at a time, keeping its place between them. It uses very little memory, however long the sequence is, and works anywhere a `for` loop does.
+      examples:
+        - title: A generator
+          code: |
+            def evens(limit):
+                n = 0
+                while n < limit:
+                    yield n
+                    n += 2
+
+            print(list(evens(7)))
+            print(sum(evens(100)))
+    - id: standard-library
+      title: The standard library
+      body: |
+        Python includes many useful modules. `collections` gives `Counter`, `defaultdict` and `deque`. `heapq` always gives you the smallest item quickly. `itertools` has combinations and permutations. `math` has `sqrt`, `gcd` and `pi`.
+      examples:
+        - title: A few useful modules
+          code: |
+            import heapq
+            import math
+            from collections import Counter, defaultdict
+
+            print(Counter("banana").most_common(1))
+            groups = defaultdict(list)
+            groups["a"].append(1)
+            print(dict(groups))
+            print(heapq.nsmallest(2, [5, 1, 4]))
+            print(math.gcd(12, 18))
+  patterns:
+    - name: Classes and objects
+      when: Data and behaviour belong together.
+      how: Set up the data in __init__, and write a method for each action.
+    - name: Errors and exceptions
+      when: An operation may fail in an expected way.
+      how: Put only the risky line inside try, and catch the specific error.
+    - name: Iterators and generators
+      when: You produce a sequence of values one at a time.
+      how: Use yield inside a function, or __iter__ and __next__ in a class.
+    - name: Standard library
+      when: The task needs common text or number tools.
+      how: Check whether a standard module already does what you need.
+  mistakes:
+    - mistake: Forgetting self in a method.
+      fix: Each method takes self first, and uses self.name for the object's data.
+    - mistake: Catching everything with a bare except.
+      fix: Name the error you expect, so that other bugs are not hidden.
+    - mistake: Trying to use a generator twice.
+      fix: A generator can only be read once. Call the function again for a new one.
+  key_ideas:
+    - A class bundles data and behaviour.
+    - Catch only the errors you expect.
+    - Generators produce values lazily.
+    - Check the standard library first.

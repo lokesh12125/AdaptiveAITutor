@@ -1,0 +1,90 @@
+\chapter{Source Code and Reproducibility}\label{app:repro}
+The complete source code, curriculum, tests and documentation are in the project repository \url{https://github.com/lokesh12125/AdaptiveAITutor}, on the branch \code{Trellis}. Version used for this report: commit [commit identifier, to be recorded after the final work is committed]. The repository's \code{.env.example} lists every configuration value without secrets. No passwords, tokens or keys are included in this report or in the repository.
+
+The repository is organised as follows:
+{\sloppy
+\begin{itemize}
+\item \code{backend/}: FastAPI application; \code{app/\allowbreak tutoring/} holds the six agents (\code{diagnostic.py}, \code{error\_analysis.py}, \code{cognitive.py}, \code{retrieval.py}, \code{dsda.py}, \code{hints.py}, \code{reflection.py}, \code{planner.py}), the graph (\code{graph.py}, \code{nodes.py}) and the policy file \code{policy.yaml}; \code{migrations/} holds the five database migrations; \code{tests/} the backend tests.
+\item \code{runner/}: the execution service and the sandbox image definition.
+\item \code{frontend/}: the React application, unit tests and the Playwright browser tests (\code{e2e/}).
+\item \code{content/}: lessons, topic notes and technique guides; \code{scripts/}: the problem bank, test generation, content verification and the agent audit.
+\item \code{docs/}: architecture, agent contracts, DSDA, security, evaluation, limitations and test results; \code{report/}: this report, its figure data and the scripts that produced them.
+\end{itemize}
+}
+
+\section{Setup and execution}
+The prerequisites are Docker (running), the \code{uv} Python package manager, Python 3.12 and Node.js 20 or later. No AI key is needed.
+
+For automatic setup, run the following from the repository root:
+{\small\begin{verbatim}
+./scripts/setup.sh
+./scripts/dev.sh
+\end{verbatim}}
+\code{setup.sh} creates \code{.env} with fresh secrets, starts PostgreSQL on port 5544, builds the sandbox image, installs the dependencies, runs the migrations and loads the content. \code{dev.sh} starts the execution service (port 8102), the API (port 8101) and the web application (port 5173). Open \url{http://127.0.0.1:5173} and choose ``Try as a learner'' or ``Try as a teacher''.
+
+For manual setup, the steps are:
+{\small\begin{verbatim}
+cp .env.example .env    # then set RUNNER_TOKEN
+docker compose up -d db
+docker build -t csmasf-sandbox:py312 runner/sandbox
+
+cd runner && uv venv --python 3.12 .venv
+uv pip install --python .venv/bin/python -e '.[dev]'
+.venv/bin/uvicorn runner_service.main:app --host 127.0.0.1 --port 8102
+
+cd backend && uv venv --python 3.12 .venv
+uv pip install --python .venv/bin/python -e '.[dev]'
+.venv/bin/alembic upgrade head
+.venv/bin/python -m app.seed
+.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8101
+
+cd frontend && npm ci && npx vite --host 127.0.0.1 --port 5173
+\end{verbatim}}
+
+The tests are run one suite at a time:
+{\small\begin{verbatim}
+cd runner && .venv/bin/python -m pytest
+cd backend && .venv/bin/python -m pytest
+cd frontend && npm test
+cd frontend && E2E_CHROME_CHANNEL=chrome npm run e2e
+cd backend && PYTHONPATH=. .venv/bin/python ../scripts/verify_content.py
+backend/.venv/bin/python scripts/agent_audit.py http://127.0.0.1:8101
+\end{verbatim}}
+The browser tests need the stack running with raised rate limits: set \code{RATE\_RUN\_PER\_MINUTE}, \code{RATE\_SUBMIT\_PER\_MINUTE}, \code{RATE\_HINT\_PER\_MINUTE}, \code{RATE\_AUTH\_PER\_MINUTE} and \code{RATE\_IMPORT\_PER\_MINUTE} to a large value such as 100000 before starting it.
+
+To reproduce the report's figures, the chart data is computed from the database and from the agents' own code, and the screenshots are captured from the running application:
+{\small\begin{verbatim}
+backend/.venv/bin/python report/tools/make_figure_data.py
+NODE_PATH=frontend/node_modules node report/tools/screenshots.cjs
+cd report && tectonic -X compile main.tex
+\end{verbatim}}
+
+\section{Supporting material}
+Table~\ref{tab:testfiles} lists the backend test files and what each verifies.
+
+\begingroup\small
+\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.15}
+\begin{longtable}{|R{4.6cm}|R{1.2cm}|R{7.8cm}|}
+\caption{Backend test files}\label{tab:testfiles}\\\hline
+\textbf{File} & \textbf{Tests} & \textbf{What it verifies}\\\hline\endfirsthead
+\hline\textbf{File} & \textbf{Tests} & \textbf{What it verifies}\\\hline\endhead
+\code{test\_repeated\_hints.py} & 118 & Persistent interaction state, varied help on repeated requests, retrieval filtering and privacy.\\\hline
+\code{test\_link\_import.py} & 90 & Adding questions from pasted text and links, site rules and labelled suggested tests.\\\hline
+\code{test\_api.py} & 84 & Authentication, demo access, rate limits, progress, profile, teacher views and dashboard measures.\\\hline
+\code{test\_diagnosis.py} & 69 & Diagnostic rules and error-cause analysis.\\\hline
+\code{test\_agents.py} & 54 & Individual agents: cognitive estimates, reflection decisions, planner rules, validator checks.\\\hline
+\code{test\_pipeline.py} & 43 & The full graph: agent order and data flow, persistence, solution protection, idempotency, failure handling.\\\hline
+\code{test\_policy.py} & 30 & DSDA score, levels, ladders, timing and the documented worked example.\\\hline
+\code{test\_reflection\_and\_planner.py} & 27 & Reflection questions and replies, their effects, and planner sequencing and agreement.\\\hline
+\code{test\_hint\_quality.py} & 23 & Specific, non-generic hint wording and validator behaviour.\\\hline
+\code{test\_content.py} & 13 & Curriculum integrity: lessons, techniques and test coverage.\\\hline
+\end{longtable}
+\endgroup
+
+In brief, the system is used as follows. A learner chooses a topic or the recommended next step, reads the lesson if needed, writes code in the workspace, uses Run to try visible examples and Submit to be graded. The tutor responds after a submission or when the learner presses ``Ask for a hint''. ``I need more help'' asks for the next step, and selecting lines lets the learner ask about them. A teacher creates a class, shares its join code, and follows learners on the class dashboard.
+
+Figures~\ref{fig:lesson} and~\ref{fig:library} show two more screens, a topic lesson and the practice library.
+
+\screenshot{lesson.png}{A topic lesson, opened from the problem's ``Read the lesson'' link}{fig:lesson}
+
+\screenshot{practice_library.png}{The practice library, grouping problems by topic in learning order}{fig:library}

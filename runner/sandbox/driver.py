@@ -12,6 +12,9 @@ import traceback
 STUDENT_FILE = "solution.py"
 MAX_VALUE_NODES = 20000
 MAX_TEXT = 2000
+MAX_TRACE_EVENTS = 40
+MAX_TRACE_VARS = 12
+MAX_TRACE_TEXT = 80
 
 
 def apply_limits(spec):
@@ -76,6 +79,32 @@ def encode(value, budget=None, depth=0):
     return {"$repr": text, "$type": type(value).__name__}
 
 
+def make_tracer(lines):
+    """Record what the variables held each time a chosen line was about to run. Only used to explain, never to grade."""
+    wanted = set(lines)
+    events = []
+
+    def local(frame, event, arg):
+        if event == "line" and frame.f_lineno in wanted and len(events) < MAX_TRACE_EVENTS:
+            values = {}
+            for name, value in list(frame.f_locals.items()):
+                if len(values) >= MAX_TRACE_VARS:
+                    break
+                if name.startswith("__") or callable(value) or type(value).__name__ == "module":
+                    continue
+                try:
+                    values[name] = repr(value)[:MAX_TRACE_TEXT]
+                except BaseException:
+                    values[name] = "<unprintable>"
+            events.append({"line": frame.f_lineno, "vars": values})
+        return local
+
+    def enter(frame, event, arg):
+        return local if frame.f_code.co_filename == STUDENT_FILE else None
+
+    return enter, events
+
+
 def describe_exception(exc):
     frames = []
     for frame in traceback.extract_tb(exc.__traceback__):
@@ -111,7 +140,12 @@ def main():
     result_stream = os.fdopen(result_fd, "w", encoding="utf-8")
     apply_limits(spec)
 
+    trace_events = None
+
     def finish(payload):
+        sys.settrace(None)
+        if trace_events is not None:
+            payload["trace"] = trace_events
         try:
             sys.stdout.flush()
             sys.stderr.flush()
@@ -136,6 +170,10 @@ def main():
         compiled = compile(source, STUDENT_FILE, "exec")
     except (SyntaxError, ValueError) as exc:
         finish({"status": "syntax_error", "error": syntax_error_info(exc)})
+
+    if spec.get("trace_lines"):
+        tracer, trace_events = make_tracer(spec["trace_lines"])
+        sys.settrace(tracer)
 
     try:
         exec(compiled, namespace)
@@ -171,6 +209,7 @@ def main():
     except BaseException as exc:
         finish({"status": "exception", "phase": "call", "error": describe_exception(exc)})
 
+    sys.settrace(None)
     try:
         encoded = encode(value)
     except TooLarge:

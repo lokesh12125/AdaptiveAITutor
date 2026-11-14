@@ -95,6 +95,19 @@ def display(value: Any, limit: int = 600) -> str:
     return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
+def parameter_names(starter_code: str | None, function_name: str | None) -> list[str]:
+    """The parameter names of the function the tests call, read from the starter code."""
+    import ast
+
+    try:
+        for node in ast.parse(starter_code or "").body:
+            if isinstance(node, ast.FunctionDef) and (not function_name or node.name == function_name):
+                return [arg.arg for arg in node.args.args]
+    except (SyntaxError, ValueError):
+        pass
+    return []
+
+
 def describe_input(test: ProblemTest, function_name: str | None) -> str:
     payload = test.payload or {}
     if test.kind == "args":

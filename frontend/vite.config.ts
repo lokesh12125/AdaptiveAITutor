@@ -11,7 +11,7 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     // Same origin in development, so the session cookie stays first-party.
-    proxy: { "/api": { target: "http://127.0.0.1:8101", changeOrigin: false } },
+    proxy: { "/api": { target: process.env.API_PROXY ?? "http://127.0.0.1:8101", changeOrigin: false } },
   },
   build: {
     rollupOptions: {

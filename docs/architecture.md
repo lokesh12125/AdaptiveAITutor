@@ -17,6 +17,8 @@ flowchart TD
     Seed["Content and seed scripts"] --> PG
     Seed --> Chroma
     Import["CodeNet importer"] --> PG
+    API -->|"one public page, on request"| Fetcher["Link import: address checks, robots.txt, limits"]
+    Fetcher -->|"only if the site allows"| Web["External sites"]
 ```
 
 **Why grading is safe:** the sandbox receives test inputs and returns what the code produced. Expected answers stay in the backend, and comparison happens there. Student code therefore cannot read answers or claim a pass.
@@ -37,7 +39,7 @@ stateDiagram-v2
     dsda --> reflection: offer, wait or none
     generate_hint --> validate_hint
     validate_hint --> generate_hint: rejected, attempts left
-    validate_hint --> reflection: accepted or built-in used
+    validate_hint --> reflection: accepted, built-in used, or nothing new to say
     reflection --> planner
     planner --> finalize
     finalize --> await_learner
@@ -47,7 +49,7 @@ stateDiagram-v2
 There are two real cycles:
 
 - **The learning cycle.** `await_learner` calls LangGraph's `interrupt`. The state is checkpointed in PostgreSQL per learner and problem, and nothing runs until the learner acts. The next action resumes the same thread. No loop can generate more detailed hints by itself.
-- **The validation cycle.** A rejected draft is rewritten at the same level, at most 3 attempts, and then a built-in hint is used. It cannot raise the level of help.
+- **The validation cycle.** A rejected draft is rewritten at the same level and strategy, at most 3 attempts, and then a built-in hint is used. If that would repeat an earlier hint, the next unused step is tried, or the tutor waits. A rewrite cannot raise the level of help.
 
 The report calls processing "sequential" (§5.1, p.4) and also "cyclic" (§6.3, p.8). This design satisfies both: agents run in sequence within a cycle, and the cycle repeats with each learner action.
 
@@ -83,6 +85,50 @@ sequenceDiagram
     Note over G: Paused until the learner acts
 ```
 
+## One repeated hint request
+
+```mermaid
+sequenceDiagram
+    actor L as Learner
+    participant A as API
+    participant G as LangGraph
+    participant P as PostgreSQL
+    L->>A: Ask for a hint, with unchanged code
+    A->>P: New run, reuse the result for this exact code
+    A->>G: Resume the learner's thread
+    G->>P: Each agent reads hints, outcomes, decisions and earlier versions
+    Note over G: Diagnostic states the code has not changed
+    Note over G: Cognitive counts the repeated request as evidence
+    Note over G: Retrieval leaves out approaches already seen
+    Note over G: DSDA picks the next unused step on this issue's ladder
+    Note over G: Validator compares the draft with every earlier hint
+    G->>P: Save the hint and an interaction record
+    A-->>L: A different kind of help, or "change your code and I will look again"
+```
+
+## One question about the code
+
+The learner types what is confusing and can select lines in the editor. The request is `POST /problems/{id}/hint` with `question`, `focus_start` and `focus_end`, and it starts the same graph as any other hint.
+
+```mermaid
+sequenceDiagram
+    actor L as Learner
+    participant A as API
+    participant G as LangGraph
+    participant R as Execution service
+    L->>A: "Why does it stop early?", lines 3 to 4
+    A->>G: Start the cycle with the question and the lines
+    Note over G: Diagnostic reads the question and looks at those lines
+    G->>R: Run a visible example, recording values on those lines
+    R-->>G: The values each variable held
+    Note over G: Cognitive, retrieval and DSDA run as usual
+    Note over G: DSDA chooses answer_question, which uses no ladder step
+    Note over G: Validator rejects repeats and leaks, then tries another angle
+    G-->>L: An answer using the real values, shown beside the code
+```
+
+Lesson examples use a separate route, `POST /playground/run`. It runs code in the same sandbox against a hidden scratch problem. It is never graded, starts no learning cycle, and does not count as work in progress.
+
 ## Event semantics
 
 | Action | Runs | Graded? | Agents? | Changes mastery? |
@@ -109,6 +155,8 @@ sequenceDiagram
 | Retrieval down or no match | Normal help, chosen without it. | Reason recorded. |
 | Server restarts mid-run | Work marked failed, with a retry offered. | Recovered on startup. A fresh thread starts if a checkpoint is mid-cycle. |
 | Connection lost when submitting | "Your code is safe", with Try again using the same key. | No duplicate. |
+| A hint fails validation | A labelled standard hint, the next kind of help, or an honest wait. | `validate_hint` status `fallback`, with the violations, and a warning in the log. |
+| A link cannot be read | What happened in plain words, and a route to paste with the link kept as the source. | Reason code in the response. |
 
 ## Repository layout
 
@@ -116,8 +164,8 @@ sequenceDiagram
 backend/   FastAPI API, LangGraph, agents, policy.yaml, migrations, tests
 runner/    Execution service, sandbox image and harness, tests
 frontend/  React app, unit tests, Playwright end-to-end tests
-content/   Units, problems, tests, reference solutions, knowledge checks
+content/   Units, problems, tests, reference solutions, topic lessons, knowledge checks
 data/      Provenance notes and the importer's made-up test fixture
-scripts/   Setup, development start, content verification, curriculum conversion
+scripts/   Setup, development start, content verification, curriculum conversion, problem bank
 docs/      This documentation
 ```

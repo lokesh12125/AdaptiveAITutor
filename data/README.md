@@ -56,7 +56,7 @@ It does **not** document tutoring conversations, hints, hint outcomes, student c
 
 `python -m app.seed` creates, when `DEMO_MODE=true`:
 
-- 400 synthetic intervention cases from a fixed random seed and an invented rule (`app/seed.py`), so retrieval has something to demonstrate.
+- 2,000 synthetic intervention cases from a fixed random seed and an invented rule (`app/seed.py`), so retrieval has something to demonstrate.
 - One clearly named synthetic class of 8 learners, for the teacher demo.
 
 To run a real study, set `DEMO_MODE=false` and `RETRIEVAL_ALLOW_SYNTHETIC=false`, and use a fresh database and vector store. Retrieval then uses only `live` cases, and reports "no reliable match" until enough exist.

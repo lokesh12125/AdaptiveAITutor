@@ -28,7 +28,11 @@ Each of these is a project choice, not a requirement of the report.
 
 | Decision | Why | How to change it |
 |---|---|---|
-| Product name "Trellis" | A trellis supports growth, as scaffolding does. The report names only the framework. | Search and replace the UI text, logo and titles. |
+| Syntax help now climbs the ladder | The earlier cap at L2 was a cause of the repeated-hint bug. A precise pointer is still the first step. |
+| Waiting rather than repeating | When every kind of help has been shown on unchanged code, the tutor says so. An unlimited supply of reworded hints would look responsive without helping. |
+| Respecting `noai` and `ai-input=no` | Page text can reach a language model, so these signals are treated as refusals. This means AtCoder statements are pasted. |
+| Sites with restrictive terms are not contacted | LeetCode, HackerRank, GeeksforGeeks, CodeChef and Take U Forward. Terms were read on 9 November 2026 and can change. |
+| Product name "CodePath" | Replaced the earlier working name at the team's request. It says what the product is: a path through code. The report names only the framework. | Search and replace the UI text, logo and titles. |
 | Vite, React and TypeScript | Fast to run, no server rendering needed, and close to the earlier stack. | Replace `frontend/`, keeping the API. |
 | CodeMirror 6 | Bundled locally, works on phones, good keyboard handling. The earlier Monaco setup loaded from a CDN. | Replace `workspace/Editor.tsx`. |
 | Radix primitives with hand-written CSS tokens | Accessible behaviour without a generic look. | Replace `components/ui.tsx`. |
@@ -42,3 +46,18 @@ Each of these is a project choice, not a requirement of the report.
 | LLM off by default | The system must work without a key or spending money. | `LLM_PROVIDER` in `.env` |
 | Codeforces as the one link source | It has an official public API. | `imports/sources.py` |
 | Hint outcomes pooled anonymously unless the learner opts out; research use is opt-in | Pooling carries no identity or code. Research use is a stronger step. | `preferences`, `research_consent` |
+
+## Interface direction
+
+The learner chose this after rejecting a dark, neon design. Twelve coding and learning sites were reviewed at desktop width on 9 November 2026: Exercism, freeCodeCamp, LeetCode, NeetCode, USACO Guide, Codecademy, Brilliant, Boot.dev, Programiz, Khan Academy, HackerRank and W3Schools. Only layout and interaction ideas were taken, not branding or content.
+
+| Decision | Why | Idea from |
+|---|---|---|
+| Light by default, dark as a choice | Long reading is the main task, and most of the friendlier sites are light | Exercism, Programiz, Khan Academy |
+| Top navigation labelled Learn and Practice | Plain words, and the content gets the full width | Exercism |
+| Lesson and Practice tabs on each topic | Reading comes first, and the problems are one click away | Exercism, Programiz |
+| One numbered line through the topics | Quick to scan and works on a phone. A tree map is harder to read at small sizes. | USACO Guide |
+| Rows with one clear action | It is always obvious what to do next | HackerRank |
+| Two panes while coding, three only above 1640 pixels | Three columns were cramped on a laptop, and the tutor still sits beside the code | LeetCode |
+| No promotions, leaderboards or game themes | They compete with the learning for attention | Avoiding LeetCode, W3Schools and Boot.dev patterns |
+

@@ -1,0 +1,26 @@
+\chapter{Conclusion}
+\section{Conclusion}
+AI assistants can answer a beginner's programming question instantly, but help that is too much, comes too soon or is the same for everyone can take away the thinking a learner needs to do. We worked on this problem by designing and building CodePath, a web-based tutor for novice Python programmers based on the Cognitive-State Guided Multi-Agent Adaptive Scaffolding Framework.
+
+What we implemented consists of:
+\begin{itemize}
+\item a cyclic LangGraph workflow of six agents with typed contracts, shared persistent history and a pause after every cycle, so that the tutor acts only in response to the learner;
+\item a rule-based Diagnostic agent that uses test results and syntax-tree analysis to label issues and quote the learner's own code;
+\item a Cognitive State agent that applies an evidence-weighted knowledge-tracing update and reports confusion, load and progress with their evidence, or ``unknown'';
+\item a Similar Learner Retrieval agent that combines ChromaDB cosine search with outcome records in PostgreSQL and refuses to answer on thin evidence;
+\item the Dynamic Scaffolding Decision Algorithm, which uses an explainable score, strategy ladders and timing rules to decide whether, when and how much to help, followed by validated generation that never reveals a solution and never repeats a hint;
+\item a Reflection agent that asks about the learner's own reasoning and replies to the answer, and a Learning Planner that sequences practice technique by technique and moves forward through the course;
+\item a safe execution service, a verified curriculum of 496 problems with 15,717 tests, and learner and teacher interfaces.
+\end{itemize}
+
+The evidence supports objectives O1 to O4 as software. On the final code, 551 backend tests, 59 browser tests, 21 unit tests and 39 execution-service tests passed. Every curriculum problem was verified in the sandbox. An audit of nine scenarios passed all 37 of its behavioural checks and both checks over every hint. Objective O5 is partly achieved, because the system's behaviour and its curriculum are verified but its effect on learning has not yet been measured with real learners. In line with Chapter~\ref{ch:results}, what this report claims is a working, tested tutor whose teaching behaviour matches its design. We make no claim of a demonstrated improvement in learning.
+
+\section{Future work}
+\begin{itemize}
+\item The next phase, and our highest priority, is a learner study. We plan a pilot with about 30 or more learners, randomly assigned and balanced on the starting knowledge check, comparing CodePath with the same interface using a plain LLM assistant or fixed hints. The measures are normalised learning gain between parallel pre- and post-checks with an effect size, completion rate, hints per solved problem, time to completion and satisfaction. The ablations are without retrieval, with DSDA constrained through \code{policy.yaml}, and with a fixed problem order. The study depends on institutional ethics approval, informed consent, participants and a fresh database. For validity, the analysis will be pre-registered and a small sample treated as preliminary.
+\item The system should be evaluated with a real model. This means configuring an LLM provider and measuring the draft rejection rate, leak rates against a fixed set of solution-extraction prompts, wording quality and latency. This needs model access with credit.
+\item The knowledge-tracing parameters and DSDA weights could be fitted to logged interactions. The fitted model's prediction of the next result would then be compared, using AUC, with the current values or with Deep Knowledge Tracing \cite{piech2015}. This needs data from the learner study.
+\item For offline evaluation on CodeNet \cite{puri2021}, we would import problem statistics and attempt sequences, check difficulty labels against acceptance rates, and replay sequences through the Cognitive State agent. Simulated learners \cite{zhan2025} could also test policies before a study.
+\item For deployment, the sandbox should be tested on a Linux server and independently reviewed for security. The queue and rate limits should move to a shared store so the API can run as several processes. Email verification, password reset and automated data retention should be added.
+\item The scope can then be widened with JavaScript, and Java or C++ once Python is stable, more Diagnostic rules, and accessibility tests with screen-reader users.
+\end{itemize}

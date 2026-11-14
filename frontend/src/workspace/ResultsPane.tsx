@@ -1,12 +1,14 @@
 import * as Collapsible from "@radix-ui/react-collapsible";
 import { Ban, Check, CheckCircle2, ChevronRight, CircleAlert, Clock, EyeOff, RotateCw, ServerCrash, Terminal, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import type { Evaluation, ProblemDetail, Run, Stage, TestResult, TutorResponse } from "@/api/types";
-import { Button, CopyButton, Field, HelpDialog, Notice, Spinner } from "@/components/ui";
+import { Button, CopyButton, HelpDialog, Notice, Spinner } from "@/components/ui";
 import { CATEGORY_LABEL, ESTIMATE_WORDS, PROGRESS_WORDS, roundedRange, VERDICT_LABEL } from "@/lib/format";
 import { useSession } from "@/lib/session";
+
+import { type CaseState, TestCases } from "./TestCases";
 
 export const STAGE_LABEL: Record<string, string> = {
   intake: "Reading your request", evaluate: "Running your code in the sandbox", diagnostic: "Working out what happened", cognitive_state: "Updating your progress estimates", retrieval: "Looking for similar situations",
@@ -34,6 +36,7 @@ function TestRow({ test, defaultOpen }: { test: TestResult; defaultOpen: boolean
         <span className="grow">{test.name}</span>
         <span className="subtle">{passedKnown ? (test.passed ? "Passed" : CATEGORY_LABEL[test.category] ?? "Did not pass") : "Output"}</span>
         {test.origin === "generated" && <span className="badge badge-info">Generated</span>}
+        {test.origin === "learner" && test.passed !== null && <span className="badge">Added by you</span>}
         {expandable ? <ChevronRight size={14} className="chevron" style={{ transform: open ? "rotate(90deg)" : undefined }} aria-hidden /> : <EyeOff size={13} aria-label="Hidden test" />}
       </button>
       {expandable && open && (
@@ -44,6 +47,7 @@ function TestRow({ test, defaultOpen }: { test: TestResult; defaultOpen: boolean
           {test.error && <><dt>Error</dt><dd>{test.error.type}{test.error.message ? `: ${test.error.message}` : ""}{test.error.line ? ` (line ${test.error.line})` : ""}</dd></>}
           {test.stdout && <><dt>Printed <CopyButton text={test.stdout} label="Copy the output" /></dt><dd>{test.stdout}{test.truncated ? "\n… output was cut off at the limit" : ""}</dd></>}
           {test.stderr && <><dt>Error output</dt><dd>{test.stderr}</dd></>}
+          {test.note && <><dt>Note</dt><dd style={{ fontFamily: "var(--font-ui)" }}>{test.note}</dd></>}
         </dl>
       )}
     </li>
@@ -150,24 +154,10 @@ function Details({ response, run, evaluation }: { response: TutorResponse | null
   );
 }
 
-function CustomInput({ problem, onRun, disabled }: { problem: ProblemDetail; onRun: (value: { custom_args?: string; custom_stdin?: string }) => void; disabled: boolean }) {
-  const [text, setText] = useState("");
-  const stdio = problem.mode === "stdio" || !problem.function_name;
-  const paramsOnly = problem.mode === "function" && !problem.function_name;
-  if (paramsOnly) return null;
-  return (
-    <form className="stack-s" onSubmit={(event) => { event.preventDefault(); onRun(stdio ? { custom_stdin: text } : { custom_args: text }); }}>
-      <Field label="Try your own input" help={stdio ? "Type what your program should read. It is not graded." : <>Write the arguments as a list, for example <code>[1, 2]</code> or <code>["hello"]</code>. It is not graded.</>}>
-        {(props) => <textarea {...props} className="textarea mono" rows={2} value={text} onChange={(e) => setText(e.target.value)} spellCheck={false} />}
-      </Field>
-      <div><Button type="submit" size="small" disabled={disabled || !text.trim()}>Run with this input</Button></div>
-    </form>
-  );
-}
-
 export function ResultsPane(props: {
   problem: ProblemDetail; code: string; focus: "evaluation" | "run" | null; evaluation: Evaluation | null; run: Run | null; response: TutorResponse | null; evaluationBusy: boolean; runBusy: boolean; starting: string | null;
-  onRetrySubmit: (code: string) => void; onSubmit: () => void; onCustomRun: (value: { custom_args?: string; custom_stdin?: string }) => void; onCancel: () => void; busy: boolean;
+  onRetrySubmit: (code: string) => void; onSubmit: () => void; onCancel: () => void; busy: boolean;
+  cases: CaseState[]; onCasesChange: (cases: CaseState[]) => void;
 }) {
   const { problem, code, focus, evaluation, run, response, evaluationBusy, runBusy, starting } = props;
   const showingRun = focus === "run";
@@ -194,14 +184,21 @@ export function ResultsPane(props: {
   const passedLine = shownEvaluation && shownEvaluation.total > 0 ? `${shownEvaluation.passed} of ${shownEvaluation.total} tests passed.` : null;
   const runFailed = showingRun && run?.status === "failed" && !response;
   const empty = !busy && !shownEvaluation && !response && !runFailed;
+  // Before anything has run, the test cases are what matters. Once something runs, its result is.
+  const [view, setView] = useState<"cases" | "result">(empty ? "cases" : "result");
+  useEffect(() => { if (busy) setView("result"); }, [busy]);
 
   return (
     <div className="pane" aria-label="Results">
-      <div className="pane-head">
-        <span className="pane-title">Results</span>
+      <div className="pane-head" style={{ paddingTop: 0, paddingBottom: 0 }}>
+        <div className="result-views" role="tablist" aria-label="Test cases or result">
+          <button type="button" role="tab" aria-selected={view === "cases"} className="result-view" onClick={() => setView("cases")} data-testid="view-cases">Test cases</button>
+          <button type="button" role="tab" aria-selected={view === "result"} className="result-view" onClick={() => setView("result")} data-testid="view-result">Test result</button>
+        </div>
         {busy && !starting && <Button size="small" variant="ghost" onClick={props.onCancel}>Cancel</Button>}
       </div>
-      <div className="pane-body stack" aria-live="polite" data-testid="results-pane">
+      <div className="pane-body stack" data-testid="results-pane">
+        {view === "cases" ? <TestCases problem={problem} cases={props.cases} onChange={props.onCasesChange} disabled={props.busy} /> : <div className="stack" aria-live="polite">
         {busy && (
           <div className="stack-s" data-testid="running">
             <div className="row"><Spinner /><span>{running}…</span></div>
@@ -213,7 +210,7 @@ export function ResultsPane(props: {
             )}
           </div>
         )}
-        {empty && <p className="muted">Press <strong>Run</strong> to try the examples, or <strong>Submit</strong> to check all the tests. Results will appear here.</p>}
+        {empty && <p className="muted">Press <strong>Run</strong> to try the test cases, or <strong>Submit</strong> to check all the tests. Results will appear here.</p>}
         {!busy && stale && (
           <div className="stale" role="status" data-testid="stale-result"><RotateCw size={14} aria-hidden /> These results are for an earlier version of your code. Run it again to check your latest changes.</div>
         )}
@@ -228,6 +225,13 @@ export function ResultsPane(props: {
               {!headline && verdict === "service_failure" && <p className="subtle">This is a problem on our side, not with your code. Nothing was counted.</p>}
             </div>
           </div>
+        )}
+        {!busy && showingRun && response?.progress_note && <p className="progress-note show-mobile" role="status">{response.progress_note}</p>}
+        {!busy && showingRun && response?.diagnostics?.diagnosis?.likely_cause && (response.tutor?.level ?? 0) >= 2 && response.verdict !== "accepted" && (
+          <p className="diagnosis-note" data-testid="diagnosis">
+            <strong>{response.diagnostics.diagnosis.confidence >= 0.8 ? "Likely cause" : "Possible cause"}:</strong> {response.diagnostics.diagnosis.likely_cause}
+            {response.diagnostics.diagnosis.concept && <span className="subtle"> · {response.diagnostics.diagnosis.concept}</span>}
+          </p>
         )}
         {!busy && showingRun && response && response.next_action.label && (
           <section className="stack-s" data-testid="next-action">
@@ -247,7 +251,7 @@ export function ResultsPane(props: {
         )}
         {!busy && <Tests results={results} />}
         {!busy && (response || shownEvaluation) && <Details response={showingRun ? response : null} run={showingRun ? run : null} evaluation={shownEvaluation} />}
-        <CustomInput problem={problem} onRun={props.onCustomRun} disabled={props.busy} />
+        </div>}
       </div>
     </div>
   );

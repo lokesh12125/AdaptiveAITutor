@@ -115,6 +115,33 @@ Test files: `pol` = `backend/tests/test_policy.py`, `agt` = `test_agents.py`, `p
 | Edit and delete, private to owner | U | `api/imports.py` | `api`, `e2e` | Done |
 | Stage-appropriate help ladder | U | DSDA | `pol`, `pip` | Done |
 | Course-like paths for guided and self-directed use | U | 17 units, `Path.tsx` | `api`, `e2e`, `con` | Done |
+| 300 to 400 problems, sorted by topic | U | 368 problems, `scripts/problem_bank`, `content/problems/bank.yaml`, `Library.tsx` | `con`, `e2e` | Done, now 496 |
+| More problems in every topic | U | 128 new in `scripts/problem_bank/more_*.py`, at least 19 per topic | `con`, `verify_content` | Done |
+| A detailed lesson for every topic, with prerequisites | U | `content/guides`, `Path.tsx`, `TryIt.tsx` | `con`, `e2e` | Done |
+| Precise diagnosis with cause, concept, evidence and confidence | U §25 | `error_analysis.py`, `diagnostic.py` | `test_diagnosis`, `e2e` | Done |
+| NameError told apart into its causes, with the goal inferred | U §25 | `analyse_name_error`, `_goal` | `test_diagnosis` | Done |
+| Validation rejects generic, off-diagnosis and vague hints | U §25 | `diagnosis_violations` in `hints.py` | `test_diagnosis` | Done |
+| Reasoning trail: raw error to whether the issue was resolved | U §25 | `InteractionRecord.reasoning`, `next_action`, `resolved` | `test_diagnosis` | Done |
+| Detailed topic notes | U §26A | `content/notes/topics.yaml`, `Path.tsx` | `con`, `e2e` | Done, with text diagrams |
+| Problem-level learning panel | U §26B | `learning.py`, `LearnPane.tsx`, `content/notes/techniques_*.yaml` | `con`, `e2e` | Done, guidance per technique |
+| Learner-controlled modes | U §26C | `ModeSwitch.tsx`, `learning_mode` in `nodes.py` | `test_diagnosis`, `e2e` | Done |
+| Test cases shown before running, editable, with added cases | U | `TestCases.tsx`, `_run_cases` in `service.py`, `CaseIn` | `test_api`, `e2e` | Done |
+| More tests per problem | U | `scripts/problem_bank/extra_tests.py`, `custom_inputs.py`, `content/problems/extra_tests.yaml` | `con`, `verify_content` | Done: 487 of 496 have 30 or more, see limitations |
+| 30 to 40 meaningful tests per question, by kind of case | U brief §2 | `choose` in `extra_tests.py`, `app/test_categories.py`, `LARGE`, `EFFICIENCY`, `SCRIPTS` in `custom_inputs.py` | `con`, `verify_content` | Done for 487 of 496, the rest have few possible inputs |
+| Test sources and categories labelled, with their purpose | U brief §2 | `ProblemTest.origin`, `category`, `hidden_test_categories`, `TestCases.tsx`, `AddQuestion.tsx` | `test_api`, `e2e` | Done |
+| Collapsible previously added questions below the import area | U brief §1 | `PreviousQuestions` in `AddQuestion.tsx` | `e2e`, `a11y` | Done |
+| Agent audit report with evidence | U brief §4 | `docs/agent-audit.md`, `scripts/agent_audit.py`, `docs/agent-audit-run.md` | audit script, `test_hint_quality` | Done |
+| Hints specific to the learner's code, never generic advice | U brief §3, §5, §6 | `_anchored_issue_hint`, `VAGUE`, `names_something_concrete` in `hints.py`, `_loop_facts` in `diagnostic.py` | `test_hint_quality`, audit script | Done |
+| Every hint shows its concept | U brief §5 | `concept` in `compose.py`, `TutorPane.tsx` | `test_hint_quality` | Done |
+| A profile per learner: totals, improvement, calendar, milestones | U | `profile.py`, `GET /me/profile`, `Profile.tsx`, `ProfileView.tsx` | `test_api`, `e2e`, `a11y` | Done |
+| Learning-state measures in separate columns | U | `state_matrix` in `profile.py`, `ProfileView.tsx`, learners table in `Teacher.tsx` | `test_api`, `e2e` | Done |
+| Teacher table of students with every measure, and each student's profile | U | `state_summary`, `student_detail` in `api/teacher.py`, `Teacher.tsx` | `test_api`, `e2e`, `a11y` | Done |
+| The learner's own questions listed apart | U | `YourQuestions` in `AddQuestion.tsx`, "Your questions" group in `Library.tsx`, `ProblemSummary.created_at` | `test_api`, `e2e` | Done |
+| Submission history with dates and code | U | `GET /problems/{id}/submissions`, `Submissions.tsx` | `test_api`, `e2e` | Done |
+| Learn tab as continuous theory with approach tabs | U | `LearnPane.tsx`, `content/notes/approach_steps.yaml` | `e2e` | Done, per technique |
+| Completion rate counts started problems | U | `learner_metrics` in `analytics.py` | `test_api`, `test_pipeline` | Done |
+| Search across topics and problems | U §26D | `search_everything`, `Search.tsx` | `con`, `e2e` | Done |
+| Type what is confusing, point at code, and rerun the six agents | U | `questions.py`, `TutorPane.tsx`, `POST /problems/{id}/hint` with `focus_start`, `focus_end` | `rep`, `e2e` | Done |
 | Python only, no unsupported languages shown | U | `LANGUAGES`, UI | `api`, `e2e` | Done |
 
 ## Engineering
@@ -129,9 +156,52 @@ Test files: `pol` = `backend/tests/test_policy.py`, `agt` = `test_agents.py`, `p
 | Linting and formatting | U | Ruff (Python), strict `tsc` | Ran clean | Partial: no ESLint or Prettier for TypeScript |
 | Dev and production distinctions | U | `ENVIRONMENT`, startup checks | `api` | Done |
 
+## Adaptive hinting, import and rebrand brief
+
+Test files: `rep` = `backend/tests/test_repeated_hints.py`, `lnk` = `backend/tests/test_link_import.py`. These are new since the rest of this document.
+
+| Requirement | Source | Implementation | Tests | Status |
+|---|---|---|---|---|
+| Diagnose and fix the repeated hint end to end | U §1 | [bug-repeated-hint.md](bug-repeated-hint.md) | `rep`, `e2e` | Done |
+| Persistent interaction state | U §2 | `interaction_records`, `tutoring/history.py`, migration `0002` with backfill | `rep` | Done |
+| Diagnostic compares versions, and separates fact from inference | U §2A | `diagnostic.py`: `evidence`, `comparison`, `comparison_facts` | `rep`, `agt` | Done |
+| Cognitive State reads history, with uncertainty and evidence | U §2B | `cognitive.py` method `cs-1.2` | `rep`, `agt` | Done |
+| Retrieval filters, and responds to state and history | U §2C | `retrieval.py`: filters, `exclude_strategies` | `rep` | Done. Synthetic data only, reliable for about 12% of states. |
+| DSDA as a separate policy, with the required structure | U §3 | `dsda.py`, `contracts.py`, `policy.yaml` | `rep`, `pol` | Done. Weights are experimental. |
+| Hint-history-aware policy, for each situation listed | U §2D | Strategy ladders and rules in `dsda.py`, text in `hints.py` | `rep`, `pol`, `e2e` | Done |
+| Validation: repeats, relevance, leakage, invented evidence, length, vagueness, contradiction | U §4 | `hints.validate_hint`, `nodes.validate_hint_node` | `rep`, `agt` | Done with a scripted model. **Real model unverified.** |
+| Retry, labelled fallback, logged failures | U §4 | `validate_hint_node`, `compose.BUILT_IN_NOTES` | `rep`, `pip` | Done |
+| Themes, responsive layouts, keyboard, reduced motion | U §5, §23 | `tokens.css`, `base.css`, `Workspace.tsx` | `e2e` | Done. No testing with real screen reader users. |
+| Progressive disclosure, and "why this help" | U §5, §23 | `TutorPane.tsx`, `ResultsPane.tsx` | `e2e` | Done |
+| Editor: find and replace, indentation, undo, font size, wrap, panels, drafts | U §6 | `Editor.tsx`, `Workspace.tsx`, `useDraft.ts` | `e2e`, inspected | Done |
+| Run, Submit and Hint are distinct, results tied to a code version | U §6 | `service.py`, `useActions.ts` | `pip`, `e2e` | Done |
+| Safe execution boundary | U §7 | `runner/`, [security.md](security.md) | `run` | Done, not independently audited |
+| Add Question: paste, with review | U §8, §22 | `AddQuestion.tsx`, `parser.py` | `lnk`, `api`, `e2e` | Done |
+| Add Question: any link, best effort | U §8, §22 | `sources.py`, `fetcher.py`, `extract.py` | `lnk`, `e2e`, live checks | Partial by necessity: no named coding site allows reading its statement. See [data-imports.md](data-imports.md). |
+| Respect terms, robots.txt, rate limits | U §22 | `fetcher.py`, `SOURCES` | `lnk` | Done for robots and signals. Terms were read by hand and reviewed by no lawyer. |
+| Imported, learner and generated tests labelled, with no hidden-test claims | U §9, §22 | `testgen.py`, `AddQuestion.tsx`, `ProblemPane.tsx`, `compose.py` | `lnk`, `api`, `e2e` | Done |
+| Imported question works with all agents and the dashboard | U §22 | Stored as a normal problem | `lnk` end-to-end test | Done |
+| Course-like path with position, reasons, uncertainty, free choice | U §10 | `Path.tsx`, `planner.py` | `e2e`, `agt` | Done |
+| Python first, with no unsupported languages shown | U §11 | Fixed label, roadmap in README | `e2e` | Done |
+| Rebrand to CodePath | U §21 | Frontend, docs, metadata, storage migration | `e2e` name check, unit tests | Done. Old keys remain only in the migration code. |
+
+## Agents as a tutor beside the learner
+
+Test files: `rnp` = `backend/tests/test_reflection_and_planner.py`, `aud` = `scripts/agent_audit.py` (output in [agent-audit-run.md](agent-audit-run.md)). Findings and fixes are in [agent-audit.md](agent-audit.md).
+
+| Requirement | Source | Implementation | Tests | Status |
+|---|---|---|---|---|
+| Learn from a problem opens the topic's lesson, not its problem list | U | `?tab=lesson` on every Learn link, in `ProblemPane.tsx`, `LearnPane.tsx`, `TutorPane.tsx`, `Library.tsx`, read by `Path.tsx` | `e2e` | Done |
+| A lesson opened in a new tab or window keeps the theme on screen, even in a browser that has not saved it | U | `NewTabLink` and `withTheme` in `lib/theme.tsx` add `theme=` to the link; `index.html` applies it before the first paint, saves it and removes it from the address | `e2e`, unit | Done |
+| Only the help the learner needs: no hint climbs the ladder unasked | U | `OFFER_NEXT_STEP` in `dsda.py` | `pol`, `pip`, `aud`, `e2e` | Done |
+| Reflection works like a tutor: a question about the learner's own code, and a reply to the answer | U | `reflection.py` (`_anchored_prompt`, `respond_to_answer`), `api/workspace.py`, migration `0005` | `rnp`, `aud`, `e2e` | Done. Key ideas are spotted by keywords. |
+| A reflection answer reaches the other agents | U | Confusion signal in `cognitive.py`, `planner.after_reflection` | `rnp`, `aud` | Done |
+| Planner takes the learner from where they are to advanced work, step by step | U | Technique and difficulty sequencing, forward topics, `route`, fluent solves in `planner.py` and `nodes.load_planner_views` | `rnp`, `aud`, `e2e` | Done. Thresholds are a teaching judgement. |
+| Home and the plan after a submission agree | U | One sequencing rule, fluent solves recorded per problem | `rnp`, `aud` | Done |
+
 ## Open decisions
 
-1. **Commit and merge:** nothing is committed. The work is on branch `rebuild/csmasf-platform`.
+1. **Commit and merge:** this work is uncommitted, on branch `Trellis`.
 2. **Old secret** in Git history: rewrite history or accept (see `docs/security.md`).
 3. **Model provider:** the existing OpenAI key has no credit.
 4. **CodeNet:** download metadata and run the importer, and confirm the dataset's licence.

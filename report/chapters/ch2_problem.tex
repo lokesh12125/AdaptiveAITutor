@@ -1,0 +1,39 @@
+\chapter{Problem Definition}
+\section{Problem statement}
+A beginner working on a programming exercise writes some code, runs it, sees it fail and tries again, usually many times. At each of these moments a good tutor has several things to decide: what exactly went wrong in this version of the code, how much the learner already understands, whether to step in at all, and how much help to give if so. With too little help the learner stays stuck and gets frustrated. With too much help, or with the answer itself, the learner no longer has to do the thinking the exercise was set for.
+
+The problem we address in this project is to build a tutor that makes these decisions automatically, consistently and transparently for every learner action, and that never hands over a complete solution.
+
+For each learner action the system receives three inputs:
+\begin{itemize}
+\item the action itself, which is one of Run (try the code on visible examples), Submit (graded against all tests), Ask for a hint (optionally ``just a small nudge'' or ``I need more help''), or a typed question about selected lines;
+\item the exact version of the learner's code and the problem it belongs to;
+\item the stored history of this learner on this problem and topic, that is, earlier attempts and their results, hints already shown and whether they were followed by progress, reflection answers, and time spent.
+\end{itemize}
+
+From these it is expected to produce:
+\begin{itemize}
+\item a diagnosis of the attempt, with the evidence that supports it;
+\item an updated estimate of the learner's state, which keeps uncertainty and says ``unknown'' where evidence is missing;
+\item a help decision (wait, offer help, or show help) at a stated level, with a stated strategy and reason;
+\item when help is shown, a hint that is specific to the learner's own code, different from earlier hints and free of solution code;
+\item when useful, one reflection question about the learner's own reasoning, and a reply to the answer;
+\item a recommendation of what to do next, with the route ahead.
+\end{itemize}
+
+There are three stakeholders. Learners need help that keeps them thinking. Teachers need to know which learners may need a conversation, without reading every submission. The institution needs a tool that is safe to run on its servers and that protects learners' data.
+
+If the problem is left unsolved, learners who rely on instant complete answers may pass exercises and still be unable to solve similar problems alone. The PyTutor study explicitly reported this risk of over-reliance \cite{yang2024}. Teachers in large courses cannot give every learner timely individual help \cite{liffiton2023}. There is also a security side: running untrusted student code without isolation would expose the server.
+
+\section{Existing system and limitations}
+Four kinds of existing solutions are relevant here. Their limitations, as reported in the literature we reviewed, define the gap this project addresses.
+
+The first kind is the general-purpose LLM assistant, a conversational question-and-answer tool. Such assistants are always available and fluent. However, they keep no model of the individual learner, apply the same help to everyone, and readily produce complete code.
+
+The second kind is the LLM programming assistant with guardrails. CodeHelp \cite{liffiton2023}, CodeAid \cite{kazemitabaar2024} and RAGMan \cite{ma2024} restrict the assistant so that it explains, gives pseudo-code or answers within a course scope, and does not write solutions. All three were deployed in real courses and received positive student feedback. Their published descriptions, however, do not include a persistent learner model that decides \emph{how much} help each learner should receive, and RAGMan's retrieval draws on course material and not on what helped similar learners. PyTutor does provide a structured ladder of hints, but one of its hint types is a coding solution, and its authors observed over-reliance \cite{yang2024}.
+
+Classical intelligent tutoring systems form the third kind. Systems such as the ACT Programming Tutor model the learner explicitly. Knowledge tracing estimates the probability that each skill has been learned, and that estimate drives mastery learning \cite{corbett1995}. Conversational tutors such as DeepTutor showed that tutoring dialogue can be delivered over the web at scale \cite{rus2015}. These systems depend on carefully authored domain models, which are expensive to build for each new subject.
+
+The fourth kind is learner-modelling research. Deep Knowledge Tracing predicts whether a learner will answer the next exercise correctly, and does so more accurately than earlier models \cite{piech2015}. Newer work simulates learners or verifies tutoring dialogue \cite{zhan2025,wang2025}. These are methods for prediction, simulation or evaluation. Used alone, they do not decide when and how much to help a real learner in a live programming session.
+
+Among the works we reviewed, no single system combines all of the following for live programming practice: (i) a continuously updated, explainable learner state, (ii) an explicit decision about whether and how much to help that escalates only on request and never reveals a solution, (iii) retrieval of what helped in similar learners' situations, and (iv) reflection and next-step planning that react to the learner's own answers. A survey of LLM applications in programming education reaches a related conclusion: interventions work best with scaffolding and human oversight, and fully automated approaches often miss pedagogical nuance \cite{pitts2025}. We designed CSMASF to fill this gap within an open, testable system.

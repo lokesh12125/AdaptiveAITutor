@@ -1,11 +1,39 @@
 import * as Collapsible from "@radix-ui/react-collapsible";
-import { ChevronRight, ExternalLink, Pencil, X } from "lucide-react";
+import { BookOpen, ChevronRight, ExternalLink, Pencil, X } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import type { ProblemDetail } from "@/api/types";
+import type { ProblemDetail, TopicNotes } from "@/api/types";
 import { Markdown } from "@/components/Markdown";
 import { Button, CopyButton, HelpDialog } from "@/components/ui";
 import { DIFFICULTY_LABEL } from "@/lib/format";
+import { NewTabLink } from "@/lib/theme";
+
+function ConceptNotes({ problem }: { problem: ProblemDetail }) {
+  const notes = (problem.topic_notes ?? null) as unknown as TopicNotes | null;
+  if (!notes) return null;
+  return (
+    <section className="concept-notes" data-testid="concept-notes">
+      <div className="row-between">
+        <strong className="row" style={{ gap: 6 }}><BookOpen size={15} aria-hidden /> {problem.unit_title}</strong>
+        <NewTabLink to={`/path/${problem.unit_id}?tab=lesson`} className="subtle" data-testid="read-lesson">Read the lesson</NewTabLink>
+      </div>
+      <Collapsible.Root>
+        <Collapsible.Trigger className="collapsible-trigger" data-testid="concept-notes-toggle"><ChevronRight size={15} className="chevron" aria-hidden /> Concept notes for this problem</Collapsible.Trigger>
+        <Collapsible.Content className="stack-s" style={{ paddingTop: 4 }}>
+          {notes.pattern && (
+            <div>
+              <strong>{notes.pattern.name}</strong>
+              <p style={{ fontSize: "0.92em" }}><strong>When:</strong> {notes.pattern.when}</p>
+              <p style={{ fontSize: "0.92em" }}><strong>How:</strong> {notes.pattern.how}</p>
+            </div>
+          )}
+          {notes.key_ideas.length > 0 && <div><strong>Key ideas</strong><ul>{notes.key_ideas.map((idea) => <li key={idea}>{idea}</li>)}</ul></div>}
+          {notes.mistakes.length > 0 && <div><strong>Watch out for</strong><ul>{notes.mistakes.map((item) => <li key={item.mistake}>{item.mistake}</li>)}</ul></div>}
+        </Collapsible.Content>
+      </Collapsible.Root>
+    </section>
+  );
+}
 
 export function ProblemPane({ problem, showGuide, onDismissGuide }: { problem: ProblemDetail; showGuide: boolean; onDismissGuide: () => void }) {
   return (
@@ -23,7 +51,8 @@ export function ProblemPane({ problem, showGuide, onDismissGuide }: { problem: P
                 <li>Write your code in the editor.</li>
                 <li><strong>Run</strong> tries the examples. It is not graded, so run as often as you like.</li>
                 <li><strong>Submit</strong> checks all the tests and counts as an attempt.</li>
-                <li><strong>Ask for a hint</strong> whenever you like. Hints are small at first.</li>
+                <li><strong>Ask for a hint</strong> whenever you like. Or select the lines that confuse you, and ask about them.</li>
+                <li>Not sure where to begin? Open <strong>Learn</strong>, beside this tab.</li>
               </ol>
             </div>
             <Button variant="ghost" size="small" icon aria-label="Dismiss walkthrough" onClick={onDismissGuide}><X size={15} aria-hidden /></Button>
@@ -32,11 +61,12 @@ export function ProblemPane({ problem, showGuide, onDismissGuide }: { problem: P
         <div className="stack-s">
           <h1 style={{ fontSize: "1.25rem" }}>{problem.title}</h1>
           <div className="row">
-            {problem.difficulty ? <span className="badge">{DIFFICULTY_LABEL[problem.difficulty]}</span> : <span className="badge">Difficulty not set</span>}
-            <Link to={`/path/${problem.unit_id}`} className="badge" style={{ textDecoration: "none" }}>{problem.unit_title}</Link>
+            {problem.difficulty ? <span className={`badge badge-${problem.difficulty}`}>{DIFFICULTY_LABEL[problem.difficulty]}</span> : <span className="badge">Difficulty not set</span>}
+            <Link to={`/path/${problem.unit_id}?tab=lesson`} className="badge" style={{ textDecoration: "none" }}>{problem.unit_title}</Link>
             <span className="badge">Python</span>
           </div>
         </div>
+        <ConceptNotes problem={problem} />
         <Markdown>{problem.description}</Markdown>
         {problem.input_format && <section><h3>Input</h3><Markdown>{problem.input_format}</Markdown></section>}
         {problem.output_format && <section><h3>Output</h3><Markdown>{problem.output_format}</Markdown></section>}
@@ -47,6 +77,8 @@ export function ProblemPane({ problem, showGuide, onDismissGuide }: { problem: P
             {problem.examples.map((example, index) => (
               <div className="example-box" key={index} style={{ position: "relative" }}>
                 <span style={{ position: "absolute", top: 1, right: 1 }}><CopyButton text={example.input} label="Copy this input" /></span>
+                {example.origin === "generated" && <span className="badge badge-info" style={{ margin: "6px 9px 0" }}>Generated suggestion</span>}
+                {example.origin === "learner" && <span className="badge" style={{ margin: "6px 9px 0" }}>Added by you</span>}
                 <dl>
                   <dt>{problem.mode === "stdio" ? "Input" : "Call"}</dt><dd>{example.input}</dd>
                   <dt>Expected</dt><dd>{example.expected ?? "Not set"}</dd>
@@ -70,8 +102,10 @@ export function ProblemPane({ problem, showGuide, onDismissGuide }: { problem: P
           )}
           <span>Time limit: {problem.per_test_seconds}s per test</span>
         </div>
+        {problem.learner_notes && <section className="stack-s" data-testid="learner-notes"><h3>Your notes</h3><p className="muted" style={{ whiteSpace: "pre-wrap" }}>{problem.learner_notes}</p></section>}
         {problem.source_type !== "curriculum" && (
           <div className="subtle stack-s" style={{ gap: 2 }}>
+            <span data-testid="tests-not-official">These are the tests saved with your question, not the original platform's hidden tests.</span>
             <span>Source: {problem.source_name}{problem.source_retrieved_at ? `, retrieved ${new Date(problem.source_retrieved_at).toLocaleDateString()}` : ""}</span>
             {problem.source_note && <span>{problem.source_note}</span>}
             {problem.source_url && /^https?:\/\//.test(problem.source_url) && <a href={problem.source_url} target="_blank" rel="noreferrer noopener" className="row" style={{ gap: 4 }}>View the original <ExternalLink size={13} aria-hidden /></a>}

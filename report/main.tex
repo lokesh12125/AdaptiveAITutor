@@ -1,0 +1,253 @@
+\documentclass[12pt,a4paper,oneside]{report}
+\usepackage[T1]{fontenc}
+\usepackage{mathptmx}
+\usepackage[left=30mm,right=25mm,top=25mm,bottom=25mm]{geometry}
+
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\setlength{\headheight}{30pt}
+\setlength{\headsep}{12pt}
+
+
+\usepackage{graphicx,array,longtable,pdflscape,setspace}
+% Packages added for this report's equations, diagrams, charts and algorithms.
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,shapes.geometric,fit,backgrounds,calc}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{caption}
+\captionsetup[table]{skip=6pt}
+\usepackage{enumitem}
+\setlist{itemsep=1pt,topsep=3pt}
+\usepackage{xurl}
+\usepackage[hidelinks]{hyperref}
+\onehalfspacing
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+\setcounter{tocdepth}{1}
+\renewcommand{\contentsname}{Table of Contents}
+\newcommand{\institutionlogo}[1]{\IfFileExists{amrita-logo.png}{\includegraphics[width=#1]{amrita-logo.png}}{\fbox{\parbox{#1}{\centering Amrita Vishwa Vidyapeetham\\Place amrita-logo.png beside this file}}}}
+\newcommand{\ProjectTitle}{Adaptive Multi-Agent AI Tutoring System for Personalized Programming Education}
+\fancypagestyle{project}{%
+  \fancyhf{}
+  \fancyhead[C]{\parbox{\textwidth}{\centering\small\nouppercase{\ProjectTitle}}}
+  \fancyfoot[C]{\thepage}
+  \renewcommand{\headrulewidth}{0.4pt}
+}
+% Preliminary pages show only a page number.
+\fancypagestyle{plain}{%
+  \fancyhf{}
+  \fancyfoot[C]{\thepage}
+  \renewcommand{\headrulewidth}{0pt}
+}
+\newcommand{\EnableProjectHeaders}{%
+  \pagestyle{project}%
+  % report uses plain style on chapter-opening pages.
+  \fancypagestyle{plain}{%
+    \fancyhf{}
+    \fancyhead[C]{\parbox{\textwidth}{\centering\small\nouppercase{\ProjectTitle}}}
+    \fancyfoot[C]{\thepage}
+    \renewcommand{\headrulewidth}{0.4pt}
+  }%
+}
+\titlespacing*{\chapter}{0pt}{0pt}{16pt}
+\titlespacing*{\section}{0pt}{10pt}{4pt}
+\titlespacing*{\subsection}{0pt}{8pt}{3pt}
+\titlespacing*{\subsubsection}{0pt}{6pt}{3pt}
+\raggedbottom
+\setlength{\emergencystretch}{3em}
+
+% Report-wide helpers.
+\newcolumntype{R}[1]{>{\raggedright\arraybackslash}p{#1}}
+% Monospace names may break after an underscore or a slash, so long identifiers fit in table cells.
+\newcommand{\code}[1]{\begingroup\ttfamily\renewcommand{\_}{\textunderscore\allowbreak}#1\endgroup}
+\tikzset{
+  box/.style={draw, rounded corners=2pt, align=center, font=\small, inner sep=4pt, fill=white},
+  agent/.style={box, fill=blue!6, minimum width=3.1cm, minimum height=0.9cm},
+  store/.style={draw, cylinder, shape border rotate=90, aspect=0.18, align=center, font=\small, fill=gray!10, minimum width=2.4cm, minimum height=1.1cm},
+  arrow/.style={-{Stealth[length=2.2mm]}, thick},
+  darrow/.style={{Stealth[length=2.2mm]}-{Stealth[length=2.2mm]}, thick},
+  note/.style={font=\footnotesize, align=center, text=black!70},
+}
+\newcommand{\screenshot}[3]{%
+  \begin{figure}[htbp]\centering
+  \includegraphics[width=\textwidth]{figures/screens/#1}
+  \caption{#2}\label{#3}
+  \end{figure}}
+
+\begin{document}
+\pagestyle{empty}
+
+{\centering \Large\bfseries \ProjectTitle{}\par}
+{\centering Project report submitted in partial fulfilment of the requirements for the award of the degree of\par}
+{\centering \textbf{BACHELOR OF TECHNOLOGY}\par}
+{\centering in\par}
+{\centering \textbf{COMPUTER SCIENCE AND ENGINEERING}\par}
+{\centering Submitted by\par}
+{\centering \fontsize{14}{18}\selectfont
+Kataru Reddy Eswar \quad AM.SC.U4CSE23126\par}
+
+{\centering \fontsize{14}{18}\selectfont
+Bharath Bommineni \quad AM.SC.U4CSE23112\par}
+
+{\centering \fontsize{14}{18}\selectfont
+Chimmili Lokesh \quad AM.SC.U4CSE23114\par}
+
+{\centering \fontsize{14}{18}\selectfont
+Ramisetti Gowtham Tej \quad AM.SC.U4CSE23144\par}
+
+{\centering \fontsize{14}{18}\selectfont
+Under the guidance of\par
+Ms. Anju Sukumar\par
+[Guide designation]\par}
+
+{\centering \institutionlogo{4.5in}\par}
+
+{\centering \textbf{AMRITA SCHOOL OF COMPUTING}\par}
+{\centering \textbf{AMRITA VISHWA VIDYAPEETHAM}\par}
+{\centering \textbf{AMRITAPURI CAMPUS}\par}
+{\centering \textbf{KOLLAM 690525}\par}
+{\centering \textbf{NOVEMBER 2026}\par}
+
+
+\clearpage
+{\centering \institutionlogo{3.7in}\par}
+{\centering \textbf{DEPARTMENT OF COMPUTER SCIENCE AND ENGINEERING}\par}
+{\centering Amrita School of Computing, Amritapuri Campus\par}
+{\centering \Large\bfseries BONAFIDE CERTIFICATE\par}
+This is to certify that the project report entitled ``\ProjectTitle{}'', submitted by Kataru Reddy Eswar (AM.SC.U4CSE23126), Bharath Bommineni (AM.SC.U4CSE23112), Chimmili Lokesh (AM.SC.U4CSE23114) and Ramisetti Gowtham Tej (AM.SC.U4CSE23144), in partial fulfilment of the requirements for the award of the degree of Bachelor of Technology in Computer Science and Engineering at Amrita Vishwa Vidyapeetham, is a bonafide record of the work carried out by them under my guidance and supervision at Amrita School of Computing, Amritapuri, during Semester 7 of the academic year 2026 - 2027.
+
+\begin{tabular}{p{.46\textwidth}p{.46\textwidth}} Ms. Anju Sukumar & [Coordinator name] \\ Project Guide & Project Coordinator \\ Signature \hrulefill & Signature \hrulefill \\[20pt] [Chairperson name] &  \\ Chairperson, CSE & Reviewers \\ Signature \hrulefill & Signature \hrulefill \end{tabular}
+\\
+\\
+\\ Place: Amritapuri\\
+Date: [DD Month YYYY]
+\clearpage
+\thispagestyle{empty}
+
+{\centering
+\institutionlogo{3.7in}\par
+\vspace{0.4cm}
+\textbf{DEPARTMENT OF COMPUTER SCIENCE AND ENGINEERING}\par
+Amrita School of Computing, Amritapuri Campus\par
+\vspace{0.6cm}
+{\Large\bfseries DECLARATION\par}
+}
+
+\vspace{0.5cm}
+
+\noindent
+{\sloppy
+We, Kataru Reddy Eswar (AM.SC.U4CSE23126),
+Bharath Bommineni (AM.SC.U4CSE23112),
+Chimmili Lokesh (AM.SC.U4CSE23114) and
+Ramisetti Gowtham Tej (AM.SC.U4CSE23144),
+hereby declare that the project entitled
+``\ProjectTitle{}'' is a record of our original work
+carried out under the guidance of Ms. Anju Sukumar, [Guide designation],
+Department of Computer Science and Engineering,
+Amrita Vishwa Vidyapeetham, Amritapuri.
+To the best of our knowledge, this work has not formed the
+basis for the award of any degree, diploma, fellowship or
+similar qualification to any candidate at any university.
+All sources and contributions of others have been
+appropriately acknowledged.\par}
+
+\vspace{0.5cm}
+
+\noindent
+Place: Amritapuri\\
+Date: [DD Month YYYY]
+
+\vspace{0.7cm}
+
+\noindent
+\begin{tabular}{@{}p{0.60\textwidth}p{0.34\textwidth}@{}}
+\textbf{Student details} & \textbf{Signature of the student} \\[14pt]
+
+Kataru Reddy Eswar\newline
+AM.SC.U4CSE23126
+& \rule{0.30\textwidth}{0.4pt} \\[18pt]
+
+Bharath Bommineni\newline
+AM.SC.U4CSE23112
+& \rule{0.30\textwidth}{0.4pt} \\[18pt]
+
+Chimmili Lokesh\newline
+AM.SC.U4CSE23114
+& \rule{0.30\textwidth}{0.4pt} \\[18pt]
+
+Ramisetti Gowtham Tej\newline
+AM.SC.U4CSE23144
+& \rule{0.30\textwidth}{0.4pt}
+\end{tabular}
+
+\vspace{0.8cm}
+
+\noindent
+\textbf{Project Guide:} Ms. Anju Sukumar
+
+\vspace{0.5cm}
+
+\noindent
+\textbf{Signature of the Project Guide:}
+\rule{4cm}{0.4pt}
+
+\clearpage
+
+\clearpage
+% Arabic numbering continues through the preliminary pages and chapters.
+\clearpage
+\pagenumbering{roman}
+\pagestyle{plain}
+
+\phantomsection
+\addcontentsline{toc}{chapter}{Acknowledgement}
+{\centering \Large\bfseries ACKNOWLEDGEMENT\par}
+\input{chapters/acknowledgement}
+
+\clearpage
+\phantomsection
+\addcontentsline{toc}{chapter}{Abstract}
+{\centering \Large\bfseries ABSTRACT\par}
+\input{chapters/abstract}
+
+
+\clearpage
+\tableofcontents
+\clearpage
+\phantomsection
+\addcontentsline{toc}{chapter}{List of Figures}
+\listoffigures
+\clearpage
+\phantomsection
+\addcontentsline{toc}{chapter}{List of Tables}
+\listoftables
+\clearpage
+\pagenumbering{arabic}
+\pagestyle{plain}
+\EnableProjectHeaders
+\input{chapters/ch1_introduction}
+\clearpage
+\input{chapters/ch2_problem}
+\clearpage
+\input{chapters/ch3_literature}
+\clearpage
+\input{chapters/ch4_requirements}
+\clearpage
+\input{chapters/ch5_methodology}
+\clearpage
+\input{chapters/ch6_results}
+\clearpage
+\input{chapters/ch7_conclusion}
+\clearpage
+\input{chapters/references}
+\clearpage
+\appendix
+\input{chapters/appendix}
+
+\end{document}

@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { api } from "@/api/client";
-import type { ClassInfo, HintRow } from "@/api/types";
-import { ActivityChart, MasteryRange, ShareBar, type ActivityDay } from "@/components/Charts";
+import type { ClassInfo, HintRow, Profile } from "@/api/types";
+import { ActivityChart, ShareBar, type ActivityDay } from "@/components/Charts";
+import { ProfileView } from "@/components/ProfileView";
 import { Button, EmptyState, errorText, ErrorState, Field, HelpDialog, Modal, Notice, PageLoading, Select, Stat, useToast } from "@/components/ui";
-import { duration, percent, roundedRange, timeAgo, VERDICT_LABEL } from "@/lib/format";
+import { duration, percent, timeAgo } from "@/lib/format";
 
 import type { Gain, Metrics } from "./Progress";
 
@@ -18,7 +19,9 @@ type Overview = {
   topics: { unit_id: string; title: string; attempts: number; problems_started: number; first_try_rate: number | null; completion_rate: number | null; attempts_per_problem: number | null }[];
   common_errors: { total: number; items: { issue_key: string; label: string; count: number; share: number | null; learners: number }[] };
   assistance: { total: number; requested: number; automatic: number; feedback_helpful: number; feedback_total: number; by_level: { level: number; count: number; resolved: number; progress: number; progress_rate: number | null }[] };
-  learners: { id: string; name: string; solved: number; started: number; completion_rate: number | null; hints_per_solved: number | null; last_active: string | null; flags: Flag[] }[];
+  learners: {
+    id: string; name: string; solved: number; started: number; completion_rate: number | null; hints_per_solved: number | null; mastery: number | null; topics_started: number; confidence: number | null;
+    confusion: string | null; load: string | null; progress: string | null; first_try_rate: number | null; attempts_per_solve: number | null; current_streak: number; longest_streak: number; last_active: string | null; flags: Flag[] }[];
   needs_support: { id: string; name: string; flags: Flag[] }[];
   definitions: Record<string, string>;
 };
@@ -96,7 +99,7 @@ export function TeacherPage() {
           {data.class.members === 0 ? <EmptyState title="No learners yet">Share the join code. Learners enter it in Settings.</EmptyState> : (
             <>
               <div className="grid-stats" data-testid="class-stats">
-                <Stat label="Completion rate" value={percent(data.metrics.completion_rate)} note={`${data.metrics.solved} solved of ${data.metrics.started} attempted`} />
+                <Stat label="Completion rate" value={percent(data.metrics.completion_rate)} note={`${data.metrics.solved} solved of ${data.metrics.started} started`} />
                 <Stat label="Hints per solved problem" value={data.metrics.hints_per_solved ?? "No data"} note={`${data.metrics.hints_total} hints in total`} />
                 <Stat label="Median time to solve" value={duration(data.metrics.median_seconds_to_complete)} note={`${data.metrics.time_sample} solves with a recorded time`} />
                 <Stat label="Satisfaction" value={data.satisfaction.median ? `${data.satisfaction.median} / 5` : "No data"} note={`Median of ${data.satisfaction.responses} survey${data.satisfaction.responses === 1 ? "" : "s"}`} />
@@ -174,12 +177,27 @@ export function TeacherPage() {
                 <h2 className="card-title" id="learners-heading">Learners</h2>
                 <div className="table-wrap" tabIndex={0} role="group" aria-label="Scrollable table">
                   <table className="table" data-testid="learners-table">
-                    <thead><tr><th>Name</th><th className="num">Solved</th><th className="num">Hints per solve</th><th>Last active</th><th>Flags</th></tr></thead>
+                    <thead><tr>
+                      <th scope="col">Name</th><th scope="col" className="num">Solved</th><th scope="col" className="num">Completion</th><th scope="col" className="num" title={data.definitions.mastery}>Mastery</th>
+                      <th scope="col" className="num">Topics</th><th scope="col" title={data.definitions.confidence}>Confidence</th><th scope="col" title={data.definitions.confusion}>Confusion</th><th scope="col" title={data.definitions.load}>Workload</th>
+                      <th scope="col" title={data.definitions.progress}>Progress</th><th scope="col" className="num">First try</th><th scope="col" className="num">Submissions per solve</th><th scope="col" className="num">Hints per solve</th>
+                      <th scope="col" className="num">Streak</th><th scope="col">Last active</th><th scope="col">Flags</th>
+                    </tr></thead>
                     <tbody>{data.learners.map((learner) => (
                       <tr key={learner.id}>
-                        <td><Link to={`/teacher/${data.class.id}/students/${learner.id}`}>{learner.name}</Link></td>
+                        <th scope="row"><Link to={`/teacher/${data.class.id}/students/${learner.id}`}>{learner.name}</Link></th>
                         <td className="num">{learner.solved} of {learner.started}</td>
+                        <td className="num">{percent(learner.completion_rate)}</td>
+                        <td className="num">{learner.mastery === null ? "–" : percent(learner.mastery)}</td>
+                        <td className="num">{learner.topics_started}</td>
+                        <td>{learner.confidence === null ? <span className="subtle">Unknown</span> : percent(learner.confidence)}</td>
+                        <td>{learner.confusion ?? <span className="subtle">Unknown</span>}</td>
+                        <td>{learner.load ?? <span className="subtle">Unknown</span>}</td>
+                        <td>{learner.progress ?? <span className="subtle">Unknown</span>}</td>
+                        <td className="num">{percent(learner.first_try_rate)}</td>
+                        <td className="num">{learner.attempts_per_solve ?? "–"}</td>
                         <td className="num">{learner.hints_per_solved ?? "–"}</td>
+                        <td className="num">{learner.current_streak}</td>
                         <td className="nowrap">{timeAgo(learner.last_active)}</td>
                         <td>{learner.flags.length ? <span className="badge badge-warn">{learner.flags.length} to review</span> : <span className="subtle">None</span>}</td>
                       </tr>
@@ -196,7 +214,7 @@ export function TeacherPage() {
 }
 
 type Detail = {
-  id: string; name: string; metrics: Metrics; flags: Flag[]; activity: ActivityDay[]; hints: HintRow[]; learning_gain: Gain; is_synthetic: boolean;
+  id: string; name: string; metrics: Metrics; flags: Flag[]; activity: ActivityDay[]; hints: HintRow[]; learning_gain: Gain; is_synthetic: boolean; profile: Profile;
   topics: { unit_id: string; title: string; band_label: string; low: number; high: number; attempts: number; independent: number; assisted: number }[];
   recent: { problem_id: string; title: string | null; verdict: string | null; passed: number; total: number; at: string }[];
 };
@@ -211,38 +229,19 @@ export function TeacherStudentPage() {
     <div className="stack-l">
       <div className="stack-s"><Link to="/teacher" className="row" style={{ gap: 4 }}><ArrowLeft size={14} aria-hidden /> Back to class</Link><h1>{data.name}</h1></div>
       {data.is_synthetic && <Notice tone="warn" title="Synthetic record">This learner was generated for the demo. Nothing here is real.</Notice>}
+      {data.flags.length > 0 && <section className="card stack"><h2>Possible reasons to check in</h2>{data.flags.map((flag) => <FlagCard key={flag.title} flag={flag} />)}</section>}
       <div className="grid-stats">
-        <Stat label="Solved" value={data.metrics.solved} note={`of ${data.metrics.started} attempted`} />
-        <Stat label="Completion rate" value={percent(data.metrics.completion_rate)} />
-        <Stat label="Hints per solve" value={data.metrics.hints_per_solved ?? "No data"} />
+        <Stat label="Completion rate" value={percent(data.metrics.completion_rate)} note={`${data.metrics.solved} solved of ${data.metrics.started} started`} />
         <Stat label="Median time to solve" value={duration(data.metrics.median_seconds_to_complete)} note={`${data.metrics.time_sample} recorded`} />
       </div>
-      {data.flags.length > 0 && <section className="card stack"><h2>Possible reasons to check in</h2>{data.flags.map((flag) => <FlagCard key={flag.title} flag={flag} />)}</section>}
-      <section className="card">
-        <h2 className="card-title">Topic estimates</h2>
-        {data.topics.length === 0 && <p className="muted">No graded attempts yet.</p>}
-        {data.topics.map((topic) => (
-          <div className="topic-row" key={topic.unit_id}>
-            <span>{topic.title}<br /><span className="subtle">{topic.attempts} attempts, {topic.independent} solved alone, {topic.assisted} with hints</span></span>
-            <MasteryRange low={topic.low} high={topic.high} label={topic.title} />
-            <span className="subtle">{topic.band_label} ({roundedRange(topic.low, topic.high)})</span>
-          </div>
-        ))}
-        <p className="subtle" style={{ marginTop: 8 }}>Estimates from coding activity. They are not test scores.</p>
-      </section>
+      <ProfileView profile={data.profile} own={false} />
       <div className="grid-2">
-        <section className="card"><h2 className="card-title">Activity</h2><ActivityChart days={data.activity} /></section>
+        <section className="card"><h2 className="card-title">Submissions, runs and hints by day</h2><ActivityChart days={data.activity} /></section>
         <section className="card">
-          <h2 className="card-title">Recent submissions</h2>
-          {data.recent.length === 0 ? <p className="muted">None yet.</p> : (
-            <div className="table-wrap" tabIndex={0} role="group" aria-label="Scrollable table"><table className="table"><thead><tr><th>Problem</th><th>Result</th><th>When</th></tr></thead><tbody>{data.recent.map((row, index) => <tr key={index}><td>{row.title}</td><td>{VERDICT_LABEL[row.verdict ?? ""] ?? row.verdict} {row.total ? `(${row.passed}/${row.total})` : ""}</td><td className="nowrap">{timeAgo(row.at)}</td></tr>)}</tbody></table></div>
-          )}
+          <h2 className="card-title">Help received</h2>
+          {data.hints.length === 0 ? <p className="muted">No hints yet.</p> : <div className="table-wrap" tabIndex={0} role="group" aria-label="Scrollable table"><table className="table"><thead><tr><th>Problem</th><th>Level</th><th>Requested</th><th>Next</th></tr></thead><tbody>{data.hints.map((hint) => <tr key={hint.id}><td>{hint.problem_title}</td><td>{hint.level_name}</td><td>{hint.requested ? "Yes" : "No"}</td><td>{hint.outcome ?? "Not known yet"}</td></tr>)}</tbody></table></div>}
         </section>
       </div>
-      <section className="card">
-        <h2 className="card-title">Help received</h2>
-        {data.hints.length === 0 ? <p className="muted">No hints yet.</p> : <div className="table-wrap" tabIndex={0} role="group" aria-label="Scrollable table"><table className="table"><thead><tr><th>Problem</th><th>Level</th><th>Requested</th><th>Next</th></tr></thead><tbody>{data.hints.map((hint) => <tr key={hint.id}><td>{hint.problem_title}</td><td>{hint.level_name}</td><td>{hint.requested ? "Yes" : "No"}</td><td>{hint.outcome ?? "Not known yet"}</td></tr>)}</tbody></table></div>}
-      </section>
     </div>
   );
 }

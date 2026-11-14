@@ -1,0 +1,865 @@
+# Detailed concept notes for each topic. All wording was written for this project.
+# These are merged into each topic's guide when the content is seeded. A knowledge check's `answer` is the index of the right option.
+
+python-basics:
+  why: "Everything else in this course is built from a few small pieces: values, names and functions. Once these feel natural, you can read almost any short Python program and work out what it does."
+  definitions:
+    - {term: "Value", meaning: "A piece of data, such as 7, 2.5, \"hello\" or True."}
+    - {term: "Variable", meaning: "A name that refers to a value. Assigning to it again makes it refer to something new."}
+    - {term: "Type", meaning: "The kind of a value. It decides what you can do with it, so 2 + 2 is 4, while \"2\" + \"2\" is \"22\"."}
+    - {term: "Function", meaning: "A named set of steps that can receive values and give one back."}
+  how_it_works:
+    - "Python reads your file from top to bottom, one line at a time."
+    - "An assignment works out the right-hand side first, then attaches the name on the left to that value."
+    - "A def line only stores the function. Its body runs later, each time the function is called."
+    - "A call sends values into the parameters, runs the body, and return hands one value back to the caller."
+  diagram:
+    caption: "A call goes in with values, and comes back with one result."
+    text: |
+      answer = double(21)
+                 |    ^
+          n = 21 |    | return 42
+                 v    |
+            def double(n):
+                return n * 2
+  edge_cases:
+    - "A function with no return gives back None."
+    - "Text that looks like a number is still text, so \"5\" + 1 is an error."
+    - "Python is case sensitive, so Total and total are different names."
+  complexity:
+    - {operation: "Assigning, arithmetic, or a simple function call", cost: "Constant time, O(1)"}
+  when_to_use:
+    - "Use a variable when a value has a meaning worth naming, or is used more than once."
+    - "Use a function when the steps have a clear job, or the task asks you to return something."
+  related: [variables-io, functions]
+  summary: "Python runs from top to bottom. Variables name values, types decide what values can do, and functions take values in and hand one back with return."
+  glossary:
+    - {term: "Expression", meaning: "Something Python can work out to a value, such as 2 + 3."}
+    - {term: "Statement", meaning: "A complete instruction, such as an assignment or a return."}
+    - {term: "Parameter", meaning: "A name in a def line that receives a value."}
+    - {term: "Argument", meaning: "The actual value you pass when calling a function."}
+    - {term: "Indentation", meaning: "The spaces at the start of a line, which show what block it belongs to."}
+  checks:
+    - question: "What does a function give back if it has no return statement?"
+      options: ["0", "None", "An error", "The last value it worked out"]
+      answer: 1
+      why: "Reaching the end of a function without return hands back None."
+    - question: "What is the type of \"7\"?"
+      options: ["A whole number", "A decimal", "Text", "True or False"]
+      answer: 2
+      why: "Quotes make it text, however much it looks like a number."
+
+variables-io:
+  why: "Programs are useful when they respond to input and do arithmetic correctly. Most real bugs at this stage come from treating text as a number, or from a misunderstanding about division or operator order."
+  definitions:
+    - {term: "Input", meaning: "Data a program reads while it runs. input() always gives back text."}
+    - {term: "Operator", meaning: "A symbol that combines values, such as +, *, //, % or ==."}
+    - {term: "Conversion", meaning: "Making a new value of another type, as int(\"5\") does."}
+    - {term: "Precedence", meaning: "The order Python applies operators in. * happens before +."}
+  how_it_works:
+    - "input() reads one line and gives it back as text, without the line ending."
+    - "Convert the text with int() or float() before doing arithmetic with it."
+    - "Python applies brackets first, then **, then * / // %, then + and -."
+    - "print() shows values on screen. It does not hand anything back to your code."
+  diagram:
+    caption: "Input arrives as text, so convert it, work with it, then show it."
+    text: |
+      "7"  --int()-->  7  --n * 2-->  14  --print()-->  14
+      text            number          number            on screen
+  edge_cases:
+    - "input() gives \"7\", not 7, even when the user typed a number."
+    - "/ always gives a decimal, so 6 / 2 is 3.0. Use // for a whole number."
+    - "// and % round towards negative infinity, so -7 // 2 is -4."
+    - "Decimals are approximate, so 0.1 + 0.2 is not exactly 0.3."
+  complexity:
+    - {operation: "Arithmetic on ordinary numbers", cost: "Constant time, O(1)"}
+  when_to_use:
+    - "Use // and % when you need whole groups and what is left over, such as minutes and seconds."
+    - "Use an f-string when you need to mix values into text."
+  related: [python-basics, conditionals, strings]
+  summary: "input() gives text, so convert it. // divides to a whole number, % gives the remainder, and an f-string places values in text."
+  glossary:
+    - {term: "Integer", meaning: "A whole number, of type int."}
+    - {term: "Float", meaning: "A number with a decimal part, of type float."}
+    - {term: "Floor division", meaning: "Division with //, which rounds down to a whole number."}
+    - {term: "Modulo", meaning: "The remainder after division, written %."}
+    - {term: "F-string", meaning: "Text starting with f, where values go inside curly brackets."}
+  checks:
+    - question: "What is 17 % 5?"
+      options: ["3", "2", "3.4", "12"]
+      answer: 1
+      why: "17 is three fives with 2 left over, and % gives what is left over."
+    - question: "What does 2 + 3 * 4 give?"
+      options: ["20", "14", "24", "9"]
+      answer: 1
+      why: "Multiplication happens first, so it is 2 + 12."
+
+conditionals:
+  why: "Decisions are what let a program do different things for different inputs. Almost every problem has a case that must be treated differently, so getting conditions exactly right matters."
+  definitions:
+    - {term: "Condition", meaning: "An expression Python treats as true or false."}
+    - {term: "Branch", meaning: "One of the blocks that may run, depending on a condition."}
+    - {term: "Boolean", meaning: "The values True and False."}
+    - {term: "Truthy and falsy", meaning: "Empty things and zero count as false in a condition, and most other values count as true."}
+  how_it_works:
+    - "Python checks the if condition first, and runs its block if it is true."
+    - "Otherwise it checks each elif in order, and runs the first one that is true."
+    - "If none is true, the else block runs, when there is one."
+    - "At most one branch of an if / elif / else chain runs."
+    - "and stops early when the left side is false. or stops early when the left side is true."
+  diagram:
+    caption: "Only one path through a chain runs, and the order of the checks matters."
+    text: |
+      score >= 90 ? --yes--> "A"
+           | no
+      score >= 70 ? --yes--> "B"
+           | no
+         else ------------> "C"
+  edge_cases:
+    - "Check the exact boundary: should 90 itself count as an A?"
+    - "Order matters. Checking score >= 70 first would send every A to B."
+    - "x == 1 or 2 is always true. Write x == 1 or x == 2, or x in (1, 2)."
+  complexity:
+    - {operation: "Checking a condition", cost: "Constant time, O(1), for simple comparisons"}
+  when_to_use:
+    - "Use if / elif / else when exactly one of several outcomes applies."
+    - "Use separate if statements when several things could each be true."
+    - "Use and / or to combine conditions, rather than nesting when you can."
+  related: [variables-io, loops]
+  summary: "A chain runs its first true branch and no others, so put the most specific check first and test the exact boundaries."
+  glossary:
+    - {term: "Comparison operator", meaning: "==, !=, <, <=, > or >=, which give True or False."}
+    - {term: "Logical operator", meaning: "and, or and not, which combine conditions."}
+    - {term: "Nested condition", meaning: "An if inside another if."}
+    - {term: "Short-circuit", meaning: "Stopping as soon as the overall answer is known."}
+  checks:
+    - question: "Which is the right way to check that x is 1 or 2?"
+      options: ["x == 1 or 2", "x == 1 or x == 2", "x == (1 or 2)", "x = 1 or x = 2"]
+      answer: 1
+      why: "Each side of or must be a full condition. A bare 2 is always true."
+    - question: "How many branches of an if / elif / else chain can run?"
+      options: ["All of them", "At most one", "Exactly two", "As many as are true"]
+      answer: 1
+      why: "Python stops at the first true branch and skips the rest."
+
+loops:
+  why: "Loops are how a short program does a lot of work. Most algorithms in this course are loops with something tracked along the way, so the patterns here return in every later topic."
+  definitions:
+    - {term: "Iteration", meaning: "One pass through the body of a loop."}
+    - {term: "for loop", meaning: "Takes each item from a sequence in turn."}
+    - {term: "while loop", meaning: "Repeats for as long as a condition stays true."}
+    - {term: "Accumulator", meaning: "A variable, such as a running total, that builds up the answer across passes."}
+  how_it_works:
+    - "Set up what you need to track before the loop starts."
+    - "For a for loop, Python takes the next item and runs the body, until none are left."
+    - "For a while loop, Python checks the condition before each pass, and something inside must eventually make it false."
+    - "break leaves the loop at once. continue skips to the next pass."
+    - "After the loop, use what you tracked. A return in the middle ends the whole function."
+  diagram:
+    caption: "range stops before its second value, so the last number is not included."
+    text: |
+      range(1, 5)  gives   1   2   3   4
+                           ^           ^
+                         start      stop - 1
+  edge_cases:
+    - "An empty sequence means the loop body never runs, so the starting value is your answer."
+    - "range(a, b) stops before b, which is the cause of most off-by-one mistakes."
+    - "A while loop that never changes its condition never ends."
+    - "Do not add or remove items from a list while looping over it."
+  complexity:
+    - {operation: "A single loop over n items", cost: "O(n) time"}
+    - {operation: "A loop inside a loop", cost: "O(n²) time, which gets slow quickly"}
+  when_to_use:
+    - "Use for when you know what you are going through."
+    - "Use while when you repeat until something happens, and cannot say how many passes that takes."
+  related: [conditionals, functions, lists-dicts]
+  summary: "Set up, loop, update, then use the result. Check the first and last passes by hand, because boundaries are where loops go wrong."
+  glossary:
+    - {term: "Loop variable", meaning: "The name in a for line that takes each item."}
+    - {term: "Off-by-one error", meaning: "A loop that runs one time too many or too few."}
+    - {term: "Infinite loop", meaning: "A loop whose condition never becomes false."}
+    - {term: "Sentinel", meaning: "A special value that signals when to stop."}
+  checks:
+    - question: "Which numbers does range(2, 5) give?"
+      options: ["2, 3, 4, 5", "2, 3, 4", "3, 4, 5", "2, 5"]
+      answer: 1
+      why: "range starts at 2 and stops before 5."
+    - question: "What must a while loop do to be able to end?"
+      options: ["Use break", "Change something its condition depends on", "Print something", "Use range"]
+      answer: 1
+      why: "If nothing the condition depends on changes, it will never become false. A break also works, but it is not required."
+
+functions:
+  why: "Functions let you solve a problem once, name the solution, and use it anywhere. They are how large programs stay understandable, and how every problem in this course is checked."
+  definitions:
+    - {term: "Parameter", meaning: "A name on the def line that receives a value."}
+    - {term: "Return value", meaning: "The value a function hands back to whoever called it."}
+    - {term: "Scope", meaning: "Where a name can be seen. Names created inside a function stay inside it."}
+    - {term: "Helper function", meaning: "A small function that does one job for another function."}
+  how_it_works:
+    - "def stores the function under its name. Nothing in the body runs yet."
+    - "A call creates fresh local names, and copies each argument to its parameter."
+    - "The body runs until it reaches return, or falls off the end and gives back None."
+    - "The local names disappear, and the returned value goes to the caller."
+  diagram:
+    caption: "Values move through parameters and return, and not through shared names."
+    text: |
+      caller                 function
+      -------                --------
+      area(3, 4)  -- 3, 4 --> def area(w, h):
+                                  return w * h
+      12  <------- 12 ---------
+  edge_cases:
+    - "print shows a value but return hands it back. The tests read what is returned."
+    - "A default like items=[] is shared between calls. Use items=None instead."
+    - "Lists passed in can be changed by the function, while numbers and text cannot."
+    - "Code after a return in the same block never runs."
+  complexity:
+    - {operation: "Calling a function", cost: "The cost of its body, plus a very small overhead"}
+  when_to_use:
+    - "Write a helper when a step has a clear name, or you need it twice."
+    - "Prefer returning a value over changing outside state, because it is easier to test."
+  related: [python-basics, recursion]
+  summary: "Parameters bring values in, return sends one out, and everything else stays private to the function."
+  glossary:
+    - {term: "Local variable", meaning: "A name created inside a function."}
+    - {term: "Keyword argument", meaning: "An argument passed by name, as in greet(name=\"A\")."}
+    - {term: "Default value", meaning: "A value a parameter uses when none is passed."}
+    - {term: "Higher-order function", meaning: "A function that takes or returns another function."}
+    - {term: "Lambda", meaning: "A small function written on one line with no name."}
+  checks:
+    - question: "A function prints a value and has no return. What does the caller receive?"
+      options: ["The printed value", "None", "An error", "The text that was printed"]
+      answer: 1
+      why: "print only shows it on screen, so the function still gives back None."
+    - question: "Can code outside a function read its local variables?"
+      options: ["Yes, always", "Only after it has been called", "No, unless the value is returned", "Only if they are numbers"]
+      answer: 2
+      why: "Local names exist only inside the function, so values leave through return."
+
+strings:
+  why: "Text is everywhere, and string problems teach indexing, slicing and building results carefully. These same ideas apply directly to lists."
+  definitions:
+    - {term: "String", meaning: "An ordered sequence of characters."}
+    - {term: "Index", meaning: "A position, starting from 0. Negative positions count from the end."}
+    - {term: "Slice", meaning: "A new string taken from part of another, as in s[a:b]."}
+    - {term: "Immutable", meaning: "Fixed once created. String methods give back new strings."}
+  how_it_works:
+    - "s[i] reads one character. s[-1] reads the last one."
+    - "s[a:b] takes from position a up to, but not including, position b."
+    - "s[::-1] walks backwards, which makes a reversed copy."
+    - "Methods like .upper() and .replace() make a new string, so store the result."
+  diagram:
+    caption: "Positions sit between 0 and len - 1, or count back from -1."
+    text: |
+      index:      0   1   2   3   4   5
+                  p   y   t   h   o   n
+      from end:  -6  -5  -4  -3  -2  -1
+  edge_cases:
+    - "An empty string has no valid positions, so s[0] is an error, while s[0:1] is just empty."
+    - "Slices never raise an error for positions out of range."
+    - "Comparisons are exact, so \"A\" and \"a\" differ."
+    - "Spaces count as characters."
+  complexity:
+    - {operation: "Reading s[i] or len(s)", cost: "O(1)"}
+    - {operation: "Slicing, .replace, or x in s", cost: "O(n)"}
+    - {operation: "Building text with += in a loop", cost: "Can reach O(n²). Collect pieces and use join."}
+  when_to_use:
+    - "Use slicing to take part of a string, without writing a loop."
+    - "Use join when building a string from many pieces."
+  related: [lists-dicts, loops, hashing]
+  summary: "Strings are indexed from 0 and cannot be changed, so methods give back new strings. Collect pieces in a list and use join."
+  glossary:
+    - {term: "Substring", meaning: "A stretch of characters inside a string."}
+    - {term: "Palindrome", meaning: "Text that reads the same backwards."}
+    - {term: "Concatenation", meaning: "Joining strings with +."}
+    - {term: "Whitespace", meaning: "Spaces, tabs and line endings."}
+  checks:
+    - question: "What is \"python\"[1:4]?"
+      options: ["pyt", "yth", "ytho", "thon"]
+      answer: 1
+      why: "It takes positions 1, 2 and 3, and stops before 4."
+    - question: "After t = s.upper(), what is s?"
+      options: ["Upper case", "Unchanged", "Empty", "An error"]
+      answer: 1
+      why: "Strings cannot be changed in place, so only t holds the new text."
+
+lists-dicts:
+  why: "Lists and dictionaries hold almost all the data real programs work with. Knowing which to choose, and what each operation costs, often decides whether a solution is simple and fast."
+  definitions:
+    - {term: "List", meaning: "An ordered, changeable sequence, reached by position."}
+    - {term: "Dictionary", meaning: "A collection of key and value pairs, reached by key."}
+    - {term: "Comprehension", meaning: "A short way to build a list from a loop, as in [x * 2 for x in items]."}
+    - {term: "Key", meaning: "The name used to look up a value. It must be something that cannot change."}
+  how_it_works:
+    - "A list stores items in order, so finding one by value means looking through it."
+    - "A dictionary works out directly where a key lives, so looking it up takes about the same time at any size."
+    - "Reading a missing key is an error, so use key in d or d.get(key, default)."
+    - "Assigning a list to another name does not copy it. Both names refer to the same list."
+  diagram:
+    caption: "A list is found by position, and a dictionary by key."
+    text: |
+      list:  [ "a", "b", "c" ]         items[1]   gives "b"
+                0    1    2
+      dict:  { "ann": 90, "bo": 72 }   scores["bo"]  gives 72
+  edge_cases:
+    - "An empty list has no first item, so check before reading items[0]."
+    - "[[0] * 3] * 2 makes two names for one inner list. Use a comprehension for grids."
+    - ".sort() changes the list and returns None, while sorted() gives back a new one."
+    - "Reading a missing key raises KeyError."
+  complexity:
+    - {operation: "List: items[i], append, pop from the end", cost: "O(1)"}
+    - {operation: "List: x in items, insert or pop at the front", cost: "O(n)"}
+    - {operation: "Dictionary: read, write, or key in d", cost: "About O(1)"}
+  when_to_use:
+    - "Use a list when order matters, or you go through everything."
+    - "Use a dictionary when you look things up by a key, or count things."
+  related: [loops, hashing, strings]
+  summary: "Lists are for order, and dictionaries are for lookup. Know that .sort() returns None and that assignment does not copy."
+  glossary:
+    - {term: "Mutable", meaning: "Can be changed after it is created. Lists and dictionaries are."}
+    - {term: "Alias", meaning: "A second name for the same object."}
+    - {term: "Matrix", meaning: "A list of lists, used like a grid."}
+    - {term: "Tuple", meaning: "An ordered sequence that cannot be changed."}
+  checks:
+    - question: "What does x = items.sort() store in x?"
+      options: ["The sorted list", "None", "The original list", "An error"]
+      answer: 1
+      why: ".sort() changes the list in place and returns None. Use sorted(items) for a new list."
+    - question: "Which is fastest for checking whether a word was seen before, with many words?"
+      options: ["A list", "A string", "A dictionary or set", "A nested loop"]
+      answer: 2
+      why: "Dictionaries and sets check membership in about constant time, and lists look through every item."
+
+recursion:
+  why: "Some problems are naturally made of smaller copies of themselves. Recursion expresses these directly, and it is the basis of trees, graphs, backtracking and dynamic programming."
+  definitions:
+    - {term: "Recursion", meaning: "A function solving a problem by calling itself on a smaller version."}
+    - {term: "Base case", meaning: "The smallest input, answered directly with no further call."}
+    - {term: "Recursive case", meaning: "The step that reduces the problem and calls itself."}
+    - {term: "Call stack", meaning: "The pile of calls waiting for their answers."}
+  how_it_works:
+    - "Write the base case first, for the smallest input."
+    - "Assume the call on a smaller input already works."
+    - "Use that answer to build the answer for the current input."
+    - "Check that every call moves closer to the base case."
+  diagram:
+    caption: "Calls go down to the base case, and answers come back up."
+    text: |
+      fact(3) = 3 * fact(2)        down
+      fact(2) = 2 * fact(1)         |
+      fact(1) = 1                   v  base case
+      fact(2) = 2 * 1 = 2           ^
+      fact(3) = 3 * 2 = 6           |  up
+  edge_cases:
+    - "A missing base case, or one that is never reached, gives RecursionError."
+    - "Python allows about 1,000 nested calls, so very deep recursion fails."
+    - "Check the empty and smallest inputs."
+    - "Repeating the same sub-problem can make it extremely slow, as a plain Fibonacci does."
+  complexity:
+    - {operation: "One call per item", cost: "O(n) time and O(n) stack space"}
+    - {operation: "Halving each time", cost: "O(log n) calls"}
+    - {operation: "Two calls that shrink by one", cost: "O(2^n), which is very slow"}
+  when_to_use:
+    - "Use it when a problem contains smaller copies of itself, such as trees."
+    - "Use a loop when you are only going through a sequence and depth may be large."
+  related: [functions, trees, dynamic-programming]
+  summary: "Base case first, then a smaller call, then combine. Trust the smaller call rather than tracing every level."
+  glossary:
+    - {term: "Stack overflow", meaning: "Running out of room for waiting calls. Python raises RecursionError."}
+    - {term: "Backtracking", meaning: "Trying a choice, exploring it, then undoing it to try another."}
+    - {term: "Divide and conquer", meaning: "Splitting a problem into parts, solving each, then combining them."}
+    - {term: "Memoisation", meaning: "Storing results so a repeated call returns at once."}
+  checks:
+    - question: "What happens without a base case?"
+      options: ["It returns None", "It keeps calling until Python raises RecursionError", "It returns 0", "Python fixes it"]
+      answer: 1
+      why: "Nothing stops the calls, so Python gives up at its limit."
+    - question: "When writing a recursive function, what should you do with the smaller call?"
+      options: ["Trace every level by hand", "Assume it works, and use its answer", "Avoid using its answer", "Call it twice"]
+      answer: 1
+      why: "Trusting it keeps the reasoning to one level. Tracing is for checking afterwards."
+
+searching-sorting:
+  why: "Searching and sorting are the classic ways to make slow programs fast. Sorted data lets you find things in a handful of steps, and many harder problems become easy once the data is sorted."
+  definitions:
+    - {term: "Linear search", meaning: "Checking items one at a time."}
+    - {term: "Binary search", meaning: "Halving a sorted range by comparing with the middle."}
+    - {term: "Stable sort", meaning: "A sort that keeps equal items in their original order, as Python's does."}
+    - {term: "Sort key", meaning: "A function that gives what to compare for each item."}
+  how_it_works:
+    - "For binary search, keep two ends, low and high."
+    - "Look at the middle. If it is too small, move low past it. If it is too large, move high before it."
+    - "Stop when you find it, or when the range is empty."
+    - "Sort with sorted(items, key=...) and, for your own version, repeatedly split or swap."
+  diagram:
+    caption: "Each comparison throws away half of what is left."
+    text: |
+      find 7 in  1  3  5  7  9  11  13
+                 low      mid        high     7 == 7, found
+      for 9:              mid=7 too small
+                             low=9  mid=11 too large
+                             low=9  high=9   found
+  edge_cases:
+    - "Binary search only works on sorted data."
+    - "An empty list and a one-item list are the usual failures."
+    - "Duplicates: decide whether you want the first match, the last, or any."
+    - "Update low and high past the middle, or the search may never end."
+  complexity:
+    - {operation: "Linear search", cost: "O(n)"}
+    - {operation: "Binary search", cost: "O(log n)"}
+    - {operation: "Bubble, selection or insertion sort", cost: "O(n²)"}
+    - {operation: "Merge sort, or Python's sorted()", cost: "O(n log n)"}
+  when_to_use:
+    - "Use binary search on sorted data, or when an answer range has a clear yes or no boundary."
+    - "Sort first when it makes the rest of the problem simpler."
+  related: [arrays-two-pointers, recursion, hashing]
+  summary: "Sorted data allows O(log n) search. sorted() costs O(n log n) and is usually worth it, and a key function decides the order."
+  glossary:
+    - {term: "Time complexity", meaning: "How the number of steps grows with the size of the input."}
+    - {term: "Big O", meaning: "A way to write that growth, ignoring small details, such as O(n)."}
+    - {term: "Space complexity", meaning: "How much extra memory grows with the size of the input."}
+    - {term: "Pivot", meaning: "The value a partition step compares others with."}
+    - {term: "In place", meaning: "Using no significant extra memory."}
+  extra_sections:
+    - id: time-complexity
+      title: "Time complexity: how fast is it?"
+      body: |
+        **Time complexity** describes how the number of steps grows as the input grows. It lets you compare approaches without running them. We write it in **Big O**, which keeps only the part that matters when the input is large.
+
+        | Name | Written | With 1,000 items | Typical example |
+        |---|---|---|---|
+        | Constant | O(1) | 1 step | `items[i]`, reading a dictionary |
+        | Logarithmic | O(log n) | about 10 steps | Binary search |
+        | Linear | O(n) | 1,000 steps | One loop |
+        | Linearithmic | O(n log n) | about 10,000 steps | `sorted()` |
+        | Quadratic | O(n²) | 1,000,000 steps | A loop inside a loop |
+        | Exponential | O(2ⁿ) | Too many to finish | Trying every subset |
+
+        As a rough guide, Python does around ten million simple steps a second. **Space complexity** asks the same question about extra memory, so a new list of n items costs O(n) space.
+      examples:
+        - title: Counting the steps
+          code: |
+            def steps_in_one_loop(n):
+                steps = 0
+                for _ in range(n):
+                    steps += 1
+                return steps
+
+            def steps_in_two_loops(n):
+                steps = 0
+                for _ in range(n):
+                    for _ in range(n):
+                        steps += 1
+                return steps
+
+            print(steps_in_one_loop(100))
+            print(steps_in_two_loops(100))
+          note: Making the input 10 times larger makes the first 10 times slower, and the second 100 times slower.
+  checks:
+    - question: "About how many steps does binary search need for one million sorted items?"
+      options: ["About 20", "About 1,000", "About 500,000", "One million"]
+      answer: 0
+      why: "Each step halves the range, and two multiplied by itself 20 times is about a million."
+    - question: "What does a key function do in sorted(words, key=len)?"
+      options: ["Removes short words", "Decides what to compare for each item", "Counts the words", "Sorts by the alphabet only"]
+      answer: 1
+      why: "Each word is compared by its length, while the words themselves are what get returned."
+
+arrays-two-pointers:
+  why: "These techniques turn a nested loop into a single pass. Spotting them is one of the most common steps from a working solution to a fast one, and they appear constantly in interview problems."
+  definitions:
+    - {term: "Two pointers", meaning: "Two positions moving through a sequence, often from both ends."}
+    - {term: "Sliding window", meaning: "A stretch of items that grows and shrinks as it moves."}
+    - {term: "Prefix sum", meaning: "A running total, so any range's sum takes one subtraction."}
+    - {term: "Subarray", meaning: "A connected stretch of items."}
+  how_it_works:
+    - "Ask what a nested loop is recomputing, and whether you could keep it up to date instead."
+    - "With sorted data and two ends, each comparison rules out at least one item."
+    - "With a window, add the item entering on the right, and remove items leaving on the left."
+    - "With prefix sums, store totals once, then answer each range in constant time."
+  diagram:
+    caption: "A window moves by adding one item on the right, and removing one on the left."
+    text: |
+      nums:   2  1  5  1  3  2
+              [ window ]           sum = 8
+                 [ window ]        sum = 8 - 2 + 1 = 7
+                    [ window ]     sum = 7 - 1 + 3 = 9
+  edge_cases:
+    - "A window larger than the list, or an empty list."
+    - "All negative numbers, which affects a running best."
+    - "Two pointers from both ends need sorted data, unless the problem compares the ends directly."
+    - "i < j or i <= j? Decide whether a position can be used twice."
+  complexity:
+    - {operation: "Checking every pair", cost: "O(n²)"}
+    - {operation: "Two pointers or a sliding window", cost: "O(n) time and O(1) space"}
+    - {operation: "Building prefix sums", cost: "O(n), then O(1) per range"}
+  when_to_use:
+    - "Two ends: sorted data, or pairs and palindromes."
+    - "Sliding window: the best connected stretch, or a fixed length."
+    - "Prefix sums: many range-total questions."
+  related: [searching-sorting, hashing, lists-dicts]
+  summary: "Stop recomputing. Move a pointer, adjust a window, or subtract two prefix sums, and an O(n²) search often becomes O(n)."
+  glossary:
+    - {term: "In-place update", meaning: "Changing a list where it is, without making another."}
+    - {term: "Kadane's algorithm", meaning: "Finding the best connected sum by deciding at each item whether to extend or restart."}
+    - {term: "Invariant", meaning: "Something that stays true on every pass, such as all items left of i being processed."}
+  checks:
+    - question: "Why can two pointers from both ends rule out items on sorted data?"
+      options: ["Because the list is short", "Because a too-small sum can only grow by moving the left pointer", "Because it checks every pair", "Because of hashing"]
+      answer: 1
+      why: "Sorting means moving left increases the sum and moving right decreases it, so each step discards a whole set of pairs."
+    - question: "What does a sliding window avoid?"
+      options: ["Using a loop", "Recomputing the whole stretch each time", "Using any memory", "Sorting"]
+      answer: 1
+      why: "It keeps the window's value up to date by adjusting only what changed."
+
+hashing:
+  why: "Hashing swaps memory for speed. A set or dictionary answers \"have I seen this?\" almost instantly, which turns many slow nested loops into one simple pass."
+  definitions:
+    - {term: "Hash", meaning: "A number worked out from a value, which says where to store it."}
+    - {term: "Set", meaning: "A collection of unique items with fast membership checks."}
+    - {term: "Frequency map", meaning: "A dictionary from each item to how many times it appears."}
+    - {term: "Complement", meaning: "The other value that, with this one, makes the target."}
+  how_it_works:
+    - "Python hashes the key to find where it belongs, so it does not search."
+    - "As you go through the data, record what you have seen."
+    - "Before recording an item, ask whether what you need is already recorded."
+    - "Only values that cannot change can be keys, so use a tuple rather than a list."
+  diagram:
+    caption: "Looking for a pair that sums to 9: check first, and then record."
+    text: |
+      nums = 2  7  11       target = 9
+      see 2: need 7, seen {}          record 2
+      see 7: need 2, seen {2}         found 2 + 7
+  edge_cases:
+    - "Check before recording, or an item could pair with itself."
+    - "Sets lose order and duplicates, so do not use one if you need those."
+    - "Lists cannot be keys. Convert to a tuple first."
+    - "Empty input should give back an empty result, not an error."
+  complexity:
+    - {operation: "Set or dictionary read and write", cost: "About O(1)"}
+    - {operation: "Checking x in a list", cost: "O(n)"}
+    - {operation: "One pass with a set", cost: "O(n) time and O(n) space"}
+  when_to_use:
+    - "When you ask whether you have seen something before."
+    - "When counting items, or grouping them by a property."
+  related: [lists-dicts, arrays-two-pointers, strings]
+  summary: "Sets answer \"seen it?\" and dictionaries answer \"how many?\" or \"where?\", both in about constant time, at the cost of extra memory."
+  glossary:
+    - {term: "Collision", meaning: "Two keys hashing to the same place, which Python handles for you."}
+    - {term: "Hashable", meaning: "Able to be a key, because its value cannot change."}
+    - {term: "Counter", meaning: "A dictionary made for counting, from the collections module."}
+    - {term: "defaultdict", meaning: "A dictionary that creates a starting value for a missing key."}
+  checks:
+    - question: "Which can be a dictionary key?"
+      options: ["A list", "A tuple of numbers", "A dictionary", "A set"]
+      answer: 1
+      why: "Keys must not change. A tuple of numbers cannot, and the others can."
+    - question: "What is the trade-off when using a set to find duplicates?"
+      options: ["More time, less memory", "Less time, more memory", "Less time, less memory", "No change"]
+      answer: 1
+      why: "One pass is fast, because the set remembers what it has seen, and that memory is the cost."
+
+stacks-queues:
+  why: "Many problems have a natural order of handling things: most recent first, or oldest first. Choosing the right structure makes matching brackets, undo, and level-by-level search simple."
+  definitions:
+    - {term: "Stack", meaning: "Last in, first out, like a pile of plates."}
+    - {term: "Queue", meaning: "First in, first out, like people in a line."}
+    - {term: "Deque", meaning: "A double-ended queue, fast to add and remove at both ends."}
+    - {term: "Monotonic stack", meaning: "A stack kept in sorted order, to find the next larger or smaller value."}
+  how_it_works:
+    - "A stack in Python is a list, using append and pop at the end."
+    - "A queue is collections.deque, using append and popleft."
+    - "Use a stack when the most recent unfinished thing must be dealt with first."
+    - "Use a queue when things must be handled in the order they arrived."
+  diagram:
+    caption: "Both add at one end. They differ in which end they remove from."
+    text: |
+      stack:  push -->  [ a  b  c ]  --> pop gives c
+      queue:  push -->  [ a  b  c ]
+                 popleft gives a  <--
+  edge_cases:
+    - "Popping from an empty stack raises IndexError, so check first."
+    - "A closing bracket may arrive when the stack is empty."
+    - "After the input ends, something may still be left on the stack."
+    - "list.pop(0) works, but costs O(n) each time."
+  complexity:
+    - {operation: "Stack push and pop", cost: "O(1)"}
+    - {operation: "deque append and popleft", cost: "O(1)"}
+    - {operation: "list.pop(0)", cost: "O(n)"}
+    - {operation: "Monotonic stack over n items", cost: "O(n) total"}
+  when_to_use:
+    - "Stack: matching pairs, undo, or the next greater item."
+    - "Queue: handling things in order, or breadth-first search."
+  related: [lists-dicts, graphs, trees]
+  summary: "Most recent first means a stack, and oldest first means a queue. Use deque for queues, because list.pop(0) is slow."
+  glossary:
+    - {term: "LIFO", meaning: "Last in, first out."}
+    - {term: "FIFO", meaning: "First in, first out."}
+    - {term: "Push", meaning: "Add an item to a stack."}
+    - {term: "Pop", meaning: "Remove the most recent item from a stack."}
+    - {term: "Amortised", meaning: "Averaged across all operations, even if a few cost more."}
+  checks:
+    - question: "Which suits checking that brackets match?"
+      options: ["A queue", "A stack", "A sorted list", "A set"]
+      answer: 1
+      why: "The most recent opening bracket must close first, which is exactly last in, first out."
+    - question: "Why use deque for a queue rather than a list?"
+      options: ["It keeps items sorted", "Removing from the front is O(1) rather than O(n)", "It uses no memory", "Lists cannot hold many items"]
+      answer: 1
+      why: "A list must shift every item when the first is removed."
+
+linked-lists:
+  why: "Linked lists teach you to think about references: names that point at things. That understanding is what makes trees and graphs make sense, and it explains why changing a link in the wrong order loses data."
+  definitions:
+    - {term: "Node", meaning: "One item, holding a value and a reference to the next node."}
+    - {term: "Head", meaning: "The first node. Losing it means losing the list."}
+    - {term: "None", meaning: "What the last node's next points to, and what an empty list is."}
+    - {term: "Dummy head", meaning: "A placeholder node in front of the list, which makes the first node simpler to handle."}
+  how_it_works:
+    - "Move through the list with current = current.next, until current is None."
+    - "Reach any position by following links, because there is no direct indexing."
+    - "To change a link, first save anything you still need."
+    - "Return the new head, because the first node may have changed."
+  diagram:
+    caption: "To reverse one link, save next first, or you lose the rest of the list."
+    text: |
+      head
+       v
+       1 --> 2 --> 3 --> None
+
+      prev  curr  next
+      None   1 --> 2 --> 3
+      None <-1     2 --> 3
+  edge_cases:
+    - "An empty list: head is None, so head.next is an error."
+    - "A single node."
+    - "Removing the first node, which is why a dummy head helps."
+    - "Check current is not None before reading current.next."
+  complexity:
+    - {operation: "Reach position k", cost: "O(k)"}
+    - {operation: "Add or remove when you hold the node before it", cost: "O(1)"}
+    - {operation: "Reverse, or find the middle", cost: "O(n) time and O(1) space"}
+  when_to_use:
+    - "In practice, Python lists are usually better. Linked lists suit many inserts and removals in the middle."
+    - "Learn them because the same reference thinking carries over to trees and graphs."
+  related: [stacks-queues, trees, recursion]
+  summary: "A node holds a value and a link. Save what you need before changing a link, watch for None, and return the head."
+  glossary:
+    - {term: "Reference", meaning: "A name or attribute pointing to an object."}
+    - {term: "Singly linked", meaning: "Each node links only to the next one."}
+    - {term: "Cycle", meaning: "A chain that loops back on itself, so it has no end."}
+    - {term: "Fast and slow pointers", meaning: "Two references moving at different speeds, to find a middle or a cycle."}
+  checks:
+    - question: "When reversing a list, why save current.next before changing it?"
+      options: ["For speed", "Otherwise the rest of the list is lost", "Python requires it", "To count nodes"]
+      answer: 1
+      why: "Once current.next is changed, nothing else points to the next node."
+    - question: "What is head when a linked list is empty?"
+      options: ["0", "None", "An empty node", "An error"]
+      answer: 1
+      why: "No nodes exist, so there is nothing for head to point to."
+
+trees:
+  why: "Trees model anything hierarchical, such as folders, web pages and decisions. Almost every tree problem has the same short shape, and once you see it, a large family of problems becomes approachable."
+  definitions:
+    - {term: "Root", meaning: "The node at the top."}
+    - {term: "Leaf", meaning: "A node with no children."}
+    - {term: "Height", meaning: "The number of levels from a node down to its deepest leaf."}
+    - {term: "Binary search tree", meaning: "A tree where left values are smaller, and right values are larger."}
+  how_it_works:
+    - "Handle the empty tree first: if node is None, return the base answer."
+    - "Get the answers from the left and right subtrees by recursion."
+    - "Combine them with this node's value."
+    - "For level-by-level work, use a queue instead."
+  diagram:
+    caption: "Depth-first goes down a branch first. Breadth-first goes level by level."
+    text: |2
+              1
+             / \
+            2   3
+           / \
+          4   5
+      depth-first (pre-order):  1 2 4 5 3
+      breadth-first:            1 2 3 4 5
+  edge_cases:
+    - "An empty tree, where the root is None."
+    - "A tree with one node."
+    - "A very lopsided tree, which behaves like a list and can be deep."
+    - "A path to a leaf is not the same as a path to any node."
+  complexity:
+    - {operation: "Visiting every node", cost: "O(n) time, O(h) stack space for height h"}
+    - {operation: "Search in a balanced binary search tree", cost: "O(log n)"}
+    - {operation: "Search in a lopsided tree", cost: "O(n)"}
+  when_to_use:
+    - "Use depth-first recursion for properties that come from the children."
+    - "Use breadth-first when levels or the shortest distance matter."
+  related: [recursion, graphs, stacks-queues]
+  summary: "If the node is None, return the base answer. Otherwise ask the left, ask the right, and combine."
+  glossary:
+    - {term: "Subtree", meaning: "A node and everything beneath it."}
+    - {term: "In-order", meaning: "Left, node, right. It gives a binary search tree's values in sorted order."}
+    - {term: "Pre-order", meaning: "Node, left, right."}
+    - {term: "Post-order", meaning: "Left, right, node."}
+    - {term: "Balanced", meaning: "Left and right sides have similar heights."}
+  checks:
+    - question: "What should a tree function usually check first?"
+      options: ["Whether the node is a leaf", "Whether the node is None", "The height", "The right child"]
+      answer: 1
+      why: "Empty subtrees are reached on every path, so this is the base case."
+    - question: "Which traversal gives a binary search tree's values in sorted order?"
+      options: ["Pre-order", "In-order", "Post-order", "Breadth-first"]
+      answer: 1
+      why: "Everything left is smaller and everything right is larger, so left, node, right is sorted."
+
+graphs:
+  why: "Graphs model connections: roads, friendships, dependencies, and even grids. Most graph problems come down to the same two searches plus one extra idea: remember where you have already been."
+  definitions:
+    - {term: "Node", meaning: "A thing in the graph, also called a vertex."}
+    - {term: "Edge", meaning: "A connection between two nodes."}
+    - {term: "Adjacency list", meaning: "A dictionary from each node to its neighbours."}
+    - {term: "Visited set", meaning: "The nodes already seen, which stops you looping forever."}
+  how_it_works:
+    - "Store the graph as a dictionary of neighbours."
+    - "Start from a node, and mark it visited."
+    - "Take a node from your stack or queue, and look at each neighbour."
+    - "If a neighbour is unvisited, mark it and add it."
+    - "A queue gives shortest paths when edges are equal, and a stack or recursion goes deep first."
+  diagram:
+    caption: "Breadth-first search spreads outward, one distance at a time."
+    text: |
+      A --- B --- D
+      |           |
+      C --------- E
+
+      from A:  distance 1: B, C
+               distance 2: D, E
+  edge_cases:
+    - "Disconnected graphs: one search will not reach everything."
+    - "Cycles, which is why you need a visited set."
+    - "A start with no neighbours, or a target that cannot be reached."
+    - "Mark nodes when you add them, not when you take them out, or they may be added twice."
+  complexity:
+    - {operation: "Breadth-first or depth-first search", cost: "O(V + E) time and O(V) space"}
+    - {operation: "Topological order", cost: "O(V + E)"}
+  when_to_use:
+    - "Use breadth-first search for the fewest steps."
+    - "Use depth-first search to explore everything, or to find connected groups."
+    - "Use topological order when tasks depend on other tasks."
+  related: [trees, stacks-queues, hashing]
+  summary: "Neighbours in a dictionary, a visited set, and either a queue or a stack. Mark nodes as soon as you add them."
+  glossary:
+    - {term: "Directed", meaning: "Edges go one way."}
+    - {term: "Weighted", meaning: "Edges have a cost or length."}
+    - {term: "Connected component", meaning: "A group of nodes all reachable from one another."}
+    - {term: "Cycle", meaning: "A path that returns to where it started."}
+    - {term: "Topological order", meaning: "An order that puts each task after what it depends on."}
+  checks:
+    - question: "Which search finds the fewest steps between two nodes, when all edges count equally?"
+      options: ["Depth-first search", "Breadth-first search", "Binary search", "Either, always"]
+      answer: 1
+      why: "It reaches everything at distance 1 before distance 2, so the first time it arrives is the shortest."
+    - question: "What is the visited set for?"
+      options: ["Sorting the nodes", "Stopping the search from going round cycles forever", "Counting edges", "Storing the answer"]
+      answer: 1
+      why: "Without it, a cycle would send the search round and round."
+
+dynamic-programming:
+  why: "Some problems look exponential because the same smaller question is asked again and again. Answering each one only once makes them fast, and this is often what separates impossible from instant."
+  definitions:
+    - {term: "State", meaning: "What you need to know to describe one smaller question."}
+    - {term: "Recurrence", meaning: "How an answer is built from smaller answers."}
+    - {term: "Memoisation", meaning: "Top-down: recursion that stores each result."}
+    - {term: "Tabulation", meaning: "Bottom-up: filling a table from the smallest case."}
+  how_it_works:
+    - "Define the state in words: dp[i] means the answer for the first i items."
+    - "Work out the recurrence: how dp[i] comes from smaller states."
+    - "Set the base cases."
+    - "Fill in an order where everything you need is already computed."
+    - "Return the state that answers the whole problem."
+  diagram:
+    caption: "Fibonacci without memory repeats work, and a table computes each value once."
+    text: |
+      fib(5) calls fib(4) and fib(3)
+               fib(4) calls fib(3) again ...
+
+      table:  i     0  1  2  3  4  5
+              fib   0  1  1  2  3  5
+                    each = the two before it
+  edge_cases:
+    - "Zero items, or an empty string, is usually the base case."
+    - "Off-by-one between the table's size and the input's positions."
+    - "For 0/1 choices, going forward can use an item twice, unless you fill backwards."
+    - "Large tables can use a lot of memory, and often only the last row is needed."
+  complexity:
+    - {operation: "Plain recursion with overlapping calls", cost: "Often O(2^n)"}
+    - {operation: "With memory", cost: "Number of states times the work per state"}
+    - {operation: "Grid or two-string tables", cost: "O(n × m) time"}
+  when_to_use:
+    - "When a problem asks for the best way, or the number of ways, and choices overlap."
+    - "When recursion works but repeats the same calls."
+  related: [recursion, arrays-two-pointers, strings]
+  summary: "Define the state, write the recurrence, set the base case, and compute each state once."
+  glossary:
+    - {term: "Overlapping sub-problems", meaning: "The same smaller question is needed more than once."}
+    - {term: "Optimal substructure", meaning: "The best answer is built from best answers to smaller parts."}
+    - {term: "Top-down", meaning: "Start from the whole problem, using recursion and memory."}
+    - {term: "Bottom-up", meaning: "Start from the smallest cases, and build a table."}
+  checks:
+    - question: "What makes dynamic programming faster than plain recursion?"
+      options: ["It uses no memory", "Each smaller question is answered only once", "It avoids loops", "It sorts first"]
+      answer: 1
+      why: "Stored answers replace the repeated calls."
+    - question: "What should you define first?"
+      options: ["The size of the table", "What one state means, in words", "The final loop", "The return statement"]
+      answer: 1
+      why: "Once a state has a clear meaning, the recurrence usually follows from it."
+
+python-toolkit:
+  why: "Classes, exceptions and iterators are the tools you meet in real Python code. You can solve most problems here without them, but knowing them makes larger programs much easier to organise and to read."
+  definitions:
+    - {term: "Class", meaning: "A blueprint that bundles data and the functions that work on it."}
+    - {term: "Object", meaning: "One thing made from a class."}
+    - {term: "Exception", meaning: "A signal that something went wrong, which can be handled with try and except."}
+    - {term: "Generator", meaning: "A function using yield, which produces values one at a time."}
+  how_it_works:
+    - "__init__ runs when an object is created, and sets up its data on self."
+    - "try runs code that may fail, and except handles a specific kind of failure."
+    - "yield hands back a value and pauses, so the next request resumes from there."
+    - "import loads tools from the standard library, so you need not write them yourself."
+  diagram:
+    caption: "One class makes many objects, each with its own data."
+    text: |
+      class Counter
+         |-- a = Counter()   a.count = 3
+         |-- b = Counter()   b.count = 0
+  edge_cases:
+    - "A bare except hides real bugs. Catch only what you expect."
+    - "A generator can only be gone through once."
+    - "Forgetting self is the most common class mistake."
+    - "Mutable data on the class is shared. Set it in __init__ instead."
+  complexity:
+    - {operation: "Using a generator", cost: "O(1) extra memory, rather than a whole list"}
+    - {operation: "Counter, heapq and similar tools", cost: "Check each tool, usually O(n) or O(log n)"}
+  when_to_use:
+    - "Use a class when data and behaviour belong together."
+    - "Use exceptions for failures you can do something about."
+    - "Use a generator when values are many, or computed as needed."
+  related: [functions, hashing, python-basics]
+  summary: "Classes bundle data and behaviour, exceptions handle specific failures, generators produce values one at a time, and the standard library saves you writing common tools."
+  glossary:
+    - {term: "Method", meaning: "A function that belongs to a class."}
+    - {term: "self", meaning: "The object a method is working on."}
+    - {term: "Attribute", meaning: "A value stored on an object."}
+    - {term: "Iterator", meaning: "An object that gives the next value when asked."}
+    - {term: "yield", meaning: "Hands back a value and pauses the function."}
+  checks:
+    - question: "What does yield do?"
+      options: ["Ends the function for good", "Hands back a value and pauses", "Prints a value", "Raises an exception"]
+      answer: 1
+      why: "The function resumes from that point when the next value is asked for."
+    - question: "Why avoid a bare except:?"
+      options: ["It is slow", "It hides real bugs by catching everything", "It is not valid Python", "It cannot catch errors"]
+      answer: 1
+      why: "Catching only what you expect lets other mistakes show themselves."

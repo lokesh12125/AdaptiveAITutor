@@ -277,13 +277,13 @@ def test_new_beginner_gets_first_exercise_and_dsa_goal_skips_it():
 
 
 # ---- hint text and validation
-def decision(level=2, allow="none", fmt="hint", words=70, sentences=3, one_action=False, strategy="trace_example"):
-    return DSDADecision(action="give_help", level=level, level_name=LEVEL_NAMES[level], strategy=strategy, focus_issue="logic:general", timing="show_now",
-                        presentation=Presentation(format=fmt, max_sentences=sentences, max_words=words, allow_code=allow, one_action=one_action), reason_codes=[], reason_student="r", policy_version="t")
+def decision(level=2, allow="none", fmt="hint", words=70, sentences=3, one_action=False, strategy="by_level"):
+    return DSDADecision(action="give_help", selected_level=level, level_name=LEVEL_NAMES[level], strategy=strategy, focus_issue="logic:general", timing="show_now",
+                        presentation=Presentation(format=fmt, max_sentences=sentences, max_words=words, allow_code=allow, one_action_at_a_time=one_action), reason_codes=[], reason_student="r", policy_version="t")
 
 
 def ctx(dec=None, solution=None, function_name="f", hidden=None):
-    return ValidationContext(decision=dec or decision(), function_name=function_name, reference_solution=solution, student_code="def f(n):\n    pass\n", hidden_literals=hidden or [])
+    return ValidationContext(decision=dec or decision(), function_name=function_name, reference_solution=solution, student_code="def f(n):\n    a = 1\n    b = 2\n    pass\n", hidden_literals=hidden or [])
 
 
 SOLUTION = "def f(numbers):\n    total = 0\n    for n in numbers:\n        total += n\n    return total\n"

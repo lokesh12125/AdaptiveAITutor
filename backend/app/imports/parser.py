@@ -9,6 +9,7 @@ from typing import Any
 
 from ..schemas import ImportDraft, ImportExample
 
+MAX_EXAMPLES = 20
 SECTION_NAMES = {
     "constraints": r"constraints?|limits?",
     "input_format": r"input(?:\s+format|\s+description)?|inputs?",
@@ -19,6 +20,8 @@ SECTION_NAMES = {
 }
 HEADING = re.compile(r"^\s*(?:#{1,4}\s*)?\**\s*(" + "|".join(SECTION_NAMES.values()) + r")\s*\**\s*:?\s*$", re.I)
 DIFFICULTY_LINE = re.compile(r"^\s*(?:difficulty\s*:?\s*)?(easy|medium|hard)\s*$", re.I)
+# Lines like "Input: nums = [1, 2]" or "Example 1:" are part of an example, never a title.
+EXAMPLE_LINE = re.compile(r"^\s*(?:input|output|example\s*\d*|explanation|constraints?|note|returns?|expected)\b\s*[:\-]|^\s*\w+\s*=\s*[\[\({\"'\d-]", re.I)
 LEADING_NUMBER = re.compile(r"^\s*\d+\s*[.)\-:]\s*")
 UNIT_KEYWORDS = [
     ("dynamic-programming", ["dynamic programming", "memoization", "subsequence", "knapsack", " dp "]),
@@ -31,7 +34,7 @@ UNIT_KEYWORDS = [
     ("searching-sorting", ["binary search", "sort", "search"]),
     ("recursion", ["recursion", "recursive", "backtrack"]),
     ("strings", ["string", "substring", "palindrome", "character"]),
-    ("lists-dicts", ["list"]),
+    ("lists-dicts", [" a list", " lists", " list of", " dict"]),
     ("loops", ["loop", "iterate"]),
 ]
 TAG_TO_UNIT = {
@@ -168,7 +171,7 @@ def parse_problem_text(text: str) -> ImportDraft:
             difficulty = DIFFICULTY_LINE.match(stripped).group(1).lower()
             remaining[index] = ""
             continue
-        if not title and len(stripped) <= 100 and not HEADING.match(line) and not stripped.endswith((".", ":", "?")):
+        if not title and len(stripped) <= 100 and not HEADING.match(line) and not EXAMPLE_LINE.match(stripped) and not stripped.endswith((".", ":", "?")):
             title = LEADING_NUMBER.sub("", stripped)
             remaining[index] = ""
     if difficulty is None:
@@ -278,12 +281,21 @@ def parse_problem_text(text: str) -> ImportDraft:
     if unparsed:
         warnings.append(f"{unparsed} example(s) could not be read as test data. Please check them in the next step.")
 
-    input_format = sections.get("input_format") or None
-    output_format = sections.get("output_format") or None
+    # Very long text is cut to the stored limits and flagged, so an unusual page or paste can never cause an error.
+    def fit(value: str | None, limit: int, label: str) -> str | None:
+        if value and len(value) > limit:
+            warnings.append(f"The {label} was very long, so it was shortened. Please check it.")
+            return value[:limit]
+        return value or None
+
+    if len(examples) > MAX_EXAMPLES:
+        warnings.append(f"Only the first {MAX_EXAMPLES} examples were kept.")
+    usable_name = function_name if mode == "function" and function_name and len(function_name) <= 120 else ("solve" if mode == "function" else None)
     return ImportDraft(
-        title=title[:160], description=description, constraints=sections.get("constraints") or None, input_format=input_format, output_format=output_format,
-        difficulty=difficulty, tags=[], unit_id=suggest_unit(f"{title} {description}", []), mode=mode, function_name=function_name if mode == "function" else None,
-        parameters=parameters if mode == "function" else [], examples=examples, missing_fields=missing, warnings=warnings,
+        title=title[:160], description=fit(description, 20000, "description") or "", constraints=fit(sections.get("constraints"), 4000, "constraints section"),
+        input_format=fit(sections.get("input_format"), 4000, "input format"), output_format=fit(sections.get("output_format"), 4000, "output format"),
+        difficulty=difficulty, tags=[], unit_id=suggest_unit(f"{title} {description}", []), mode=mode, function_name=usable_name,
+        parameters=(parameters if mode == "function" else [])[:12], examples=examples[:MAX_EXAMPLES], missing_fields=missing, warnings=warnings,
     )
 
 

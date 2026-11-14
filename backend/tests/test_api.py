@@ -538,7 +538,8 @@ def test_save_requires_core_fields(learner):
 @pytest.mark.parametrize("url,name", [("https://leetcode.com/problems/two-sum/", "LeetCode"), ("https://www.hackerrank.com/challenges/x", "HackerRank"), ("https://www.geeksforgeeks.org/problems/y", "GeeksforGeeks")])
 def test_unsupported_sites_explain_and_guide_to_paste(learner, url, name):
     body = learner.client.post("/api/imports/lookup", json={"query": url}).json()
-    assert not body["supported"] and name in body["message"] and "scrape" in body["message"] and "Paste" in body["guidance"] and body["draft"] is None
+    assert not body["supported"] and name in body["message"] and "scrape" in body["message"] and "Paste" in body["guidance"]
+    assert body["status"] == "url_only" and body["draft"]["source_name"] == name and "description" in body["missing_fields"], "the link is kept for attribution"
 
 
 def codeforces_transport(handler=None):
@@ -708,3 +709,147 @@ def test_production_refuses_unsafe_settings():
     assert len(check_production_settings(unsafe)) == 4
     safe = Settings(demo_mode=False, retrieval_allow_synthetic=False, runner_token="x" * 32, database_url="postgresql+psycopg://csmasf:a-real-secret@db/csmasf")
     assert check_production_settings(safe) == []
+
+
+def test_completion_counts_problems_started_but_never_submitted(learner):
+    """Reported: 100% completion while several problems were unfinished, because only submitted problems counted."""
+    learner.submit("say-hello", 'def greet(name):\n    return f"Hello, {name}!"\n')
+    learner.client.put("/api/problems/sum-to-n/draft", json={"code": "def sum_to_n(n):\n    return 0\n", "language": "python", "base_version": 0})
+    learner.run("count-multiples", "def count_multiples(n, limit):\n    return 0\n")
+    metrics = learner.client.get("/api/progress").json()["metrics"]
+    assert metrics["solved"] == 1 and metrics["submitted"] == 1
+    assert metrics["started"] == 3 and metrics["completion_rate"] == pytest.approx(1 / 3, abs=0.001)
+
+
+def test_an_example_line_is_never_taken_as_the_title():
+    from app.imports.parser import parse_problem_text
+
+    draft = parse_problem_text("Input: nums = [7, 4, 1, 5, 3]\nOutput: 4\n\nReturn the length of the longest increasing run.")
+    assert not draft.title.lower().startswith("input")
+
+
+
+# ---- test cases shown before running, and submission history
+
+def test_each_problem_shows_its_sample_cases_with_named_inputs(learner):
+    detail = learner.client.get("/api/problems/count-multiples").json()
+    assert detail["param_names"] == ["n", "limit"]
+    first = detail["sample_cases"][0]
+    assert [p["name"] for p in first["params"]] == ["n", "limit"] and first["editable"] and first["expected"]
+
+
+def test_edited_and_new_cases_get_expected_answers_from_the_reference(learner):
+    detail = learner.client.get("/api/problems/sum-to-n").json()
+    sample = detail["sample_cases"][0]["id"]
+    code = "def sum_to_n(n):\n    total = 0\n    for i in range(1, n):\n        total += i\n    return total\n"
+    response = learner.client.post("/api/problems/sum-to-n/run", json={"code": code, "idempotency_key": learner.key(), "cases": [{"test_id": sample}, {"args": ["5"]}, {"args": ["1"]}]})
+    assert response.status_code == 202, response.text
+    result = learner.wait_evaluation(response.json()["id"])
+    rows = result["results"]
+    assert [r["name"] for r in rows] == ["Case 1", "Case 2", "Case 3"]
+    assert rows[1]["expected"] == "15" and rows[1]["actual"] == "10" and rows[1]["passed"] is False
+    assert rows[2]["expected"] == "1" and rows[2]["passed"] is False
+    assert result["verdict"] in ("wrong_answer", "partial")
+
+
+def test_an_input_the_reference_rejects_is_shown_as_possibly_invalid(learner):
+    response = learner.client.post("/api/problems/sum-to-n/run", json={"code": "def sum_to_n(n):\n    return n\n", "idempotency_key": learner.key(), "cases": [{"args": ["'text'"]}]})
+    rows = learner.wait_evaluation(response.json()["id"])["results"]
+    assert rows[0]["passed"] is None and "may not be a valid input" in rows[0]["note"]
+
+
+def test_a_case_value_must_be_a_plain_python_value(learner):
+    bad = learner.client.post("/api/problems/sum-to-n/run", json={"code": "x = 1\n", "idempotency_key": learner.key(), "cases": [{"args": ["__import__('os')"]}]})
+    assert bad.status_code == 422 and "Case 1" in bad.json()["error"]["message"]
+    wrong_count = learner.client.post("/api/problems/count-multiples/run", json={"code": "x = 1\n", "idempotency_key": learner.key(), "cases": [{"args": ["3"]}]})
+    assert wrong_count.status_code == 422 and "n, limit" in wrong_count.json()["error"]["message"]
+
+
+def test_submission_history_lists_every_submission_with_its_code(learner):
+    wrong = "def sum_to_n(n):\n    return 0\n"
+    right = "def sum_to_n(n):\n    return n * (n + 1) // 2\n"
+    learner.submit("sum-to-n", wrong)
+    learner.submit("sum-to-n", right)
+    rows = learner.client.get("/api/problems/sum-to-n/submissions").json()
+    assert rows[0]["verdict"] == "accepted" and rows[1]["verdict"] in ("wrong_answer", "partial")
+    assert rows[0]["code"] == right and rows[1]["code"] == wrong and rows[0]["created_at"] >= rows[1]["created_at"]
+    assert rows[1]["passed"] < rows[1]["total"]
+
+
+# ---- the learner's profile, the teacher's view of it, and the learner's own questions
+SIMILAR_KEYS = {"matched", "support", "effectiveness", "similarity", "candidates", "suggested_strategy", "reason", "demo_data", "at"}
+
+
+def test_profile_counts_work_and_shows_the_learning_state(learner):
+    learner.submit("sum-to-n", "def sum_to_n(n):\n    return 0\n", active_seconds=60)
+    learner.submit("sum-to-n", RIGHT, active_seconds=120)
+    profile = learner.client.get("/api/me/profile").json()
+    totals = profile["totals"]
+    assert totals["solved"] == 1 and totals["started"] == 1 and totals["completion_rate"] == 1.0
+    assert totals["submissions"] == 2 and totals["accepted_submissions"] == 1 and totals["acceptance_rate"] == 0.5
+    assert totals["first_try_solves"] == 0 and totals["topics_with_solves"] == 1
+    assert totals["hints_total"] >= 1 and totals["solved_without_hints"] == 0, "the failed submission was answered with a hint"
+    assert sum(solved for solved, _ in totals["solved_by_difficulty"].values()) == 1
+    assert all(total > 0 for _, total in totals["solved_by_difficulty"].values()), "totals count the curriculum's problems"
+    assert len(profile["calendar"]) == 182 and sum(day["count"] for day in profile["calendar"]) >= 2
+    assert totals["days_active"] == 1 and totals["current_streak"] == 1 and totals["longest_streak"] == 1
+    loops = next(row for row in profile["state_matrix"] if row["unit_id"] == "loops")
+    assert loops["solved"] == 1 and loops["total"] >= 15 and loops["graded_attempts"] >= 1
+    assert 0 <= loops["mastery_low"] <= loops["mastery"] <= loops["mastery_high"] <= 1
+    assert {"confidence", "confusion", "load", "progress", "band", "evidence_weight", "starting_mastery"} <= loops.keys()
+    assert all(row["unit_id"] != "graphs" for row in profile["state_matrix"]), "a topic with no work gets no estimate"
+    assert len(profile["vector"]["features"]) == 14 and all(f["meaning"] for f in profile["vector"]["features"])
+    assert profile["recent"][0]["verdict"] == "accepted" and len(profile["recent"]) == 2
+    assert any(m["achieved"] for m in profile["milestones"]) and not all(m["achieved"] for m in profile["milestones"])
+
+
+def test_profile_shows_similar_learners_only_as_counts(learner):
+    learner.submit("sum-to-n", "def sum_to_n(n):\n    return 0\n")
+    similar = learner.client.get("/api/me/profile").json()["similar"]
+    assert similar is not None and set(similar) <= SIMILAR_KEYS, "no identities, ids or code from other learners"
+
+
+def test_new_learner_profile_is_empty_not_an_error(learner):
+    profile = learner.client.get("/api/me/profile").json()
+    assert profile["totals"]["solved"] == 0 and profile["totals"]["acceptance_rate"] is None
+    assert profile["vector"] is None and profile["similar"] is None and profile["recent"] == []
+    assert profile["improvement"]["then_now"] is None, "early and recent work are compared only after four solves"
+    assert len(profile["improvement"]["weekly"]) == 8 and all(week["solved"] == 0 for week in profile["improvement"]["weekly"])
+
+
+def test_teacher_table_has_state_columns_and_student_profile(classroom):
+    teacher, created, student = classroom
+    student.submit("sum-to-n", "def sum_to_n(n):\n    return 0\n")
+    student.submit("sum-to-n", RIGHT)
+    overview = teacher.client.get(f"/api/teacher/classes/{created['id']}/overview").json()
+    row = overview["learners"][0]
+    for key in ("mastery", "topics_started", "confidence", "confusion", "load", "progress", "first_try_rate", "attempts_per_solve", "current_streak", "longest_streak"):
+        assert key in row, key
+    assert row["topics_started"] == 1 and row["attempts_per_solve"] == 2 and row["first_try_rate"] == 0
+    for key in ("mastery", "confidence", "confusion", "load", "progress"):
+        assert overview["definitions"][key], key
+    detail = teacher.client.get(f"/api/teacher/classes/{created['id']}/students/{student.id}").json()
+    mine = student.client.get("/api/me/profile").json()
+    assert detail["profile"]["totals"] == mine["totals"] and detail["profile"]["state_matrix"] == mine["state_matrix"]
+
+
+def test_your_questions_list_shows_when_each_was_added(make_learner):
+    owner, other = make_learner(), make_learner()
+    problem = imported_problem(owner)
+    mine = owner.client.get("/api/problems", params={"mine": True}).json()
+    row = next(p for p in mine if p["id"] == problem["id"])
+    assert row["is_mine"] and row["created_at"]
+    assert all(p["created_at"] is None for p in owner.client.get("/api/problems", params={"unit": "loops"}).json())
+    assert owner.client.get("/api/me/profile").json()["totals"]["questions_added"] == 1
+    assert other.client.get("/api/problems", params={"mine": True}).json() == []
+
+
+def test_generation_adds_order_duplicate_zero_and_smallest_value_cases():
+    tests, _ = generate_tests(draft_for([[3, -1, 4], 5], 7, constraints="1 <= nums.length <= 50\n-100 <= nums[i] <= 100"))
+    generated = {t.category: t for t in tests if t.origin == "generated"}
+    for category in ("sorted", "reverse_sorted", "unsorted", "duplicates", "zero", "boundary", "negative", "minimal", "repeated"):
+        assert category in generated, category
+    assert generated["sorted"].args[0] == [-1, 3, 4] and generated["reverse_sorted"].args[0] == [4, 3, -1]
+    assert all(t.needs_expected and not t.enabled for t in generated.values() if t.compare != "completes"), "a generated answer is never assumed"
+    smallest = [t for t in tests if t.label == "nums with its smallest values"]
+    assert smallest and smallest[0].args[0] == [-100, -100]

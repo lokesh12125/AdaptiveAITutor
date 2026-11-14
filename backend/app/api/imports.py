@@ -12,8 +12,8 @@ from .. import ratelimit
 from ..config import settings
 from ..db import get_db
 from ..errors import ApiError, not_found
-from ..imports import parser, sources, testgen
-from ..models import Problem, ProblemTest, Unit, User
+from ..imports import fetcher, parser, sources, testgen
+from ..models import Problem, ProblemTest, Unit, User, utcnow
 from ..schemas import (
     GenerateTestsIn,
     ImportDraft,
@@ -38,6 +38,15 @@ def parse(payload: ParseIn, user: User = Depends(current_user)) -> ImportDraft:
     ratelimit.check(f"import:{user.id}", settings.rate_import_per_minute)
     draft = parser.parse_problem_text(payload.text)
     draft.starter_code = parser.generate_starter(draft)
+    # Attribution comes from the link the learner gave. Nothing is fetched here.
+    if payload.source_url:
+        name = sources.source_name_for(payload.source_url)
+        if name is None:
+            raise ApiError(422, "invalid_source_url", "That source link does not look like a web address.")
+        draft.source_url, draft.source_name = fetcher.normalise_url(payload.source_url), name
+    draft.unit_id = payload.unit_id or draft.unit_id
+    draft.learner_notes = (payload.notes or "").strip() or None
+    draft.extracted_fields = sources._extracted_fields(draft)
     return draft
 
 
@@ -62,6 +71,8 @@ def _validate_draft(db: Session, draft: ImportDraft) -> str:
         problems.append({"field": "description", "message": "Please add the problem description."})
     if draft.mode == "function" and not draft.function_name:
         problems.append({"field": "function_name", "message": "Please name the function the tests should call."})
+    if draft.source_url and not sources.source_name_for(draft.source_url):
+        problems.append({"field": "source_url", "message": "The source link does not look like a web address."})
     if problems:
         raise ApiError(422, "invalid_question", "A few details are needed before saving.", details=problems)
     unit = draft.unit_id if draft.unit_id and db.get(Unit, draft.unit_id) else DEFAULT_UNIT
@@ -76,6 +87,7 @@ def _apply(problem: Problem, draft: ImportDraft, unit_id: str) -> None:
     problem.function_name = draft.function_name if draft.mode == "function" else None
     problem.starter_code = parser.generate_starter(draft)
     problem.source_type, problem.source_name, problem.source_url, problem.source_retrieved_at = "imported", draft.source_name or "Added by you", draft.source_url, draft.source_retrieved_at
+    problem.learner_notes = (draft.learner_notes or "").strip() or None
 
 
 def _replace_tests(problem: Problem, tests: list[TestCase]) -> None:
@@ -126,7 +138,7 @@ def _to_out(problem: Problem) -> ImportOut:
             parameters = []
     draft = ImportDraft(
         title=problem.title, description=problem.description, constraints=problem.constraints, input_format=problem.input_format, output_format=problem.output_format, difficulty=problem.difficulty, tags=problem.concepts or [], unit_id=problem.unit_id,
-        mode=problem.mode, function_name=problem.function_name, parameters=parameters, starter_code=problem.starter_code, examples=[], source_name=problem.source_name, source_url=problem.source_url, source_retrieved_at=problem.source_retrieved_at,
+        mode=problem.mode, function_name=problem.function_name, parameters=parameters, starter_code=problem.starter_code, examples=[], source_name=problem.source_name, source_url=problem.source_url, source_retrieved_at=problem.source_retrieved_at, learner_notes=problem.learner_notes,
     )
     return ImportOut(id=problem.id, draft=draft, tests=tests)
 
@@ -143,6 +155,7 @@ def update_import(problem_id: str, payload: SaveImportIn, db: Session = Depends(
     testgen.validate_tests(payload.draft, payload.tests)
     _apply(problem, payload.draft, unit_id)
     _replace_tests(problem, payload.tests)
+    problem.updated_at = utcnow()  # earlier results were produced by the old tests, so they must not be reused
     db.commit()
     return _to_out(problem)
 

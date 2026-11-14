@@ -38,7 +38,7 @@ export function Onboarding() {
   return (
     <div className="app">
       <SystemBanners />
-      <header className="topbar"><Logo /></header>
+      <header className="topnav"><div className="topnav-inner"><Logo /></div></header>
       <main className="page page-narrow stack-l" id="main">
         <div className="stack-s">
           <h1>Welcome. Where shall we start?</h1>

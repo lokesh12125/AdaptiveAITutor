@@ -10,21 +10,23 @@ import { Home } from "./pages/Home";
 import { Library } from "./pages/Library";
 import { Onboarding } from "./pages/Onboarding";
 import { PathPage, UnitPage } from "./pages/Path";
+import { ProfilePage } from "./pages/Profile";
 import { ProgressPage } from "./pages/Progress";
+import { SearchPage } from "./pages/Search";
 import { SettingsPage } from "./pages/Settings";
 import { TeacherPage, TeacherStudentPage } from "./pages/Teacher";
 import { Welcome } from "./pages/Welcome";
 import { WorkspacePage } from "./workspace/Workspace";
 
 const TITLES: [RegExp, string][] = [
-  [/^\/welcome/, "Welcome"], [/^\/onboarding/, "Getting started"], [/^\/path/, "Learning path"], [/^\/problems\/new/, "Add a question"], [/^\/problems$/, "Problems"], [/^\/progress/, "Your progress"], [/^\/teacher/, "Class"], [/^\/settings/, "Settings"], [/^\/check/, "Knowledge check"], [/^\/$/, "Home"],
+  [/^\/welcome/, "Welcome"], [/^\/onboarding/, "Getting started"], [/^\/path/, "Learning path"], [/^\/search/, "Search"], [/^\/profile/, "Your profile"], [/^\/problems\/new/, "Add a question"], [/^\/problems$/, "Problems"], [/^\/progress/, "Your progress"], [/^\/teacher/, "Class"], [/^\/settings/, "Settings"], [/^\/check/, "Knowledge check"], [/^\/$/, "Home"],
 ];
 
 function DocumentTitle() {
   const { pathname } = useLocation();
   useEffect(() => {
     const match = TITLES.find(([pattern]) => pattern.test(pathname));
-    document.title = match ? `${match[1]} · Trellis` : "Trellis";
+    document.title = match ? `${match[1]} · CodePath` : "CodePath";
     if (!pathname.match(/^\/problems\/(?!new)/)) window.scrollTo(0, 0);
   }, [pathname]);
   return null;
@@ -55,6 +57,8 @@ export function App() {
         <Route path="/problems/new" element={<Authed role="student"><Shell narrow><AddQuestion /></Shell></Authed>} />
         <Route path="/problems/:problemId/edit" element={<Authed role="student"><Shell narrow><EditQuestion /></Shell></Authed>} />
         <Route path="/problems/:problemId" element={<Authed role="student"><WorkspacePage /></Authed>} />
+        <Route path="/profile" element={<Authed role="student"><Shell><ProfilePage /></Shell></Authed>} />
+        <Route path="/search" element={<Authed role="student"><Shell><SearchPage /></Shell></Authed>} />
         <Route path="/progress" element={<Authed role="student"><Shell><ProgressPage /></Shell></Authed>} />
         <Route path="/check/:phase" element={<Authed role="student"><Shell narrow><AssessmentPage /></Shell></Authed>} />
         <Route path="/teacher" element={<Authed role="teacher"><Shell><TeacherPage /></Shell></Authed>} />

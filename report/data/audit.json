@@ -1,0 +1,52 @@
+[
+ {
+  "scenario": "Repeated hint requests on unchanged wrong code (the critical regression)",
+  "pass": 7,
+  "fail": 0
+ },
+ {
+  "scenario": "Syntax error, then the same mistake again",
+  "pass": 3,
+  "fail": 0
+ },
+ {
+  "scenario": "Runtime exception and a loop that never ends",
+  "pass": 3,
+  "fail": 0
+ },
+ {
+  "scenario": "Progress after a hint, a new issue, then a solve",
+  "pass": 5,
+  "fail": 0
+ },
+ {
+  "scenario": "Return inside a loop",
+  "pass": 2,
+  "fail": 0
+ },
+ {
+  "scenario": "High mastery, overload, and no history",
+  "pass": 5,
+  "fail": 0
+ },
+ {
+  "scenario": "Wrong submissions without asking: help is offered, not pushed",
+  "pass": 3,
+  "fail": 0
+ },
+ {
+  "scenario": "Reflection: the question, the reply, and what happens next",
+  "pass": 6,
+  "fail": 0
+ },
+ {
+  "scenario": "Learning Planner: from where the learner is, onward",
+  "pass": 3,
+  "fail": 0
+ },
+ {
+  "scenario": "Across every hint shown",
+  "pass": 2,
+  "fail": 0
+ }
+]

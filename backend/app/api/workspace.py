@@ -13,6 +13,7 @@ from .. import ratelimit
 from ..config import settings
 from ..db import get_db
 from ..errors import ApiError, forbidden, not_found
+from ..grading import parameter_names
 from ..models import (
     AgentStep,
     CodeSnapshot,
@@ -41,8 +42,10 @@ from ..schemas import (
     WorkspaceOut,
 )
 from ..security import current_user
+from ..tutoring import reflection as reflection_agent
 from ..tutoring import service
-from ..tutoring.dsda import LEVEL_NAMES
+from ..tutoring.dsda import LEVEL_NAMES, STRATEGY_LEVEL_NAMES
+from ..tutoring.hints import _normalised_words
 from .content import to_detail, visible_problem
 
 router = APIRouter(prefix="/api", tags=["workspace"])
@@ -68,9 +71,70 @@ def _run_out(db: Session, run: PipelineRun) -> RunOut:
     )
 
 
+def _distinct_hints(hints: list[Hint], limit: int = 30) -> list[Hint]:
+    """Each different hint once, newest first. Older records can hold exact repeats of the same text."""
+    seen: set[str] = set()
+    distinct: list[Hint] = []
+    for hint in hints:
+        key = " ".join(_normalised_words(hint.text))
+        if key not in seen:
+            seen.add(key)
+            distinct.append(hint)
+    return distinct[:limit]
+
+
 def _hint_row(hint: Hint, title: str | None = None) -> HintRow:
-    return HintRow(id=hint.id, level=hint.level, level_name=LEVEL_NAMES.get(hint.level, ""), text=hint.text, why=hint.reason_student, source=hint.source, requested=hint.requested, outcome=hint.outcome, helpful=hint.helpful,
+    request = hint.learner_request or {}
+    return HintRow(id=hint.id, level=hint.level, level_name=STRATEGY_LEVEL_NAMES.get(hint.strategy, LEVEL_NAMES.get(hint.level, "")), strategy=hint.strategy, question=request.get("question"), focus_start=request.get("focus_start"), focus_end=request.get("focus_end"), text=hint.text, why=hint.reason_student, source=hint.source, requested=hint.requested, outcome=hint.outcome, helpful=hint.helpful,
                    problem_id=hint.problem_id, problem_title=title, created_at=hint.created_at)
+
+
+def _literal(text: str, name: str, number: int) -> Any:
+    """Read one value as Python writes it, such as [1, 2] or "abc". Only plain values are allowed, never code."""
+    import ast
+
+    try:
+        value = ast.literal_eval(text.strip())
+    except (ValueError, SyntaxError, MemoryError, RecursionError) as exc:
+        raise ApiError(422, "bad_custom_input", f"Case {number}: the value for {name} is not a valid Python value. Write it as you would in code, for example [1, 2], 5 or \"text\".") from exc
+
+    def plain(item: Any) -> Any:
+        if isinstance(item, tuple):
+            return [plain(x) for x in item]
+        if isinstance(item, list):
+            return [plain(x) for x in item]
+        if isinstance(item, dict):
+            if not all(isinstance(key, str) for key in item):
+                raise ApiError(422, "bad_custom_input", f"Case {number}: dictionary keys for {name} must be text here.")
+            return {key: plain(val) for key, val in item.items()}
+        if item is None or isinstance(item, (bool, int, float, str)):
+            return item
+        raise ApiError(422, "bad_custom_input", f"Case {number}: {name} can be a number, text, True, False, None, a list or a dictionary.")
+
+    return plain(value)
+
+
+def _parse_cases(payload: RunIn, problem: Problem) -> dict[str, Any] | None:
+    """The test cases shown before running: unchanged examples by id, or values the learner edited or added."""
+    if not payload.cases:
+        return None
+    public_ids = {t.id for t in problem.tests if t.enabled and not t.needs_expected and t.visibility == "public"}
+    params = parameter_names(problem.starter_code, problem.function_name)
+    cases: list[dict[str, Any]] = []
+    for number, case in enumerate(payload.cases, start=1):
+        if case.test_id:
+            if case.test_id not in public_ids:
+                raise ApiError(422, "bad_custom_input", f"Case {number} is not one of this problem's examples.")
+            cases.append({"test_id": case.test_id})
+        elif case.stdin is not None or problem.mode == "stdio":
+            cases.append({"stdin": case.stdin or ""})
+        elif case.args is not None:
+            if not problem.function_name or len(case.args) != len(params):
+                raise ApiError(422, "bad_custom_input", f"Case {number} needs one value for each of: {', '.join(params) or 'the inputs'}.")
+            cases.append({"args": [_literal(text, name, number) for text, name in zip(case.args, params, strict=True)]})
+        else:
+            raise ApiError(422, "bad_custom_input", f"Case {number} is empty.")
+    return {"cases": cases}
 
 
 def _parse_custom(payload: RunIn, problem: Problem) -> dict[str, Any] | None:
@@ -89,16 +153,44 @@ def _parse_custom(payload: RunIn, problem: Problem) -> dict[str, Any] | None:
     return None
 
 
+@router.get("/problems/{problem_id}/submissions")
+def submissions(problem_id: str, db: Session = Depends(get_db), user: User = Depends(current_user)) -> list[dict[str, Any]]:
+    """Every graded submission of this problem by this learner, newest first, with the code that was submitted."""
+    problem = visible_problem(db, problem_id, user)
+    rows = db.scalars(
+        select(Evaluation).where(Evaluation.user_id == user.id, Evaluation.problem_id == problem.id, Evaluation.kind == "submit").order_by(Evaluation.created_at.desc()).limit(200)
+    ).all()
+    codes = dict(db.execute(select(CodeSnapshot.id, CodeSnapshot.code).where(CodeSnapshot.id.in_([r.snapshot_id for r in rows]))).all()) if rows else {}
+    return [{
+        "id": row.id, "created_at": row.created_at, "status": row.status, "verdict": row.verdict, "passed": row.passed, "total": row.total,
+        "duration_ms": row.duration_ms, "code": codes.get(row.snapshot_id, ""),
+        "first_failure": next(({"name": r.get("name"), "category": r.get("category")} for r in (row.public_results or []) if r.get("passed") is False), None),
+    } for row in rows]
+
+
 @router.post("/problems/{problem_id}/run", response_model=Accepted, status_code=202)
 def run_code(problem_id: str, payload: RunIn, db: Session = Depends(get_db), user: User = Depends(current_user)) -> Accepted:
     """Run public examples or the learner's own input. Not graded, and no agents run."""
     ratelimit.check(f"run:{user.id}", settings.rate_run_per_minute)
     problem = visible_problem(db, problem_id, user)
-    custom = _parse_custom(payload, problem)
+    custom = _parse_cases(payload, problem) or _parse_custom(payload, problem)
     evaluation, created = service.create_run_evaluation(db, user, problem, payload.code, payload.idempotency_key, custom)
     if created:
         db.add(LearnerEvent(user_id=user.id, problem_id=problem.id, type="run", data={"evaluation_id": evaluation.id, "custom": bool(custom)}))
         db.commit()
+        service.schedule_evaluation(evaluation)
+    return Accepted(id=evaluation.id, created=created)
+
+
+@router.post("/playground/run", response_model=Accepted, status_code=202)
+def run_playground(payload: RunIn, db: Session = Depends(get_db), user: User = Depends(current_user)) -> Accepted:
+    """Run any code from a lesson, in the same sandbox as everything else. Never graded, and no agents run."""
+    ratelimit.check(f"run:{user.id}", settings.rate_run_per_minute)
+    problem = db.get(Problem, "playground")
+    if problem is None:
+        raise not_found("The scratch space")
+    evaluation, created = service.create_run_evaluation(db, user, problem, payload.code, payload.idempotency_key, None)
+    if created:
         service.schedule_evaluation(evaluation)
     return Accepted(id=evaluation.id, created=created)
 
@@ -124,7 +216,7 @@ def request_hint(problem_id: str, payload: HintIn, db: Session = Depends(get_db)
     problem = visible_problem(db, problem_id, user)
     run, created = service.create_learning_run(
         db, user, problem, payload.code, payload.idempotency_key, "hint_request",
-        {"active_seconds": payload.active_seconds, "self_confidence": payload.self_confidence, "self_state": payload.self_state, "request_size": payload.request_size, "question": payload.question}, payload.active_seconds,
+        {"active_seconds": payload.active_seconds, "self_confidence": payload.self_confidence, "self_state": payload.self_state, "request_size": payload.request_size, "question": payload.question, "focus_start": payload.focus_start, "focus_end": payload.focus_end}, payload.active_seconds,
     )
     if created:
         service.schedule_run(run)
@@ -189,12 +281,12 @@ def workspace(problem_id: str, db: Session = Depends(get_db), user: User = Depen
     latest_run = db.scalar(select(PipelineRun).where(PipelineRun.user_id == user.id, PipelineRun.problem_id == problem.id).order_by(PipelineRun.created_at.desc()).limit(1))
     latest_eval = db.scalar(select(Evaluation).where(Evaluation.user_id == user.id, Evaluation.problem_id == problem.id, Evaluation.kind == "run").order_by(Evaluation.created_at.desc()).limit(1))
     pending = db.scalar(select(Reflection).where(Reflection.user_id == user.id, Reflection.problem_id == problem.id, Reflection.status == "prompted").order_by(Reflection.created_at.desc()).limit(1))
-    hints = db.scalars(select(Hint).where(Hint.user_id == user.id, Hint.problem_id == problem.id, Hint.delivery == "shown").order_by(Hint.created_at.desc()).limit(20)).all()
+    hints = db.scalars(select(Hint).where(Hint.user_id == user.id, Hint.problem_id == problem.id, Hint.delivery == "shown").order_by(Hint.created_at.desc()).limit(120)).all()
     active = db.scalar(select(func.max(Evaluation.active_seconds)).where(Evaluation.user_id == user.id, Evaluation.problem_id == problem.id)) or 0
     solved = db.scalar(select(func.count()).select_from(Evaluation).where(Evaluation.user_id == user.id, Evaluation.problem_id == problem.id, Evaluation.kind == "submit", Evaluation.verdict == "accepted")) or 0
     return WorkspaceOut(
         problem=to_detail(db, problem, user), draft=DraftOut(code=draft.code, version=draft.version, updated_at=draft.updated_at) if draft else None, latest_run=_run_out(db, latest_run) if latest_run else None,
-        latest_evaluation=_evaluation_out(db, latest_eval) if latest_eval else None, pending_reflection={"id": pending.id, "prompt": pending.prompt} if pending else None, hints=[_hint_row(h) for h in hints], active_seconds=active, solved=solved > 0,
+        latest_evaluation=_evaluation_out(db, latest_eval) if latest_eval else None, pending_reflection={"id": pending.id, "prompt": pending.prompt} if pending else None, hints=[_hint_row(h) for h in _distinct_hints(list(hints))], active_seconds=active, solved=solved > 0,
     )
 
 
@@ -225,15 +317,21 @@ def delete_draft(problem_id: str, db: Session = Depends(get_db), user: User = De
 
 
 @router.post("/reflections/{reflection_id}/answer", status_code=200)
-def answer_reflection(reflection_id: str, payload: ReflectionAnswerIn, db: Session = Depends(get_db), user: User = Depends(current_user)) -> dict[str, str]:
-    """The answer is its own learner event. It is stored, not graded."""
+def answer_reflection(reflection_id: str, payload: ReflectionAnswerIn, db: Session = Depends(get_db), user: User = Depends(current_user)) -> dict[str, Any]:
+    """The answer is its own learner event. It is never graded: the tutor replies to it, and the next cycle can use it."""
     reflection = db.get(Reflection, reflection_id)
     if not reflection or reflection.user_id != user.id:
         raise not_found("That question")
-    reflection.status, reflection.answer, reflection.answered_at = "answered", payload.answer.strip(), datetime.now(UTC)
-    db.add(LearnerEvent(user_id=user.id, problem_id=reflection.problem_id, type="reflection_answer", data={"reflection_id": reflection.id, "words": len(payload.answer.split())}))
+    answer = payload.answer.strip()
+    code = db.scalar(select(CodeSnapshot.code).where(CodeSnapshot.user_id == user.id, CodeSnapshot.problem_id == reflection.problem_id).order_by(CodeSnapshot.created_at.desc()).limit(1))
+    reply = reflection_agent.respond_to_answer(reflection.kind, reflection.context or {}, answer, code)
+    reflection.status, reflection.answer, reflection.answered_at = "answered", answer, datetime.now(UTC)
+    reflection.feedback, reflection.quality = reply.feedback, reply.quality
+    db.add(LearnerEvent(user_id=user.id, problem_id=reflection.problem_id, type="reflection_answer",
+                        data={"reflection_id": reflection.id, "words": len(answer.split()), "quality": reply.quality, "matched": reply.matched}))
+    next_step = service.plan_after_reflection(db, user, reflection.problem_id, reply.quality, bool((reflection.context or {}).get("solved")), reflection.run_id)
     db.commit()
-    return {"status": "answered"}
+    return {"status": "answered", "quality": reply.quality, "feedback": reply.feedback, "matched": reply.matched, "next": next_step}
 
 
 @router.post("/reflections/{reflection_id}/dismiss", status_code=200)

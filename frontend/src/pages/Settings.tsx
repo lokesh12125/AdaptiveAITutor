@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 
 import { api } from "@/api/client";
 import type { ClassInfo, Preferences, User } from "@/api/types";
+import { ModeSwitch } from "@/components/ModeSwitch";
 import { Button, errorText, Field, Modal, Notice, Select, Toggle, useToast } from "@/components/ui";
 import { useSession } from "@/lib/session";
 
@@ -55,7 +56,7 @@ export function SettingsPage() {
       const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
       const link = document.createElement("a");
       link.href = url;
-      link.download = "trellis-my-data.json";
+      link.download = "codepath-my-data.json";
       link.click();
       URL.revokeObjectURL(url);
     } catch (error) {
@@ -74,7 +75,7 @@ export function SettingsPage() {
       <div className="page-head" style={{ marginBottom: 0 }}><div><h1>Settings</h1><p>Changes save automatically.</p></div></div>
       <section className="card" aria-labelledby="look-heading">
         <h2 id="look-heading">Appearance</h2>
-        <Row title="Theme" control={<div style={{ width: 150 }}><Select label="Theme" value={preferences.theme ?? "system"} onChange={(value) => void set({ theme: value as Preferences["theme"] })} options={[{ value: "system", label: "Match system" }, { value: "light", label: "Light" }, { value: "dark", label: "Dark" }]} /></div>} />
+        <Row title="Theme" control={<div style={{ width: 150 }}><Select label="Theme" value={preferences.theme ?? "light"} onChange={(value) => void set({ theme: value as Preferences["theme"] })} options={[{ value: "system", label: "Match system" }, { value: "light", label: "Light" }, { value: "dark", label: "Dark" }]} /></div>} />
         <Row title="Layout density" help="Compact fits more on screen." control={<div style={{ width: 150 }}><Select label="Layout density" value={preferences.density ?? "comfortable"} onChange={(value) => void set({ density: value as Preferences["density"] })} options={[{ value: "comfortable", label: "Comfortable" }, { value: "compact", label: "Compact" }]} /></div>} />
         <Row title="Reduce motion" help="Turns off animations. Your device's own setting is always respected." control={<Toggle checked={preferences.motion === "reduced"} onChange={(value) => void set({ motion: value ? "reduced" : "system" })} label="Reduce motion" />} />
       </section>
@@ -89,6 +90,11 @@ export function SettingsPage() {
       {student && (
         <section className="card" aria-labelledby="tutor-heading">
           <h2 id="tutor-heading">Tutor</h2>
+          <div className="setting-row" style={{ display: "block" }}>
+            <strong>Learning mode</strong>
+            <p className="subtle" style={{ marginBottom: 8 }}>Changes what is shown first, and what the tutor offers unprompted. If you ask for help, you always get it.</p>
+            <ModeSwitch />
+          </div>
           <Row title="Show hints automatically" help="When this is off, the tutor only offers help after a failed submission, and waits for you to ask." control={<Toggle checked={preferences.auto_hints ?? true} onChange={(value) => void set({ auto_hints: value })} label="Show hints automatically" />} />
           <Row title="Show walkthroughs" help="Short explanations for people new to the workspace." control={<Toggle checked={preferences.show_walkthroughs ?? true} onChange={(value) => void set({ show_walkthroughs: value })} label="Show walkthroughs" />} />
           <Row title="Show the tutor's working estimates" help="Confusion, workload and progress estimates. The tutor still uses them when they are hidden." control={<Toggle checked={preferences.show_estimates ?? true} onChange={(value) => void set({ show_estimates: value })} label="Show working estimates" />} />

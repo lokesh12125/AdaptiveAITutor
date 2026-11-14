@@ -4,6 +4,8 @@ import { fromEditable } from "@/pages/AddQuestion";
 import { chooseInitial } from "@/workspace/useDraft";
 
 import { duration, percent, roundedRange, timeAgo } from "./format";
+import { migrateStorage } from "./migrateStorage";
+import { withTheme } from "./theme";
 
 describe("draft restoration", () => {
   const starter = "def f():\n    pass\n";
@@ -76,5 +78,37 @@ describe("display formatting", () => {
   it("formats relative time", () => {
     expect(timeAgo(null)).toBe("never");
     expect(timeAgo(new Date().toISOString())).toBe("just now");
+  });
+});
+
+describe("moving saved data to the new product name", () => {
+  const memory = (entries: Record<string, string>) => {
+    const data = new Map(Object.entries(entries));
+    return {
+      get length() { return data.size; }, key: (index: number) => [...data.keys()][index] ?? null, getItem: (key: string) => data.get(key) ?? null,
+      setItem: (key: string, value: string) => { data.set(key, value); }, removeItem: (key: string) => { data.delete(key); }, clear: () => data.clear(), data,
+    };
+  };
+
+  it("moves drafts, theme and panel layout", () => {
+    const store = memory({ "trellis.draft.u.p.python": "d", "trellis.theme": "dark", "react-resizable-panels:trellis.ws.3col": "l", unrelated: "keep" });
+    expect(migrateStorage(store as unknown as Storage)).toBe(3);
+    expect(Object.fromEntries(store.data)).toEqual({ "codepath.draft.u.p.python": "d", "codepath.theme": "dark", "react-resizable-panels:codepath.ws.3col": "l", unrelated: "keep" });
+  });
+  it("never overwrites newer data under the new name", () => {
+    const store = memory({ "trellis.theme": "dark", "codepath.theme": "light" });
+    migrateStorage(store as unknown as Storage);
+    expect(Object.fromEntries(store.data)).toEqual({ "codepath.theme": "light" });
+  });
+  it("copes with storage that refuses access", () => {
+    expect(migrateStorage({ get length(): number { throw new Error("denied"); } } as unknown as Storage)).toBe(0);
+  });
+});
+
+describe("links that open in a new tab carry the theme", () => {
+  it("adds the theme to the query, before any section", () => {
+    expect(withTheme("/path/loops?tab=lesson", "dark")).toBe("/path/loops?tab=lesson&theme=dark");
+    expect(withTheme("/path/loops?tab=lesson#for-loops", "dark")).toBe("/path/loops?tab=lesson&theme=dark#for-loops");
+    expect(withTheme("/path/loops", "light")).toBe("/path/loops?theme=light");
   });
 });

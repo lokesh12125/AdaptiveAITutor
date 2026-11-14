@@ -1,0 +1,118 @@
+# Steps for the simpler approaches in each technique. The main approach uses the technique's own steps.
+# All wording was written for this project. It describes how to think, never a specific problem's solution.
+
+Digit loops:
+  Using text: ["Turn the number into text with str().", "Go through the characters one at a time.", "Turn each character back into a number with int() when you need its value."]
+Counting and searching:
+  Check every value: ["Go through every value the task allows.", "Test each one against the rule.", "Count it, or stop as soon as you find the one you want."]
+Breaking problems into helpers:
+  All in one: ["Write every step inside the one function.", "Use comments to mark where each part starts.", "Run it, then look for a part with a clear job that could become a helper."]
+Indexing and slicing:
+  Loop over positions: ["Start with an empty result.", "Loop over the positions you need, using range.", "Add the character at each position to the result."]
+String methods:
+  By hand: ["Start with an empty result.", "Go through the text one character at a time.", "Decide what each character becomes, and add it to the result."]
+Counting characters:
+  Repeated .count(): ["Find each different character, for example with set(text).", "Call text.count(ch) for each one.", "Use those counts to give the answer."]
+Building strings:
+  Repeated +=: ["Start with an empty string.", "Add each piece with += as you go.", "Return the string when the loop ends."]
+Palindromes and comparison:
+  Reverse and compare: ["Clean the text if the task says to ignore case or punctuation.", "Make a reversed copy with slicing.", "Compare the two."]
+List basics:
+  Build a new list: ["Start with an empty list.", "Go through the items.", "Append each item you want to keep, then return the new list."]
+Comprehensions:
+  Plain loop: ["Start with an empty list.", "Loop over the input.", "Append each new item, adding an if when you need to filter."]
+Dictionary basics:
+  Search a list: ["Keep the pairs in a list.", "To look something up, go through the list until you find its key.", "Return the value next to it."]
+Grouping and counting:
+  Nested loops: ["Take each item in turn.", "Look through all the items again for ones in the same group.", "Record each group once, skipping groups already done."]
+Linear recursion:
+  Recursion: ["Write the answer for the smallest input.", "For a bigger input, call the function on one size smaller.", "Combine that answer with the current value."]
+Recursion on sequences:
+  Slicing: ["Return the answer for an empty sequence.", "Handle the first item.", "Call the function on items[1:] and combine the two results."]
+Divide and conquer:
+  Direct: ["Go through the whole input with one or two loops.", "Work out the answer directly.", "Note how the work grows as the input gets bigger."]
+Backtracking:
+  Try everything: ["Generate every possible combination, for example with nested loops or itertools.", "Check each one against the rules.", "Keep the ones that work."]
+Linear and binary search:
+  Linear search: ["Start at the first item.", "Compare each item with what you want.", "Stop when you find it, or when you reach the end."]
+Binary search on answers:
+  Try every answer: ["List every possible answer, smallest first.", "Check each one with a function that says whether it works.", "Return the first one that does."]
+Sorting algorithms:
+  Bubble, selection, insertion: ["Go through the list, comparing neighbours or finding the smallest left.", "Swap or move items so one more is in place after each pass.", "Repeat until no more passes are needed."]
+  Merge sort: ["Split the list in half.", "Sort each half the same way.", "Merge the two sorted halves by repeatedly taking the smaller front item."]
+Custom sort keys:
+  Write your own sort: ["Pick a simple sort, such as insertion sort.", "Write a comparison that says which of two items comes first.", "Use it wherever the sort compares items."]
+Merge and partition:
+  Combine, then sort: ["Join the inputs into one list.", "Sort it.", "Return the result."]
+Two pointers from both ends:
+  Brute force: ["Use one loop for the first position.", "Use a second loop for every later position.", "Check each pair, and stop when one works."]
+  Using a set: ["Start with an empty set.", "For each value, work out the partner it would need.", "If the partner is already in the set you have a match. Otherwise add this value."]
+Fast and slow pointers:
+  Use extra memory: ["Copy the values into a list, or record what you have seen in a set.", "Answer the question from that.", "Note the extra memory this uses."]
+Sliding window:
+  Brute force: ["Try every starting position.", "For each start, try every stretch that begins there.", "Work out each stretch's value from scratch, and keep the best."]
+Prefix sums:
+  Try every stretch: ["Pick each start position.", "From there, extend the end one item at a time, keeping a running total.", "Check each stretch against what the task asks, and keep the answer."]
+Kadane and running best:
+  Brute force: ["Try every start position.", "From each start, extend one item at a time, keeping a running total.", "Keep the best total seen."]
+In-place updates:
+  New list: ["Start with an empty list.", "Append each item you keep.", "Copy the result back, or return it, as the task asks."]
+Seen sets:
+  Brute force: ["Take each item.", "Compare it with every other item.", "Stop at the first match, or record what you find."]
+  Sort first: ["Make a sorted copy.", "Equal values are now neighbours.", "Compare each item with the one before it."]
+Frequency maps:
+  Repeated .count(): ["Find each different item.", "Call .count() for each one.", "Use the counts to answer."]
+Complement lookup:
+  Brute force: ["Use two loops to try every pair of positions.", "Check whether each pair makes the target.", "Return as soon as one does."]
+  Sort and two pointers: ["Sort the values, keeping their positions if you need them.", "Put one pointer at each end.", "Move the pointer that brings the sum closer to the target."]
+Grouping by key:
+  Compare every pair: ["Take each item.", "Compare it with every other item to see whether they belong together.", "Put matching items in the same group, skipping items already placed."]
+Matching and parsing:
+  Repeated replacing: ["Look for a matched pair next to each other, such as ().", "Remove it.", "Repeat until no pair is left, then check whether anything remains."]
+Queue and deque:
+  List as a queue: ["Add to the end with append.", "Take from the front with pop(0).", "Note that each pop(0) moves every other item."]
+Traversal:
+  Copy to a list: ["Walk the linked list, collecting each value in a Python list.", "Work on the Python list.", "Return what the task asks for."]
+Pointer rewiring:
+  Copy values: ["Walk the list, collecting the values.", "Rearrange the values in a Python list.", "Write them back into the nodes, or build new ones."]
+Merging and dummy heads:
+  Copy, sort, rebuild: ["Collect all the values in a Python list.", "Sort them.", "Build a new linked list from the sorted values."]
+Depth-first traversal:
+  Recursion: ["If the node is empty, return.", "Handle the node, then the left subtree, then the right, in the order the task needs.", "Combine or collect the results."]
+Breadth-first traversal:
+  Depth-first with a depth: ["Recurse through the tree, passing the current level.", "Add each value to the list for its level.", "Return the levels in order."]
+Tree properties:
+  Recompute for each node: ["For each node, call a separate helper that measures its subtree.", "Use that to check the property at this node.", "Note that subtrees get measured again and again."]
+Binary search trees:
+  Search everything: ["Visit every node, in any order.", "Compare each value with what you want.", "Return as soon as you find it."]
+Graph representation:
+  List of edges: ["Keep the edges as given.", "To find a node's neighbours, scan every edge.", "Repeat that scan each time you need neighbours."]
+Breadth-first search:
+  Try all paths: ["Explore every route from the start.", "Track the length of each route that reaches the target.", "Keep the shortest."]
+Topological order:
+  Repeated scanning: ["Look through the tasks for one whose dependencies are all done.", "Do it, and mark it done.", "Repeat until every task is done, or none can be."]
+One-dimensional DP:
+  Plain recursion: ["Write the answer for the smallest cases.", "Write the answer for n using calls on smaller inputs.", "Note how often the same call is repeated."]
+  Memoisation: ["Write the plain recursion.", "Before computing, check whether the answer is already stored.", "Store each answer before returning it."]
+Choices and subsets:
+  Try every subset: ["For each item, try taking it and leaving it.", "Recurse on the remaining items.", "Keep the best result, or count the ones that work."]
+Two-dimensional grids:
+  Plain recursion: ["From each cell, recurse to the cells you could come from.", "Return the base answer at the edge or the start.", "Combine the answers from each direction."]
+Strings and sequences:
+  Plain recursion: ["Compare the last characters of the two strings.", "Recurse on shorter prefixes, depending on whether they match.", "Return the best of the options."]
+Memoisation:
+  Plain recursion: ["Write the recursion straight from the definition.", "Check it on small inputs.", "Notice which calls repeat as the input grows."]
+Errors and exceptions:
+  Check first: ["Work out what could go wrong.", "Test for it with an if before the risky step.", "Handle that case directly."]
+Iterators and generators:
+  Build a list: ["Start with an empty list.", "Compute every value and append it.", "Return the whole list."]
+Standard library:
+  By hand: ["Write the loop and tracking yourself.", "Test it on small inputs.", "Compare it with what the library tool would give."]
+General problem solving:
+  Simplest first: ["Solve the first example by hand, and write the steps as comments.", "Turn each comment into a line of code.", "Run it on every example before improving it."]
+Monotonic stack:
+  Brute force: ["Take each position in turn.", "Scan forward until you find the value it is looking for.", "Record that, or a default if you reach the end."]
+Design with stacks and queues:
+  Direct: ["Store the items in a plain list.", "Work out each answer from the whole list when it is asked for.", "Note which operations become slow as the list grows."]
+Depth-first search:
+  Recursion: ["Mark the current node as visited.", "Call the function on each neighbour not yet visited.", "Combine what the calls return, if the task needs a value."]

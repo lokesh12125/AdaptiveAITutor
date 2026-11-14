@@ -1,0 +1,370 @@
+# Topic lessons, written for this project. Every example is run in the sandbox by backend/tests/test_content.py.
+python-basics:
+  reading_minutes: 8
+  overview: |
+    A program is a list of instructions that Python carries out from top to bottom. This topic covers how to write those instructions, how Python stores values, and how to package steps into your first function.
+  you_will_learn:
+    - How Python runs a file, line by line
+    - The main kinds of value, and how to convert between them
+    - How indentation shows which lines belong together
+    - How to write and call a simple function
+  before_you_start:
+    - You need no programming experience for this topic.
+    - Know where the Run button is. Running is never graded, so try things freely.
+  sections:
+    - id: running-code
+      title: How Python runs your code
+      body: |
+        Python reads a file from the first line to the last, and runs each line in turn. `print` shows a value on the screen, and a line beginning with `#` is a comment, which Python ignores.
+      examples:
+        - title: Your first program
+          code: |
+            # This line is a comment, so Python skips it.
+            print("Hello, world")
+            print(2 + 3)
+          note: The second line prints 5, because Python works out the sum first.
+    - id: values-types
+      title: Values and types
+      body: |
+        Every value has a **type**, which decides what you can do with it.
+
+        - `int` holds whole numbers, such as `42`
+        - `float` holds decimals, such as `3.5`
+        - `str` holds text, written in quotes, such as `"hi"`
+        - `bool` is `True` or `False`
+        - `None` means no value at all
+
+        `type(x)` tells you the type of `x`. You can convert between types with `int()`, `float()` and `str()`. This matters because text and numbers behave differently: `"2" + "3"` joins text to make `"23"`, whereas `2 + 3` gives `5`.
+      examples:
+        - title: The same characters, different types
+          code: |
+            print("2" + "3")
+            print(2 + 3)
+            print(int("2") + int("3"))
+            print(type("hi"), type(3.5))
+          note: Converting text with int() lets you do arithmetic with it.
+    - id: indentation
+      title: Indentation and blocks
+      body: |
+        Python uses the spaces at the start of a line to group lines into a **block**. A line ending in a colon opens a block, and the lines inside it are indented by four spaces. Getting this wrong is one of the most common early errors, and Python will report it as an `IndentationError`.
+      examples:
+        - title: A block
+          code: |
+            if 5 > 3:
+                print("this line is inside the block")
+                print("so is this one")
+            print("this line is outside it")
+    - id: first-functions
+      title: Your first function
+      body: |
+        A **function** is a named set of steps. `def` defines it, the names in brackets are its **parameters**, and `return` hands a result back to whoever called it. Defining a function does not run it. It runs only when you call it.
+
+        Most exercises here ask you to write a function. The tests call it with different inputs, and check what it **returns**. Printing is not returning, so a function that only prints gives back `None`.
+      examples:
+        - title: Defining and calling
+          code: |
+            def double(x):
+                return x * 2
+
+            answer = double(21)
+            print(answer)
+          note: The value 42 travels back from return into the variable answer.
+  patterns:
+    - name: First programs
+      when: The task asks you to read input and print output, with nothing else.
+      how: Write the steps in order, from top to bottom, and press Run after each line you add.
+    - name: Values and types
+      when: The task involves converting or inspecting a value.
+      how: Decide what type you have and what type you need, then convert with int(), float() or str().
+    - name: Simple functions
+      when: The task says to write a function and return something.
+      how: Use the parameters, work out the answer, and finish with return.
+  mistakes:
+    - mistake: Using print inside a function when the task asks you to return.
+      fix: Tests read the returned value. Use return for the answer, and print only to look at values while you work.
+    - mistake: Forgetting the colon at the end of def, if, for or while.
+      fix: Any line that opens a block must end with a colon.
+    - mistake: Mixing up = and ==.
+      fix: One equals sign stores a value. Two compare values.
+    - mistake: Adding a number to text from input().
+      fix: input() always gives text. Convert it with int() or float() first.
+  key_ideas:
+    - Python runs from top to bottom.
+    - Indentation groups lines into blocks.
+    - return hands back a result, and print only shows it.
+    - input() always gives you text.
+
+variables-io:
+  reading_minutes: 8
+  overview: |
+    Programs become useful when they work with data they are given. Here you will store values in variables, read input, do arithmetic, and format your output exactly as a task asks.
+  you_will_learn:
+    - How variables work, and what assignment really does
+    - The arithmetic operators, including floor division and remainder
+    - How to read one or several values with input()
+    - How to format output precisely with f-strings
+  before_you_start:
+    - You should be comfortable running a short program.
+    - Remember the difference between int, float and str, from Python basics.
+  sections:
+    - id: variables
+      title: Variables
+      body: |
+        `x = 5` stores 5 under the name `x`. The right side is worked out first, and then the name is pointed at the result. That is why `count = count + 1` makes sense: it reads the old value, adds one, and stores the new value. `count += 1` is a shorter way to write the same thing.
+
+        Python can also assign several names at once, which makes swapping easy.
+      examples:
+        - title: Updating and swapping
+          code: |
+            count = 10
+            count += 1
+            print(count)
+
+            a, b = 1, 2
+            a, b = b, a
+            print(a, b)
+    - id: operators
+      title: Arithmetic operators
+      body: |
+        Beyond `+`, `-` and `*`, three operators do a great deal of work:
+
+        - `/` always gives a decimal, so `7 / 2` is `3.5`
+        - `//` gives the whole-number quotient, so `7 // 2` is `3`
+        - `%` gives the remainder, so `7 % 2` is `1`
+        - `**` raises to a power, so `2 ** 10` is `1024`
+
+        `%` is more useful than it first looks. `n % 2 == 0` tests for an even number, and `n % 10` gives the last digit. `n // 10` removes that last digit.
+      examples:
+        - title: Pulling a number apart
+          code: |
+            n = 1234
+            print(n % 10)
+            print(n // 10)
+            print(n % 2 == 0)
+    - id: input
+      title: Reading input
+      body: |
+        `input()` reads one line and always gives you **text**. To treat it as a number, convert it. If a line holds several values, `.split()` breaks it into a list of pieces.
+      examples:
+        - title: Reading numbers
+          code: |
+            # In a real program this text would come from input().
+            line = "3 4"
+            a, b = line.split()
+            print(int(a) * int(b))
+    - id: formatting
+      title: Formatting output
+      body: |
+        Automatic checks compare your output exactly, so spacing and punctuation matter. An **f-string** puts values inside text using braces, and a format code after a colon controls how they look. `:.2f` means two decimal places, and `:02d` pads a whole number to two digits with zeros.
+      examples:
+        - title: f-strings
+          code: |
+            name = "Ada"
+            price = 3.14159
+            minutes = 5
+            print(f"Hello, {name}!")
+            print(f"{price:.2f}")
+            print(f"2:{minutes:02d}")
+  patterns:
+    - name: Reading input
+      when: The task says values arrive on standard input.
+      how: Call input() once per line, split if there are several values on a line, and convert to numbers.
+    - name: Arithmetic and operators
+      when: The task involves digits, remainders, units or formulas.
+      how: Think about which of /, // and % you need, and test with a small value by hand.
+    - name: Formatting output
+      when: The output must look a particular way.
+      how: Use an f-string and a format code, then compare your output with the example character by character.
+  mistakes:
+    - mistake: Writing x + 1 and expecting x to change.
+      fix: That only works out a value. Store it with x = x + 1, or x += 1.
+    - mistake: Using / when you need a whole number.
+      fix: Use // for whole-number division, since / always gives a decimal.
+    - mistake: Printing extra words such as "The answer is".
+      fix: Print exactly what the task shows. Extra text fails an exact comparison.
+  key_ideas:
+    - Assignment works out the right side first, then stores it.
+    - // gives the quotient and % gives the remainder.
+    - input() gives text, so convert it.
+    - f-strings give you exact control over output.
+
+conditionals:
+  reading_minutes: 8
+  overview: |
+    Conditionals let a program make decisions, running different code depending on the data. Almost every problem you will meet later relies on them.
+  you_will_learn:
+    - How if, elif and else choose one path
+    - How comparison and logical operators build conditions
+    - Why the order of your branches matters
+    - How to return early to keep code simple
+  before_you_start:
+    - You should be able to write a function that returns a value.
+    - Remember that one equals sign stores a value, and two compare.
+  sections:
+    - id: if-else
+      title: if, elif and else
+      body: |
+        Python checks conditions from the top and runs the **first** block whose condition is true. It then skips the rest. `else` catches everything left over. Because only the first match runs, the order you write the conditions in can change the result.
+      examples:
+        - title: Order matters
+          code: |
+            def size(n):
+                if n >= 100:
+                    return "large"
+                elif n >= 10:
+                    return "medium"
+                else:
+                    return "small"
+
+            print(size(150), size(50), size(3))
+          note: If the n >= 10 check came first, 150 would wrongly be called medium.
+    - id: comparisons
+      title: Comparisons and logic
+      body: |
+        Comparisons give `True` or `False`: `==`, `!=`, `<`, `<=`, `>`, `>=`. You can combine them with `and`, `or` and `not`. Python also lets you chain comparisons, so `0 <= x < 10` reads just as it does in maths. Use `in` to test membership, as in `ch in "aeiou"`.
+      examples:
+        - title: Combining conditions
+          code: |
+            x = 7
+            print(0 <= x < 10)
+            print(x % 2 == 0 or x > 5)
+            print("e" in "hello")
+    - id: early-return
+      title: Returning early
+      body: |
+        Inside a function, `return` ends it straight away. So you often do not need `elif` or `else` at all: handle a special case, return, and let the rest of the function deal with the normal case. A condition is already `True` or `False`, so you can return it directly rather than writing `if x: return True else: return False`.
+      examples:
+        - title: Early return
+          code: |
+            def is_adult(age):
+                return age >= 18
+
+            def describe(n):
+                if n == 0:
+                    return "zero"
+                if n < 0:
+                    return "negative"
+                return "positive"
+
+            print(is_adult(20), describe(-3))
+  patterns:
+    - name: Simple decisions
+      when: There are only one or two outcomes.
+      how: Write the condition directly, and return early if that keeps the code short.
+    - name: Multiple branches
+      when: A value falls into one of several ranges or categories.
+      how: Check from the most specific or highest first, so that each later branch can assume the earlier ones failed.
+    - name: Combined conditions
+      when: Several things must be true together, or at least one of them.
+      how: Use and and or, and write each part so that it can be read on its own. Test the boundary values.
+  mistakes:
+    - mistake: Writing if x = 5.
+      fix: Use == to compare. A single = stores a value, and Python reports this as a syntax error.
+    - mistake: Writing if x == 1 or 2.
+      fix: Each side must be a full comparison, so write x == 1 or x == 2, or x in (1, 2).
+    - mistake: Missing the exact boundary, such as using > when the task says "or more".
+      fix: Test the boundary value itself. "90 or more" means >= 90.
+    - mistake: A path that reaches the end of the function with no return.
+      fix: Python then returns None. Make sure that every path returns a value.
+  key_ideas:
+    - Only the first true branch runs.
+    - Check the boundary values, not just the obvious ones.
+    - A comparison already gives True or False.
+
+loops:
+  reading_minutes: 10
+  overview: |
+    Loops repeat work, which is where programs become far more powerful than doing things by hand. Nearly every data structure and algorithm later in this course is built on loops.
+  you_will_learn:
+    - When to use for and when to use while
+    - How range decides what a loop visits
+    - The running-total pattern, and how to pull digits apart
+    - How nested loops work, and what they cost
+  before_you_start:
+    - You should be comfortable with if and with returning values.
+    - Know the % and // operators from Variables and input.
+  sections:
+    - id: for-loops
+      title: for loops and range
+      body: |
+        A `for` loop takes each item from a sequence in turn. `range` produces numbers, and it has one rule that causes more bugs than any other: **it stops before the end value**.
+
+        - `range(5)` gives 0, 1, 2, 3, 4
+        - `range(1, 5)` gives 1, 2, 3, 4
+        - `range(0, 10, 2)` gives 0, 2, 4, 6, 8
+        - `range(5, 0, -1)` gives 5, 4, 3, 2, 1
+      examples:
+        - title: What range visits
+          code: |
+            print(list(range(1, 5)))
+            for letter in "abc":
+                print(letter)
+          note: list() lets you see exactly which values a range holds. It is a good way to check your boundaries.
+    - id: running-totals
+      title: The running total
+      body: |
+        To add up values, create a variable before the loop, change it inside the loop, and return it **after** the loop. Most loop problems are a variation on this. The same shape finds a product, a count, or the largest value so far.
+      examples:
+        - title: Three uses of one pattern
+          code: |
+            nums = [3, 8, 2]
+            total = 0
+            largest = nums[0]
+            for n in nums:
+                total += n
+                if n > largest:
+                    largest = n
+            print(total, largest)
+    - id: while-loops
+      title: while loops
+      body: |
+        Use `while` when you do not know how many steps you need. The loop repeats as long as its condition is true, so **something inside must eventually make it false**, or it will run forever. `break` leaves a loop early, and `continue` skips to the next pass.
+      examples:
+        - title: Pulling digits off a number
+          code: |
+            n = 1234
+            total = 0
+            while n > 0:
+                total += n % 10
+                n //= 10
+            print(total)
+          note: Each pass takes off the last digit, so n always shrinks and the loop must end.
+    - id: nested-loops
+      title: Nested loops and their cost
+      body: |
+        A loop inside a loop runs its inner part for every pass of the outer one. For `n` items, that is about `n * n` steps. It is fine for small inputs, but this is often what makes a solution too slow. Later topics such as hashing and two pointers exist largely to remove that second loop.
+      examples:
+        - title: Every pair
+          code: |
+            nums = [1, 2, 3]
+            for i in range(len(nums)):
+                for j in range(i + 1, len(nums)):
+                    print(nums[i], nums[j])
+          note: Starting j at i + 1 avoids pairing an item with itself, or visiting a pair twice.
+  patterns:
+    - name: Running totals
+      when: You need a sum, product, or best value over many items.
+      how: Set up a variable before the loop, update it inside, and return it after.
+    - name: Digit loops
+      when: The task is about the digits of a number.
+      how: Use n % 10 to read the last digit and n //= 10 to remove it, until n is 0.
+    - name: Counting and searching
+      when: You need to find something, or count how many satisfy a condition.
+      how: Check each candidate. Return as soon as the answer is certain, and only give the final answer after the loop.
+    - name: Nested loops
+      when: You need every pair, or you are building a table.
+      how: Use one loop for each dimension, and start the inner loop at i + 1 if you only need each pair once.
+  mistakes:
+    - mistake: Returning inside the loop when you meant to return after it.
+      fix: Check the indentation of your return. Inside the loop, the function ends during the first pass.
+    - mistake: An off-by-one error from range.
+      fix: range stops before its end value. To include n, write range(1, n + 1).
+    - mistake: A while loop whose condition never changes.
+      fix: Make sure something inside the loop moves it closer to stopping.
+    - mistake: Resetting the total inside the loop.
+      fix: Create the running total before the loop starts.
+  key_ideas:
+    - range stops before its end value.
+    - Set up before the loop, update inside, return after.
+    - Every while loop needs something that moves it towards stopping.
+    - Two nested loops cost about n times n steps.

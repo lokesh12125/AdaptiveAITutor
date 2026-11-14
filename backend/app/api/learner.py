@@ -21,6 +21,7 @@ from ..models import (
     Draft,
     Evaluation,
     Hint,
+    InteractionRecord,
     Problem,
     Reflection,
     SurveyResponse,
@@ -49,7 +50,7 @@ from .workspace import _hint_row
 router = APIRouter(prefix="/api", tags=["learner"])
 ALLOWED_PREFERENCES = {
     "theme", "editor_font_size", "editor_tab_size", "editor_line_wrap", "editor_line_numbers", "motion", "density", "show_walkthroughs", "auto_hints", "share_anonymous_outcomes",
-    "show_estimates", "syntax_feedback",
+    "show_estimates", "syntax_feedback", "learning_mode",
 }
 
 
@@ -76,9 +77,11 @@ def home(db: Session = Depends(get_db), user: User = Depends(current_user)) -> d
         select(Evaluation.problem_id, func.max(Evaluation.created_at)).where(Evaluation.user_id == user.id, Evaluation.verdict.notin_(["service_failure", "cancelled"])).group_by(Evaluation.problem_id).order_by(func.max(Evaluation.created_at).desc()).limit(40)
     ).all()
     drafts = db.execute(select(Draft.problem_id, Draft.updated_at).where(Draft.user_id == user.id)).all()
-    moments: dict[str, Any] = {pid: at for pid, at in latest}
+    # Archived problems, which include the scratch space behind lesson examples, are not work in progress.
+    open_problems = set(db.scalars(select(Problem.id).where(Problem.archived.is_(False))).all())
+    moments: dict[str, Any] = {pid: at for pid, at in latest if pid in open_problems}
     for pid, at in drafts:
-        if pid not in moments or at > moments[pid]:
+        if pid in open_problems and (pid not in moments or at > moments[pid]):
             moments[pid] = at
     unfinished = [
         {"problem_id": pid, "title": titles.get(pid, pid), "unit_title": unit_titles.get(problem_units.get(pid, ""), ""), "last_active": at, "attempted": pid in attempted}
@@ -102,7 +105,7 @@ def progress(db: Session = Depends(get_db), user: User = Depends(current_user)) 
     units = db.scalars(select(Unit).order_by(Unit.order_index)).all()
     states = {s.unit_id: s for s in db.scalars(select(TopicState).where(TopicState.user_id == user.id)).all()}
     solved, _ = statuses(db, user.id)
-    totals = dict(db.execute(select(Problem.unit_id, func.count()).where(Problem.owner_id.is_(None), Problem.archived.is_(False)).group_by(Problem.unit_id)).all())
+    totals = dict(db.execute(select(Problem.unit_id, func.count()).where(Problem.archived.is_(False), Problem.owner_id.is_(None), Problem.archived.is_(False)).group_by(Problem.unit_id)).all())
     solved_per_unit: dict[str, int] = {}
     if solved:
         for unit_id in db.scalars(select(Problem.unit_id).where(Problem.id.in_(solved))).all():
@@ -210,6 +213,14 @@ def leave_class(class_id: str, db: Session = Depends(get_db), user: User = Depen
     return Response(status_code=204)
 
 
+@router.get("/me/profile")
+def my_profile(db: Session = Depends(get_db), user: User = Depends(current_user)) -> dict[str, Any]:
+    """Everything the learner has done, how they have improved, and the estimates the tutor keeps about them."""
+    from ..profile import build_profile
+
+    return build_profile(db, user.id)
+
+
 @router.get("/me/export")
 def export_my_data(db: Session = Depends(get_db), user: User = Depends(current_user)) -> dict[str, Any]:
     """Everything stored about this learner, for inspection or portability."""
@@ -218,8 +229,13 @@ def export_my_data(db: Session = Depends(get_db), user: User = Depends(current_u
     hints = db.scalars(select(Hint).where(Hint.user_id == user.id)).all()
     reflections = db.scalars(select(Reflection).where(Reflection.user_id == user.id)).all()
     states = db.scalars(select(TopicState).where(TopicState.user_id == user.id)).all()
+    interactions = db.scalars(select(InteractionRecord).where(InteractionRecord.user_id == user.id).order_by(InteractionRecord.created_at)).all()
     return {
         "profile": to_user_out(user).model_dump(),
+        "interactions": [{
+            "problem_id": r.problem_id, "unit_id": r.unit_id, "trigger": r.trigger, "verdict": r.verdict, "category": r.category, "issue_key": r.issue_key, "tests_passed": r.tests_passed, "tests_total": r.tests_total,
+            "code_changed": r.code_changed, "learner_input": r.learner_input, "cognitive": r.cognitive, "decision": r.decision, "active_seconds": r.active_seconds, "policy_version": r.policy_version, "created_at": r.created_at, "reasoning": r.reasoning, "next_action": r.next_action, "resolved": r.resolved,
+        } for r in interactions],
         "code_snapshots": [{"problem_id": s.problem_id, "code": s.code, "created_at": s.created_at} for s in snapshots],
         "evaluations": [{"problem_id": e.problem_id, "kind": e.kind, "verdict": e.verdict, "passed": e.passed, "total": e.total, "created_at": e.created_at} for e in evaluations],
         "hints": [{"problem_id": h.problem_id, "level": h.level, "text": h.text, "outcome": h.outcome, "created_at": h.created_at} for h in hints],

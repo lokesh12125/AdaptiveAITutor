@@ -6,11 +6,11 @@ import type { Preferences, Status, User } from "@/api/types";
 
 type Session = { user: User | null; loading: boolean; refresh: () => Promise<void>; setUser: (user: User | null) => void; preferences: Preferences; updatePreferences: (patch: Preferences) => Promise<void>; status: Status | undefined };
 const Context = createContext<Session | null>(null);
-const THEME_KEY = "trellis.theme";
+const THEME_KEY = "codepath.theme";
 
 function resolveTheme(choice: Preferences["theme"]): "light" | "dark" {
-  if (choice === "light" || choice === "dark") return choice;
-  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  if (choice === "system") return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  return choice === "dark" ? "dark" : "light"; // light is the default
 }
 
 /** Theme choice is kept in the browser too, so it applies before sign-in and before first paint. */
@@ -19,13 +19,13 @@ export function applyAppearance(preferences: Preferences): void {
   let choice = preferences.theme;
   try {
     const saved = localStorage.getItem(THEME_KEY);
-    if (!choice && (saved === "light" || saved === "dark")) choice = saved;
-    if (preferences.theme === "system") localStorage.removeItem(THEME_KEY);
-    else if (preferences.theme) localStorage.setItem(THEME_KEY, preferences.theme);
+    if (!choice && (saved === "light" || saved === "dark" || saved === "system")) choice = saved;
+    if (preferences.theme) localStorage.setItem(THEME_KEY, preferences.theme);
   } catch {
     /* Storage can be unavailable in private windows. The theme still applies for this page. */
   }
-  root.dataset.theme = resolveTheme(choice);
+  // With no choice anywhere, keep the theme index.html set, which may have come with the link that opened this tab.
+  root.dataset.theme = choice ? resolveTheme(choice) : root.dataset.theme === "dark" ? "dark" : "light";
   root.dataset.density = preferences.density === "compact" ? "compact" : "comfortable";
   root.dataset.motion = preferences.motion === "reduced" ? "reduced" : "system";
   root.style.setProperty("--editor-font-size", `${preferences.editor_font_size ?? 14}px`);

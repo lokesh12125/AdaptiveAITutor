@@ -1,0 +1,279 @@
+# Approach guidance for each technique. All wording was written for this project.
+# This describes how to think about a kind of problem. It never contains the solution to a specific problem.
+
+Stack basics:
+  idea: "A stack handles the most recent item first, using append and pop on a list."
+  observations: ["Popping from an empty list raises an error.", "Reversal is natural, since the last item in comes out first."]
+  steps: ["Decide what goes on the stack.", "Decide when to push, and when to pop.", "Check it is not empty before popping.", "Decide what remains at the end."]
+  approaches:
+    - {level: "Stack", idea: "Use a list with append and pop.", time: "O(1) per operation", space: "O(n)"}
+  mistakes: ["Popping an empty stack.", "Using pop(0), which removes from the wrong end.", "Forgetting what is left on the stack at the end."]
+  edge_cases: ["Empty input.", "One item.", "More pops than pushes."]
+
+Matching and parsing:
+  idea: "Push what opens, and when something closes, it must match the most recent opening."
+  observations: ["A closing item with an empty stack is an error.", "Anything left at the end was never closed.", "A dictionary from closers to openers keeps the code short."]
+  steps: ["Identify what opens and what closes.", "Push each opener.", "For each closer, check the top matches.", "At the end, check the stack is empty."]
+  approaches:
+    - {level: "Repeated replacing", idea: "Remove matched pairs until none remain.", time: "O(n²)", space: "O(n)"}
+    - {level: "Stack", idea: "One pass with a stack.", time: "O(n)", space: "O(n)"}
+  mistakes: ["Not checking for an empty stack on a closer.", "Forgetting the final check.", "Only counting brackets, which ignores their order."]
+  edge_cases: ["Empty text.", "Only closers.", "Only openers.", "Correct counts in the wrong order."]
+
+Monotonic stack:
+  idea: "Keep a stack in sorted order, so each item can find its next larger or smaller value."
+  observations: ["Popped items have just found their answer.", "Each item is pushed and popped at most once, so the total is linear.", "Store positions, so you can work out distances."]
+  steps: ["Decide what each item is looking for.", "Keep waiting items on the stack.", "When a new item answers some of them, pop them and record.", "Decide the answer for those still waiting at the end."]
+  approaches:
+    - {level: "Brute force", idea: "For each item, scan forward.", time: "O(n²)", space: "O(1)"}
+    - {level: "Monotonic stack", idea: "One pass, with a stack of waiting items.", time: "O(n)", space: "O(n)"}
+  mistakes: ["Storing values when you need positions.", "Using < where <= is needed for equal values.", "Forgetting items still on the stack."]
+  edge_cases: ["Increasing input.", "Decreasing input.", "All equal.", "A single item."]
+
+Queue and deque:
+  idea: "A queue handles the oldest item first, and a deque does this quickly at both ends."
+  observations: ["deque.popleft() is O(1), and list.pop(0) is O(n).", "A deque can also keep a sliding window's candidates."]
+  steps: ["Decide what waits in the queue.", "Add at one end.", "Take from the other.", "Decide when the work is finished."]
+  approaches:
+    - {level: "List as a queue", idea: "Use append and pop(0).", time: "O(n) per removal", space: "O(n)"}
+    - {level: "Deque", idea: "Use append and popleft.", time: "O(1) per operation", space: "O(n)"}
+  mistakes: ["Using pop rather than popleft.", "Removing from an empty queue.", "Forgetting to import deque."]
+  edge_cases: ["An empty queue.", "One item.", "Adding while processing."]
+
+Design with stacks and queues:
+  idea: "Build the behaviour asked for by combining simple structures, and keep extra information to make each operation fast."
+  observations: ["A second stack can remember a minimum at every level.", "Two stacks can act as a queue.", "Make invalid operations safe."]
+  steps: ["List the operations and how fast they must be.", "Decide what data each one needs.", "Choose structures that give that directly.", "Test a sequence of mixed operations."]
+  approaches:
+    - {level: "Direct", idea: "Compute what is asked each time.", time: "O(n) per slow operation", space: "O(n)"}
+    - {level: "Keep extra information", idea: "Update what you need as items change.", time: "O(1) per operation", space: "O(n)"}
+  mistakes: ["Letting the extra structure go out of step.", "Not handling operations on an empty structure.", "Using shared state on the class."]
+  edge_cases: ["Operations on an empty structure.", "Repeated values.", "Alternating operations."]
+
+Traversal:
+  idea: "Follow next from node to node, until you reach None."
+  observations: ["There is no direct indexing, so you walk to each position.", "Keep the head safe by walking with another name."]
+  steps: ["Start a variable at the head.", "Process the current node.", "Move to the next node.", "Stop at None."]
+  approaches:
+    - {level: "Copy to a list", idea: "Collect the values, then work on the list.", time: "O(n)", space: "O(n)"}
+    - {level: "Walk the list", idea: "Process each node as you reach it.", time: "O(n)", space: "O(1)"}
+  mistakes: ["Moving the head itself and losing the list.", "Reading .next on None.", "Forgetting to move forward, so the loop never ends."]
+  edge_cases: ["An empty list.", "One node.", "A position past the end."]
+
+Pointer rewiring:
+  idea: "Change where links point, always saving what you still need first."
+  observations: ["Once a link changes, whatever it pointed to may be unreachable.", "Drawing boxes and arrows helps more than anything else here."]
+  steps: ["Draw the list before and after.", "Name the nodes you need: previous, current, next.", "Save the next node.", "Change the link, then move along."]
+  approaches:
+    - {level: "Copy values", idea: "Collect values, then rebuild.", time: "O(n)", space: "O(n)"}
+    - {level: "Rewire links", idea: "Change links as you go.", time: "O(n)", space: "O(1)"}
+  mistakes: ["Changing a link before saving next.", "Returning the old head.", "Leaving a stray link that makes a cycle."]
+  edge_cases: ["An empty list.", "One node.", "Two nodes."]
+
+Merging and dummy heads:
+  idea: "A placeholder node in front means the first real node needs no special case."
+  observations: ["Return dummy.next, not dummy.", "When one list ends, attach the rest of the other."]
+  steps: ["Create a dummy node, and a tail pointing at it.", "Attach the next node to the tail.", "Move the tail along.", "Return dummy.next."]
+  approaches:
+    - {level: "Copy, sort, rebuild", idea: "Use a list in the middle.", time: "O(n log n)", space: "O(n)"}
+    - {level: "Dummy head", idea: "Link nodes directly as you go.", time: "O(n)", space: "O(1)"}
+  mistakes: ["Returning the dummy itself.", "Forgetting to attach what remains.", "Not advancing the tail."]
+  edge_cases: ["One or both lists empty.", "Removing the first node.", "All nodes removed."]
+
+Depth-first traversal:
+  idea: "Visit a node and go all the way down each branch before moving to the next."
+  observations: ["Pre-order, in-order and post-order differ in when the node is handled.", "The empty node is the base case."]
+  steps: ["Handle the empty node.", "Decide when to handle this node.", "Recurse on the left, then the right.", "Combine or collect the results."]
+  approaches:
+    - {level: "Recursion", idea: "Follow the tree's own shape.", time: "O(n)", space: "O(h) for height h"}
+    - {level: "Explicit stack", idea: "Replace recursion with your own stack.", time: "O(n)", space: "O(h)"}
+  mistakes: ["No check for None.", "Doing the wrong order for the task.", "Forgetting to return the result of the recursive calls."]
+  edge_cases: ["An empty tree.", "One node.", "A lopsided tree."]
+
+Breadth-first traversal:
+  idea: "Visit a whole level before moving to the next, using a queue."
+  observations: ["The size of the queue at the start of a pass is the size of that level.", "It finds the nearest leaf first."]
+  steps: ["Put the root in a queue.", "Note how many nodes are in this level.", "Process that many, adding their children.", "Repeat until the queue is empty."]
+  approaches:
+    - {level: "Depth-first with a depth", idea: "Recurse, passing the current level.", time: "O(n)", space: "O(h) plus the result"}
+    - {level: "Queue", idea: "Handle a level at a time.", time: "O(n)", space: "O(w) for width w"}
+  mistakes: ["Adding None children to the queue.", "Not separating the levels.", "Using a list with pop(0)."]
+  edge_cases: ["An empty tree.", "One node.", "Levels of very different sizes."]
+
+Tree properties:
+  idea: "Ask each subtree for its answer, then combine those with this node."
+  observations: ["Height, size and balance all follow the same shape.", "Sometimes a helper must return two things."]
+  steps: ["Decide the answer for an empty tree.", "Assume the left and right answers are known.", "Combine them with this node.", "Check on a one-node tree."]
+  approaches:
+    - {level: "Recompute for each node", idea: "Call a separate height for every node.", time: "O(n²)", space: "O(h)"}
+    - {level: "One recursion", idea: "Return what you need, once, from below.", time: "O(n)", space: "O(h)"}
+  mistakes: ["Wrong value for the empty tree.", "Forgetting the 1 for the current node.", "Calling the helper repeatedly."]
+  edge_cases: ["An empty tree.", "One node.", "Only left children."]
+
+Binary search trees:
+  idea: "Everything left is smaller and everything right is larger, so you can discard half at each step."
+  observations: ["In-order traversal gives sorted values.", "Validity depends on all ancestors, not just the parent.", "A lopsided tree loses the speed."]
+  steps: ["Compare the target with this node.", "Go left or right.", "Stop at a match, or at None.", "For validity, pass allowed limits down."]
+  approaches:
+    - {level: "Search everything", idea: "Visit every node.", time: "O(n)", space: "O(h)"}
+    - {level: "Use the order", idea: "Go one way at each node.", time: "O(h), about O(log n) when balanced", space: "O(1) or O(h)"}
+  mistakes: ["Only comparing with the parent when checking validity.", "Forgetting to return or reattach the result.", "Mishandling equal values."]
+  edge_cases: ["An empty tree.", "A missing value.", "Duplicates, if allowed."]
+
+Path problems:
+  idea: "Pass down what the path has so far, and check when you reach the end."
+  observations: ["A leaf has no children at all.", "A path may need to be undone on the way back.", "Some paths may start and end anywhere."]
+  steps: ["Decide what travels down with the recursion.", "Update it at each node.", "Check it at the right place.", "Combine or record the results."]
+  approaches:
+    - {level: "Depth-first search", idea: "Carry the running value down.", time: "O(n)", space: "O(h)"}
+  mistakes: ["Checking at None rather than at a leaf.", "Appending the path list itself rather than a copy.", "Treating a one-child node as a leaf."]
+  edge_cases: ["An empty tree.", "A one-sided tree.", "Negative values."]
+
+Graph representation:
+  idea: "Store each node's neighbours in a dictionary, which is called an adjacency list."
+  observations: ["Undirected edges are added in both directions.", "Some nodes may have no edges at all.", "A set of neighbours removes duplicates."]
+  steps: ["Read how edges are given.", "Create an entry for every node.", "Add each edge, in both directions if undirected.", "Use the dictionary to answer the question."]
+  approaches:
+    - {level: "List of edges", idea: "Scan all edges each time.", time: "O(E) per question", space: "O(E)"}
+    - {level: "Adjacency list", idea: "Look up the neighbours directly.", time: "O(V + E) to build", space: "O(V + E)"}
+  mistakes: ["Adding an undirected edge in only one direction.", "Forgetting nodes with no edges.", "Reading a key that does not exist."]
+  edge_cases: ["Nodes with no edges.", "A node linked to itself.", "Repeated edges."]
+
+Breadth-first search:
+  idea: "Explore outward one distance at a time, using a queue and a visited set."
+  observations: ["The first time you reach a node is by the shortest route, when edges count equally.", "Mark nodes as you add them, not as you remove them."]
+  steps: ["Put the start in a queue, and mark it.", "Take the next node.", "Add each unvisited neighbour, and mark it.", "Stop when you reach the target, or the queue is empty."]
+  approaches:
+    - {level: "Try all paths", idea: "Search every route.", time: "Exponential", space: "O(V)"}
+    - {level: "Breadth-first search", idea: "Spread out level by level.", time: "O(V + E)", space: "O(V)"}
+  mistakes: ["Marking too late, which adds nodes more than once.", "Using depth-first search for shortest paths.", "Forgetting the unreachable case."]
+  edge_cases: ["Start equals target.", "An unreachable target.", "A disconnected graph."]
+
+Depth-first search:
+  idea: "Go as far as you can along one route, then back up and try another."
+  observations: ["Recursion or a stack both work.", "A visited set stops you looping.", "Starting from each unvisited node counts the connected groups."]
+  steps: ["Mark the current node.", "For each unvisited neighbour, recurse.", "Combine the results if you need to.", "Loop over every node if the graph may be disconnected."]
+  approaches:
+    - {level: "Recursion", idea: "Use the call stack.", time: "O(V + E)", space: "O(V)"}
+    - {level: "Explicit stack", idea: "Use your own stack on very deep graphs.", time: "O(V + E)", space: "O(V)"}
+  mistakes: ["No visited set.", "Only starting from one node.", "Using it for shortest paths."]
+  edge_cases: ["Cycles.", "A disconnected graph.", "A node with no neighbours."]
+
+Grids as graphs:
+  idea: "Each cell is a node, and its neighbours are the cells up, down, left and right."
+  observations: ["Check the bounds before using a neighbour.", "A set of (row, column) pairs tracks what you have seen.", "Marking the grid itself also works, if allowed."]
+  steps: ["Define what a valid move is.", "Write the four directions as a list.", "Check bounds and visited for each move.", "Use breadth-first for shortest routes, and depth-first for regions."]
+  approaches:
+    - {level: "Depth-first or breadth-first search", idea: "Treat cells as nodes.", time: "O(r × c)", space: "O(r × c)"}
+  mistakes: ["Mixing up rows and columns.", "Checking the cell before checking the bounds.", "Forgetting to mark cells as visited."]
+  edge_cases: ["An empty grid.", "One row or column.", "A start that is blocked."]
+
+Topological order:
+  idea: "Do a task only once everything it depends on is done, starting with tasks that depend on nothing."
+  observations: ["Count how many unfinished things each task depends on.", "If you cannot finish every task, there is a cycle.", "There can be several valid orders."]
+  steps: ["Build the graph and count each task's dependencies.", "Queue the tasks with none.", "Finish one, and reduce the count of what depends on it.", "Queue any that reach zero."]
+  approaches:
+    - {level: "Repeated scanning", idea: "Keep searching for a task that is ready.", time: "O(V²)", space: "O(V)"}
+    - {level: "Counting dependencies", idea: "Use a queue of ready tasks.", time: "O(V + E)", space: "O(V + E)"}
+  mistakes: ["Getting the edge direction backwards.", "Forgetting tasks with no edges.", "Not detecting a cycle."]
+  edge_cases: ["A cycle.", "No dependencies.", "A task depending on itself."]
+
+One-dimensional DP:
+  idea: "Let dp[i] answer the problem for the first i items, built from a few smaller answers."
+  observations: ["Often only the last two values are needed.", "Say in words what dp[i] means before writing any code."]
+  steps: ["Define dp[i] in words.", "Write how dp[i] comes from smaller values.", "Set the base cases.", "Fill from small to large, and return the final one."]
+  approaches:
+    - {level: "Plain recursion", idea: "Follow the definition directly.", time: "Often O(2^n)", space: "O(n)"}
+    - {level: "Memoisation", idea: "Store each result.", time: "O(n)", space: "O(n)"}
+    - {level: "Table or two variables", idea: "Build up from the base cases.", time: "O(n)", space: "O(n) or O(1)"}
+  mistakes: ["No clear meaning for dp[i].", "Off by one between dp and the input.", "Wrong base cases."]
+  edge_cases: ["Zero items.", "One item.", "All values equal."]
+
+Choices and subsets:
+  idea: "For each item, compare taking it with leaving it, and keep the better result."
+  observations: ["The state usually includes the capacity or target left.", "Filling backwards stops an item being used twice."]
+  steps: ["Define the state, using the remaining capacity or target.", "Write the take and leave options.", "Set the base case.", "Choose the fill order carefully."]
+  approaches:
+    - {level: "Try every subset", idea: "Explore every choice.", time: "O(2^n)", space: "O(n)"}
+    - {level: "Table", idea: "Store the answer per capacity.", time: "O(n × capacity)", space: "O(capacity)"}
+  mistakes: ["Using an item more than once by accident.", "The wrong base value, such as 0 instead of infinity.", "Forgetting the impossible case."]
+  edge_cases: ["A target of zero.", "No possible answer.", "Items larger than the capacity."]
+
+Two-dimensional grids:
+  idea: "Each cell's answer comes from the cells you could have arrived from."
+  observations: ["The first row and column are usually base cases.", "One row of memory is often enough."]
+  steps: ["Define what dp[r][c] means.", "Write how it comes from above and left.", "Fill the first row and column.", "Fill the rest, row by row."]
+  approaches:
+    - {level: "Plain recursion", idea: "Explore every path.", time: "Exponential", space: "O(r + c)"}
+    - {level: "Table", idea: "Fill one cell at a time.", time: "O(r × c)", space: "O(r × c) or O(c)"}
+  mistakes: ["Building the table with shared rows.", "Mixing up rows and columns.", "Forgetting a blocked start or end."]
+  edge_cases: ["One row or column.", "A blocked cell.", "An empty grid."]
+
+Strings and sequences:
+  idea: "Compare prefixes: dp[i][j] answers for the first i of one, and the first j of the other."
+  observations: ["If the last characters match, the answer often builds on the diagonal.", "The table needs one extra row and column for empty prefixes."]
+  steps: ["Define dp[i][j] in words.", "Handle the case when characters match.", "Handle the case when they differ.", "Set the empty prefix values, then fill."]
+  approaches:
+    - {level: "Plain recursion", idea: "Try every option.", time: "Exponential", space: "O(n + m)"}
+    - {level: "Table", idea: "Fill by prefixes.", time: "O(n × m)", space: "O(n × m), or one row"}
+  mistakes: ["Off by one between the table and the strings.", "Wrong empty-prefix values.", "Confusing subsequence with substring."]
+  edge_cases: ["One or both strings empty.", "Identical strings.", "No characters in common."]
+
+Memoisation:
+  idea: "Write the natural recursion, and store each answer so it is only computed once."
+  observations: ["The arguments are the state, so they must be hashable.", "functools.lru_cache does this with one line.", "Base cases go first."]
+  steps: ["Write the plain recursion first.", "Identify what its arguments are.", "Return early if the answer is stored.", "Store the answer before returning."]
+  approaches:
+    - {level: "Plain recursion", idea: "Solves the same call again and again.", time: "Often exponential", space: "O(depth)"}
+    - {level: "With memory", idea: "Each distinct call runs once.", time: "States times work per state", space: "O(states)"}
+  mistakes: ["Using a list as an argument, which cannot be hashed.", "A shared default dictionary across calls.", "Storing the answer but not returning it."]
+  edge_cases: ["The base cases.", "Very deep recursion.", "Negative arguments."]
+
+Classes and objects:
+  idea: "A class bundles data with the functions that use it, and each object keeps its own data."
+  observations: ["__init__ sets up a new object.", "Every method takes self first.", "Set mutable data in __init__, not on the class."]
+  steps: ["List what each object must remember.", "Set it up in __init__.", "Write one method at a time.", "Try it by creating two objects."]
+  approaches:
+    - {level: "Class", idea: "Keep the data and behaviour together.", time: "Depends on the methods", space: "O(1) per object, plus its data"}
+  mistakes: ["Forgetting self.", "Sharing a list between objects.", "Calling a method on the class rather than an object."]
+  edge_cases: ["A new object with no data.", "Two objects staying independent.", "Invalid values."]
+
+Errors and exceptions:
+  idea: "Use try and except to handle a specific failure you can do something about."
+  observations: ["Catch the exact error you expect.", "raise signals a problem to the caller.", "finally always runs."]
+  steps: ["Identify what can go wrong.", "Put only that in a try.", "Catch that specific error.", "Decide what happens instead."]
+  approaches:
+    - {level: "Check first", idea: "Test the condition with if.", time: "Small check each time", space: "O(1)"}
+    - {level: "Try and except", idea: "Attempt it, and handle the failure.", time: "Small unless it fails often", space: "O(1)"}
+  mistakes: ["A bare except that hides real bugs.", "Too much code inside the try.", "Swallowing an error silently."]
+  edge_cases: ["Errors you did not expect.", "An error raised inside except.", "Empty input."]
+
+Iterators and generators:
+  idea: "A generator produces values one at a time, so nothing is stored until it is needed."
+  observations: ["yield pauses the function.", "A generator can only be gone through once.", "next() asks for one more value."]
+  steps: ["Decide the sequence of values.", "Replace collecting in a list with yield.", "Consume it with a for loop or next().", "Decide when it should end."]
+  approaches:
+    - {level: "Build a list", idea: "Compute everything first.", time: "O(n)", space: "O(n)"}
+    - {level: "Generator", idea: "Compute each value as it is needed.", time: "O(n) in total", space: "O(1)"}
+  mistakes: ["Going through a generator twice.", "Using return when you mean yield.", "An endless generator used without a stop."]
+  edge_cases: ["No values at all.", "Stopping early.", "Infinite sequences."]
+
+Standard library:
+  idea: "Python ships with tested tools for common jobs. Import them, rather than rewriting them."
+  observations: ["Each tool must be imported before use.", "collections, itertools, functools, heapq and math cover a great deal."]
+  steps: ["Describe the job in general terms.", "Find the tool that does it.", "Import it at the top of your file.", "Read how it is called, and test it."]
+  approaches:
+    - {level: "By hand", idea: "Write the logic yourself.", time: "Depends", space: "Depends"}
+    - {level: "Standard library", idea: "Use a tested tool.", time: "Check each tool", space: "Check each tool"}
+  mistakes: ["Forgetting the import.", "Importing the module, then using the name without its prefix.", "Naming your own file after a module."]
+  edge_cases: ["Empty inputs to each tool.", "Heaps being smallest first.", "itertools tools that never end."]
+
+General problem solving:
+  idea: "Understand the task by hand first. Code comes from a process you already understand."
+  observations: ["Work out one example by hand before writing code.", "The simplest correct solution is a good first version.", "Check what the input size means for your approach."]
+  steps: ["Say in your own words what comes in and what goes out.", "Solve the first example by hand, noting each step.", "Turn those steps into code, one at a time.", "Run it on the examples, then on small unusual inputs."]
+  approaches:
+    - {level: "Simplest first", idea: "Write the most direct method that works.", time: "Often O(n²)", space: "Often O(1)"}
+    - {level: "Improve it", idea: "Find repeated work, and remember results rather than recomputing.", time: "Often O(n) or O(n log n)", space: "Often O(n)"}
+  mistakes: ["Starting to code before understanding the example.", "Trying to write it all before running anything.", "Ignoring empty and smallest inputs."]
+  edge_cases: ["Empty input.", "The smallest and largest allowed input.", "Repeated values."]

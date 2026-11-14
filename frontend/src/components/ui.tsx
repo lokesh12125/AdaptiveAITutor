@@ -103,7 +103,7 @@ export function Confirm({ trigger, title, description, confirmLabel, onConfirm, 
   );
 }
 
-export function Field({ label, help, error, children }: { label: string; help?: ReactNode; error?: string | null; children: (props: { id: string; "aria-describedby"?: string; "aria-invalid"?: boolean }) => ReactNode }) {
+export function Field({ label, help, error, children }: { label: ReactNode; help?: ReactNode; error?: string | null; children: (props: { id: string; "aria-describedby"?: string; "aria-invalid"?: boolean }) => ReactNode }) {
   const id = useId();
   const describedBy = [help ? `${id}-help` : null, error ? `${id}-error` : null].filter(Boolean).join(" ") || undefined;
   return (
@@ -195,7 +195,7 @@ export function Stat({ value, label, note }: { value: ReactNode; label: string; 
   return (
     <div className="stat">
       <span className="stat-label">{label}</span>
-      <span className="stat-value">{value}</span>
+      <span className={`stat-value ${typeof value === "string" && /[a-z]{3}/i.test(value) ? "stat-value-text" : ""}`}>{value}</span>
       {note && <span className="stat-note">{note}</span>}
     </div>
   );
@@ -235,4 +235,21 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
 export function errorText(error: unknown): string {
   return error instanceof ApiError ? error.message : "Something went wrong. Your work is safe. Please try again.";
+}
+
+/** How much of a topic is solved, as a ring. The percentage is decoration: the label carries the numbers. */
+export function Ring({ value, total, size = 46, label }: { value: number; total: number; size?: number; label: string }) {
+  const stroke = 4;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const share = total > 0 ? Math.min(1, value / total) : 0;
+  return (
+    <span className="ring" role="img" aria-label={label} style={{ width: size, height: size }}>
+      <svg width={size} height={size} fill="none" strokeWidth={stroke} aria-hidden>
+        <circle className="ring-track" cx={size / 2} cy={size / 2} r={radius} />
+        <circle className="ring-value" cx={size / 2} cy={size / 2} r={radius} strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - share)} />
+      </svg>
+      <span className="ring-label" aria-hidden>{Math.round(share * 100)}%</span>
+    </span>
+  );
 }

@@ -45,7 +45,7 @@ def app_ready():
     from app.seed import seed_content, seed_demo_class, seed_synthetic_cases
 
     seed_content()
-    seed_synthetic_cases(400)
+    seed_synthetic_cases()
     seed_demo_class()
     from app.main import app
 

@@ -43,6 +43,7 @@ def run_test(test, job, workdir):
         "kwargs": test.get("kwargs", {}),
         "setup": test.get("setup"),
         "expr": test.get("expr"),
+        "trace_lines": test.get("trace_lines"),
         "limits": {
             "cpu_seconds": max(1, int(per_test) + 1),
             "memory_mb": int(limits["memory_mb"]),

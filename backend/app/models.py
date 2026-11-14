@@ -75,6 +75,7 @@ class Unit(Base):
     optional: Mapped[bool] = mapped_column(Boolean, default=False)
     prerequisites: Mapped[list[str]] = mapped_column(ARRAY(String(64)), default=list)
     lessons: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    guide: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
 
 class Problem(Base):
@@ -100,6 +101,8 @@ class Problem(Base):
     source_url: Mapped[str | None] = mapped_column(String(500))
     source_note: Mapped[str | None] = mapped_column(Text)
     source_retrieved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    learner_notes: Mapped[str | None] = mapped_column(Text)
+    pattern: Mapped[str | None] = mapped_column(String(64))
     owner_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     recommended_first: Mapped[bool] = mapped_column(Boolean, default=False)
     order_index: Mapped[int] = mapped_column(Integer, default=0)
@@ -321,6 +324,47 @@ class Hint(Base):
     outcome: Mapped[str | None] = mapped_column(String(16))
     outcome_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     helpful: Mapped[bool | None] = mapped_column(Boolean)
+    learner_request: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class InteractionRecord(Base):
+    """One row per completed learning cycle: what was seen, what each agent concluded, and what was decided.
+
+    This is the persistent interaction state the agents read back on the next cycle. It holds no hidden
+    test contents, no reference solutions, and no prompts.
+    """
+
+    __tablename__ = "interaction_records"
+    __table_args__ = (Index("ix_interaction_user_problem_time", "user_id", "problem_id", "created_at"),)
+    id: Mapped[str] = mapped_column(ID, primary_key=True, default=new_id)
+    run_id: Mapped[str] = mapped_column(ForeignKey("pipeline_runs.id", ondelete="CASCADE"), unique=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    problem_id: Mapped[str] = mapped_column(ForeignKey("problems.id", ondelete="CASCADE"))
+    unit_id: Mapped[str] = mapped_column(ForeignKey("units.id"))
+    snapshot_id: Mapped[str] = mapped_column(ForeignKey("code_snapshots.id", ondelete="CASCADE"))
+    evaluation_id: Mapped[str | None] = mapped_column(ForeignKey("evaluations.id", ondelete="SET NULL"))
+    evaluation_kind: Mapped[str | None] = mapped_column(String(12))
+    trigger: Mapped[str] = mapped_column(String(24))
+    verdict: Mapped[str | None] = mapped_column(String(24))
+    category: Mapped[str] = mapped_column(String(24))
+    issue_key: Mapped[str] = mapped_column(String(64))
+    tests_passed: Mapped[int] = mapped_column(Integer, default=0)
+    tests_total: Mapped[int] = mapped_column(Integer, default=0)
+    code_changed: Mapped[bool] = mapped_column(Boolean, default=False)
+    learner_input: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    diagnostic: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    cognitive: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    retrieval: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    decision: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    hint_id: Mapped[str | None] = mapped_column(ForeignKey("hints.id", ondelete="SET NULL"))
+    active_seconds: Mapped[int | None] = mapped_column(Integer)
+    policy_version: Mapped[str | None] = mapped_column(String(32))
+    # The reasoning trail: raw error, prior hints, the hint generated and whether validation passed.
+    reasoning: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
+    # Filled in by the next cycle on this problem.
+    next_action: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    resolved: Mapped[bool | None] = mapped_column(Boolean)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
@@ -335,6 +379,10 @@ class Reflection(Base):
     answer: Mapped[str | None] = mapped_column(Text)
     answered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    kind: Mapped[str | None] = mapped_column(String(40))
+    context: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
+    feedback: Mapped[str | None] = mapped_column(Text)
+    quality: Mapped[str | None] = mapped_column(String(16))
 
 
 class Recommendation(Base):

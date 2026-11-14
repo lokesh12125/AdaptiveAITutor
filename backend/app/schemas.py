@@ -93,6 +93,8 @@ class ProblemSummary(BaseModel):
     source_name: str | None
     is_mine: bool
     recommended_first: bool = False
+    pattern: str | None = None
+    created_at: datetime | None = None
 
 
 class ExampleOut(BaseModel):
@@ -100,6 +102,14 @@ class ExampleOut(BaseModel):
     input: str
     expected: str | None
     origin: str
+
+
+class SampleCase(BaseModel):
+    id: str
+    kind: str
+    params: list[dict[str, str]]
+    expected: str | None
+    editable: bool
 
 
 class ProblemDetail(BaseModel):
@@ -121,12 +131,18 @@ class ProblemDetail(BaseModel):
     per_test_seconds: float
     examples: list[ExampleOut]
     hidden_test_count: int
+    hidden_test_categories: list[dict[str, Any]] = Field(default_factory=list, description="How many hidden tests of each kind, and what that kind checks. Never inputs or answers.")
     source_type: str
     source_name: str | None
     source_url: str | None
     source_note: str | None
     source_retrieved_at: datetime | None
+    learner_notes: str | None = None
     is_mine: bool
+    pattern: str | None = None
+    topic_notes: dict[str, Any] | None = None
+    sample_cases: list[SampleCase] = Field(default_factory=list)
+    param_names: list[str] = Field(default_factory=list)
 
 
 class LessonOut(BaseModel):
@@ -167,15 +183,25 @@ class UnitDetail(BaseModel):
     optional: bool
     prerequisites: list[dict[str, str]]
     lessons: list[LessonOut]
+    guide: dict[str, Any] | None = None
     problems: list[ProblemSummary]
 
 
 # ---- workspace
+class CaseIn(BaseModel):
+    """One test case to run: an unchanged example by id, or the learner's own values, one Python value per parameter."""
+
+    test_id: str | None = Field(default=None, max_length=64)
+    args: list[str] | None = Field(default=None, max_length=12)
+    stdin: str | None = Field(default=None, max_length=20000)
+
+
 class RunIn(BaseModel):
     code: str = Field(max_length=100000)
     idempotency_key: str = Field(min_length=8, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
     custom_args: str | None = Field(default=None, max_length=20000, description="A JSON array of arguments")
     custom_stdin: str | None = Field(default=None, max_length=20000)
+    cases: list[CaseIn] | None = Field(default=None, max_length=8)
 
 
 class SubmitIn(BaseModel):
@@ -189,6 +215,8 @@ class SubmitIn(BaseModel):
 class HintIn(SubmitIn):
     request_size: Literal["nudge", "more"] | None = None
     question: str | None = Field(default=None, max_length=500)
+    focus_start: int | None = Field(default=None, ge=1, le=20000, description="First line the learner pointed at")
+    focus_end: int | None = Field(default=None, ge=1, le=20000)
 
 
 class EvaluationOut(BaseModel):
@@ -253,6 +281,10 @@ class HintRow(BaseModel):
     id: str
     level: int
     level_name: str
+    strategy: str | None = None
+    question: str | None = None
+    focus_start: int | None = None
+    focus_end: int | None = None
     text: str
     why: str
     source: str
@@ -308,6 +340,9 @@ class AssessmentSubmitIn(BaseModel):
 # ---- imports
 class ParseIn(BaseModel):
     text: str = Field(min_length=20, max_length=30000)
+    source_url: str | None = Field(default=None, max_length=500)
+    unit_id: str | None = Field(default=None, max_length=64)
+    notes: str | None = Field(default=None, max_length=2000)
 
 
 class LookupIn(BaseModel):
@@ -341,16 +376,24 @@ class ImportDraft(BaseModel):
     source_name: str | None = Field(default=None, max_length=160)
     source_url: str | None = Field(default=None, max_length=500)
     source_retrieved_at: datetime | None = None
+    learner_notes: str | None = Field(default=None, max_length=2000)
     missing_fields: list[str] = Field(default_factory=list)
+    extracted_fields: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
 
 
 class LookupOut(BaseModel):
     supported: bool
-    source_name: str | None
+    status: Literal["extracted", "partial", "metadata_only", "url_only", "failed", "invalid"] = "failed"
+    reason_code: str | None = None
+    source_name: str | None = None
+    source_url: str | None = None
+    access: Literal["official_api", "public_page", "url_only", "none"] = "none"
     message: str
     guidance: str | None = None
     draft: ImportDraft | None = None
+    extracted_fields: list[str] = Field(default_factory=list)
+    missing_fields: list[str] = Field(default_factory=list)
 
 
 class TestCase(BaseModel):

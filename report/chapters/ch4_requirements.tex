@@ -1,0 +1,96 @@
+\chapter{Requirements}
+\section{Functional requirements}
+There are three actors: the learner, the teacher and the system (the tutoring agents). Table~\ref{tab:fr} lists the functional requirements. Each acceptance criterion is checked by automated tests, which are either named in the table or listed in Appendix~\ref{app:repro}. Files named \code{test\_*.py} are backend tests, and ``browser'' means the Playwright end-to-end suite.
+
+\begingroup\small
+\setlength{\tabcolsep}{3pt}\renewcommand{\arraystretch}{1.15}
+\begin{longtable}{|R{0.8cm}|R{2.9cm}|R{1.5cm}|R{4.5cm}|R{4.1cm}|}
+\caption{Functional requirements}\label{tab:fr}\\\hline
+\textbf{ID} & \textbf{Requirement} & \textbf{Actor} & \textbf{Input and expected behaviour or output} & \textbf{Acceptance criterion}\\\hline\endfirsthead
+\hline\textbf{ID} & \textbf{Requirement} & \textbf{Actor} & \textbf{Input and expected behaviour or output} & \textbf{Acceptance criterion}\\\hline\endhead
+FR1 & Accounts and onboarding & Learner, teacher & Register, sign in, or start a labelled demo session; a short onboarding records experience and goal. & Browser: real accounts work; demo access is labelled; signed-out visitors are sent to sign in.\\\hline
+FR2 & Curriculum and lessons & Learner & Browse 17 topics in learning order; each topic has a lesson per technique with runnable examples. & Browser: the path shows position and leaves every topic open; a topic teaches first, then offers problems by technique.\\\hline
+FR3 & Code workspace & Learner & Editor with Python highlighting, find and replace, font size and saved drafts. & Browser: drafts survive a refresh; the editor behaves like a code editor.\\\hline
+FR4 & Run & Learner & Run code on visible examples or own test cases; not graded. & \code{test\_hint\_request\_is\_not\_a\_graded\_attempt}; browser: Run, Submit and Hint are separate.\\\hline
+FR5 & Submit and results & Learner & Grade against public and hidden tests in the sandbox; results name the code version they belong to. & \code{test\_older\_results\_never\_overwrite\_newer\_state}; duplicate clicks create one attempt.\\\hline
+FR6 & Diagnose each attempt & System & Output category, issue label, evidence, likely cause and comparison with the previous version. & \code{test\_diagnosis.py} (69 tests); audit checks on syntax, runtime and logic issues.\\\hline
+FR7 & Estimate learner state & System & Update mastery (with range) and confusion, workload and progress, or report ``unknown''. & \code{test\_unknown\_confidence\_is\_left\_out\_not\_assumed}; \code{test\_cognitive\_state\_updates\_from\_repeated\_requests}.\\\hline
+FR8 & Retrieve similar situations & System & Suggest a level and strategy from similar past situations, or report no reliable match; no identities or code. & \code{test\_retrieval\_output\_exposes\_no\_identities\_or\_code}; \code{test\_retrieval\_does\_not\_suggest\_what\_this\_learner\_already\_saw}.\\\hline
+FR9 & Decide help (DSDA) & System & Decide wait, offer or show; choose level and strategy; never more than one level up; unrequested help after a hint is only offered. & \code{test\_policy.py} (30 tests), including \code{test\_help\_never\_climbs\_the\_ladder\_without\_a\_request}.\\\hline
+FR10 & Generate and validate hints & System & Write a hint from the learner's own evidence; reject repeats, vague advice, invented lines and solution code; retry or fall back. & \code{test\_repeated\_requests\_never\_show\_the\_same\_hint}; \code{test\_never\_returns\_the\_solution\_through\_the\_ladder}.\\\hline
+FR11 & Questions about code & Learner & Ask a typed question or select lines; the answer uses what the lines really did on a visible example. & Browser: asking about selected lines still runs the agents and answers.\\\hline
+FR12 & Reflection & System, learner & Ask one question about the learner's own code when useful; reply to the answer without grading. & \code{test\_reflection\_and\_planner.py} (27 tests); browser: a reflection answer gets a reply.\\\hline
+FR13 & Learning plan & System & Recommend the next problem with a reason and show the route ahead; the home screen agrees with the plan. & \code{test\_planner\_keeps\_unresolved\_task\_active}; \code{test\_home\_agrees\_with\_the\_plan\_after\_a\_first\_try\_solve}.\\\hline
+FR14 & Progress and profile & Learner & Show solved problems, activity, per-topic state with evidence, and improvement measures. & Browser: the profile shows what was done and each topic's learning state.\\\hline
+FR15 & Teacher dashboard & Teacher & Show class measures and learners who may need support; open a student's profile. & Browser: a student's numbers match the teacher's; teacher demo labels its data as synthetic.\\\hline
+FR16 & Add a question & Learner & Paste a question or give a link; review parsed fields; suggested tests are labelled, never presented as official. & \code{test\_link\_import.py} (90 tests); browser Add Question flows.\\\hline
+FR17 & Preferences & Learner & Theme, learning mode, automatic hints and editor settings are saved per account. & Browser: theme persists; font size persists across sessions.\\\hline
+\end{longtable}
+\endgroup
+
+\section{Non-functional requirements}
+Table~\ref{tab:nfr} gives the quality requirements with measurable criteria. A value marked ``configured'' is a limit set in the code and should not be read as measured performance.
+
+\begingroup\small
+\setlength{\tabcolsep}{3pt}\renewcommand{\arraystretch}{1.15}
+\begin{longtable}{|R{1.2cm}|R{2.6cm}|R{5.7cm}|R{4.2cm}|}
+\caption{Non-functional requirements}\label{tab:nfr}\\\hline
+\textbf{ID} & \textbf{Quality} & \textbf{Requirement and measurable criterion} & \textbf{Verification}\\\hline\endfirsthead
+\hline\textbf{ID} & \textbf{Quality} & \textbf{Requirement and measurable criterion} & \textbf{Verification}\\\hline\endhead
+NFR1 & Security of execution & Student code is untrusted. Each job runs in a fresh container with no network, a read-only root filesystem, all capabilities dropped, an unprivileged user, 256~MB memory, one CPU and at most 64 processes (configured). & Execution-service suite (39 tests, including isolation attacks).\\\hline
+NFR2 & Solution protection & No response contains a reference solution, hidden test values or hidden-test output; no hint level contains a complete solution. & \code{test\_hidden\_tests\_never\_reach\_the\_client}; \code{test\_reference\_solution\_never\_reaches\_the\_client}; validator tests.\\\hline
+NFR3 & Privacy & Retrieval returns only aggregates; learners are stored only as a hash in pooled cases; pooling requires consent. & \code{test\_retrieval\_output\_exposes\_no\_identities\_or\_code}; \code{test\_profile\_shows\_similar\_learners\_only\_as\_counts}.\\\hline
+NFR4 & Reliability & A failing agent falls back to a safe default; an execution-service failure is never counted as a learner mistake; a repeated request with the same idempotency key creates one record. & \code{test\_service\_failure\_is\_not\_treated\_as\_learner\_mistake}; \code{test\_model\_failure\_uses\_labelled\_fallback}; idempotency tests.\\\hline
+NFR5 & Explainability & Every decision carries reason codes and a learner-facing reason; every stage writes a trace row. & Audit reads each agent's output from its trace.\\\hline
+NFR6 & Robustness to manipulation & Instructions hidden in student code cannot change the policy. & \code{test\_prompt\_injection\_in\_code\_cannot\_change\_the\_policy}.\\\hline
+NFR7 & Accessibility & No violations of automated WCAG 2.0 and 2.1 level A and AA rules on the main screens, in both themes; no sideways scrolling at phone width. & Browser accessibility suite (axe-core) and phone-layout test.\\\hline
+NFR8 & Fair use & Per-user limits per minute (configured): 30 runs, 15 submissions, 15 hints, 12 sign-in attempts, 20 imports. A saved draft may hold at most 20,000 characters, and code sent to run, submit or ask is limited to 100,000 characters by request validation. & \code{test\_rate\_limit} (with the run limit set to two per minute, the third run is refused with status 429); a longer draft is refused with status 413.\\\hline
+NFR9 & Responsiveness & Per-test time limit 2~s by default, total job limit at most 25~s, at most 3 concurrent jobs with a queue of 12 (configured). & Execution-service tests; timeout scenario in the audit.\\\hline
+NFR10 & Maintainability & All policy weights, thresholds and ladders live in one versioned file (\code{policy.yaml}); each hint records the policy version. & Policy tests; recorded \code{policy\_version}.\\\hline
+\end{longtable}
+\endgroup
+
+\section{Hardware requirements}
+The system needs no special hardware, because no model is trained and the optional LLM is reached over the network.
+\begin{itemize}
+\item For development and testing we used an Apple MacBook Air with an Apple M2 processor and 8~GB of memory, running macOS 27.2 with Docker Desktop 29.8.
+\item The deployment server must be a 64-bit machine able to run Docker containers. Each code job starts a container with a 256~MB memory limit and up to three jobs run at once, so memory for these containers comes on top of the database, API and vector store. A GPU is not required.
+\item A learner can use any device with a current web browser. The interface adapts to phone, tablet and desktop widths.
+\end{itemize}
+
+\section{Software and data requirements}
+Table~\ref{tab:software} lists the main software, with the versions installed in the tested environment.
+
+\begingroup\small
+\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.15}
+\begin{longtable}{|R{3.4cm}|R{2.6cm}|R{7.6cm}|}
+\caption{Software used and versions in the tested environment}\label{tab:software}\\\hline
+\textbf{Component} & \textbf{Version} & \textbf{Role}\\\hline\endfirsthead
+\hline\textbf{Component} & \textbf{Version} & \textbf{Role}\\\hline\endhead
+Python & 3.12.13 & Backend and execution service; the sandbox image uses Python 3.12 slim.\\\hline
+FastAPI, Uvicorn & 0.162.2, 0.54.0 & HTTP API \cite{fastapi}.\\\hline
+Pydantic & 2.14.3 & Typed contracts between agents.\\\hline
+LangGraph, checkpoint-postgres & 1.2.20, 3.2.0 & Agent graph, pause and resume \cite{langgraph}.\\\hline
+SQLAlchemy, Alembic, psycopg & 2.1.8, 1.20.1, 3.3.8 & Database access and five migrations.\\\hline
+PostgreSQL & 16.15 & Main database and graph checkpoints.\\\hline
+ChromaDB & 1.5.9 & Vector store with cosine HNSW index \cite{chroma,malkov2020}.\\\hline
+httpx & 0.28.1 & Calls to the execution service and optional LLM providers.\\\hline
+Docker & 29.8.0 & Isolated execution of student code.\\\hline
+Node.js & 26.4.0 & Frontend build and browser tests.\\\hline
+React, React Router & 18.3.1, 6.30.1 & Web interface.\\\hline
+TypeScript, Vite & 5.8.3, 6.3.5 & Typed frontend code and build tool.\\\hline
+CodeMirror & 6 (view 6.36.8) & Code editor with Python support.\\\hline
+TanStack Query, Radix UI & 5.80.7, 1.x and 2.x & Server state and accessible interface components.\\\hline
+pytest, Vitest, Playwright & 9.2.0, 3.2.4, 1.53.1 & Backend, unit and browser tests \cite{playwright}.\\\hline
+axe-core for Playwright & 4.10.2 & Automated accessibility checks \cite{axecore}.\\\hline
+\end{longtable}
+\endgroup
+
+The system uses the following data.
+\begin{itemize}
+\item The curriculum was authored for the project. It has 17 topics, 74 techniques and 496 Python problems (237 easy, 218 medium, 41 hard). Each problem has a statement, starter code, a reference solution kept on the server, and tests.
+\item There are 15,717 tests in all, of which 1,000 are visible examples and 14,717 are hidden. Of the total, 2,665 were written with the curriculum and 13,052 were generated from each problem's examples or from a problem-specific input generator. Generated tests take their expected answers from the reference solution, and every test, written or generated, is checked against it. In all, 487 problems have 30 or more tests (median 32). In the real sandbox, each reference solution passes all of its tests and each starter fails.
+\item The similar-situation records are pooled, anonymous outcomes of real hints, stored only for consenting real accounts. There are also synthetic demonstration records, which are always labelled and can be switched off.
+\item For IBM Project CodeNet \cite{puri2021}, we built an importer that aggregates problem statistics and tested it on a small fixture. The archive was not imported in this phase.
+\item Questions added from links are read only where the site's terms and \code{robots.txt} permit. For sites that forbid automated access, the link supplies attribution and the learner pastes the statement.
+\end{itemize}

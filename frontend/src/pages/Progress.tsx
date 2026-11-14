@@ -65,7 +65,7 @@ export function ProgressPage() {
       </div>
       <div className="grid-stats" data-testid="stats">
         <Stat label="Problems solved" value={metrics.solved} note={`of ${metrics.started} attempted`} />
-        <Stat label="Completion rate" value={percent(metrics.completion_rate)} note="Solved ÷ attempted" />
+        <Stat label="Completion rate" value={percent(metrics.completion_rate)} note={`${metrics.solved} solved of ${metrics.started} started`} />
         <Stat label="Hints per solved problem" value={metrics.hints_per_solved ?? "No data yet"} note="Hints on problems you solved" />
         <Stat label="Typical time to solve" value={duration(metrics.median_seconds_to_complete)} note={metrics.time_sample ? `Median active time, ${metrics.time_sample} problem${metrics.time_sample === 1 ? "" : "s"}` : "Active time only"} />
       </div>
@@ -134,20 +134,22 @@ export function ProgressPage() {
       <section className="card" aria-labelledby="hints-heading">
         <h2 className="card-title" id="hints-heading">Hints and help</h2>
         {hints.length === 0 ? <p className="muted">You have not used any hints yet.</p> : (
-          <div className="table-wrap" tabIndex={0} role="group" aria-label="Scrollable table">
-            <table className="table">
-              <thead><tr><th>Problem</th><th>Help</th><th>Why</th><th>What happened next</th><th>When</th></tr></thead>
-              <tbody>{hints.map((hint) => (
-                <tr key={hint.id}>
-                  <td><Link to={`/problems/${hint.problem_id}`}>{hint.problem_title}</Link></td>
-                  <td>{hint.level_name}{hint.requested ? "" : <span className="subtle"> (offered by tutor)</span>}</td>
-                  <td className="subtle" style={{ minWidth: 200 }}>{hint.why}</td>
-                  <td>{hint.outcome ? OUTCOME[hint.outcome] : <span className="subtle">Not known yet</span>}</td>
-                  <td className="nowrap">{timeAgo(hint.created_at)}</td>
-                </tr>
-              ))}</tbody>
-            </table>
-          </div>
+          <ul className="fact-list" style={{ listStyle: "none", padding: 0, margin: 0 }} data-testid="hints-list">
+            {hints.map((hint) => (
+              <li key={hint.id} className="fact-row">
+                <div className="row-between" style={{ flexWrap: "nowrap" }}>
+                  <Link to={`/problems/${hint.problem_id}`} style={{ fontWeight: 600 }}>{hint.problem_title}</Link>
+                  <span className="subtle nowrap">{timeAgo(hint.created_at)}</span>
+                </div>
+                <div className="row" style={{ gap: 6 }}>
+                  <span className="badge badge-hint">{hint.level_name}</span>
+                  {!hint.requested && <span className="badge">Offered by the tutor</span>}
+                  <span className="subtle">{hint.outcome ? OUTCOME[hint.outcome] : "Result not known yet"}</span>
+                </div>
+                <p className="subtle">{hint.why}</p>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
       {reflections.length > 0 && (

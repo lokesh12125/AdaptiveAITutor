@@ -1,0 +1,10 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "test-frontend",
+      "port": 5174,
+      "url": "http://127.0.0.1:5174"
+    }
+  ]
+}

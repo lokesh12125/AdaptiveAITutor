@@ -5,7 +5,7 @@ import { api } from "@/api/client";
 export type SaveState = "saved" | "saving" | "failed" | "idle";
 type Stored = { code: string; at: number };
 
-const storageKey = (userId: string, problemId: string) => `trellis.draft.${userId}.${problemId}.python`;
+const storageKey = (userId: string, problemId: string) => `codepath.draft.${userId}.${problemId}.python`;
 
 function readLocal(key: string): Stored | null {
   try {
@@ -97,7 +97,7 @@ export function useDraft(userId: string, problemId: string, serverDelayMs = 1500
 
 /** Counts time only while the page is visible and the learner has interacted in the last minute. */
 export function useActiveSeconds(userId: string, problemId: string, serverSeconds: number) {
-  const key = `trellis.active.${userId}.${problemId}`;
+  const key = `codepath.active.${userId}.${problemId}`;
   const value = useRef(serverSeconds);
   const lastInteraction = useRef(Date.now());
   useEffect(() => {

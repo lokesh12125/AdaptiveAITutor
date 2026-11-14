@@ -1,0 +1,307 @@
+functions:
+  reading_minutes: 9
+  overview: |
+    Functions let you name a piece of logic, reuse it, and test it on its own. Good functions make hard problems manageable, because you can solve one small part at a time.
+  you_will_learn:
+    - How parameters, return values and scope work
+    - How to use default arguments and any number of arguments
+    - How functions can be passed around like any other value
+    - How to split a problem into helper functions
+  before_you_start:
+    - You should be able to write loops and conditionals.
+    - You have already written simple functions in Python basics.
+  sections:
+    - id: parameters-return
+      title: Parameters, return and scope
+      body: |
+        Parameters are local names for the values passed in. Variables created inside a function exist only there, which is called **scope**. That means a function cannot accidentally break other code through its own variables. `return` can send back several values at once as a tuple.
+      examples:
+        - title: Returning two values
+          code: |
+            def low_high(nums):
+                return min(nums), max(nums)
+
+            low, high = low_high([3, 9, 1])
+            print(low, high)
+    - id: defaults
+      title: Default and keyword arguments
+      body: |
+        A parameter can have a default value, which is used if the caller leaves it out. Callers can also name arguments, which makes calls easier to read. `*args` collects any number of positional arguments into a tuple.
+
+        One warning: never use a list or dictionary as a default, as in `def f(items=[])`. The same list is shared between every call. Use `None`, and create the list inside the function.
+      examples:
+        - title: Flexible calls
+          code: |
+            def greet(name, greeting="Hello"):
+                return f"{greeting}, {name}!"
+
+            def total(*values):
+                return sum(values)
+
+            print(greet("Ada"))
+            print(greet("Lin", greeting="Hi"))
+            print(total(1, 2, 3))
+    - id: functions-as-values
+      title: Functions are values
+      body: |
+        A function can be stored in a variable, passed as an argument, or returned from another function. This is what makes `sorted(items, key=len)` work: you pass the function `len` itself, without brackets. A `lambda` is a short function without a name, useful for simple keys.
+      examples:
+        - title: Passing a function
+          code: |
+            def apply_all(f, items):
+                return [f(item) for item in items]
+
+            print(apply_all(abs, [-1, 2, -3]))
+            print(sorted(["bbb", "a", "cc"], key=len))
+            print(sorted([3, -5, 1], key=lambda n: -n))
+    - id: helpers
+      title: Breaking problems into helpers
+      body: |
+        When a task has two distinct ideas, give each its own function. A helper with a clear name makes the main function read almost like a description of the solution, and lets you test each part separately.
+      examples:
+        - title: A helper keeps this readable
+          code: |
+            def is_even(n):
+                return n % 2 == 0
+
+            def count_evens(nums):
+                return sum(1 for n in nums if is_even(n))
+
+            print(count_evens([1, 2, 3, 4]))
+  patterns:
+    - name: Parameters and return values
+      when: The task defines inputs and an output.
+      how: Use only what comes in through the parameters, and return the answer at the end of every path.
+    - name: Default and keyword arguments
+      when: Some inputs are optional.
+      how: Give them a default value in the def line, or use *args for any number of values.
+    - name: Functions as values
+      when: The task passes in a function or asks you to return one.
+      how: Treat the function like any variable, and add brackets only when you want to call it.
+    - name: Breaking problems into helpers
+      when: One function is doing two jobs.
+      how: Move one job into its own well-named function, and call it from the main one.
+  mistakes:
+    - mistake: Calling a function when you meant to pass it, as in key=len().
+      fix: Without brackets you pass the function. With brackets you pass its result.
+    - mistake: Using a list as a default argument.
+      fix: Default to None, and create the list inside the function.
+    - mistake: Expecting a variable set inside a function to exist outside.
+      fix: Return the value, and store it where you call the function.
+  key_ideas:
+    - Variables inside a function stay inside it.
+    - Functions can be passed around like values.
+    - A good helper makes the main function read like a plan.
+
+strings:
+  reading_minutes: 10
+  overview: |
+    Text processing appears everywhere, from parsing input to interview questions. Python strings have rich slicing and many built-in methods, so a little knowledge goes a long way.
+  you_will_learn:
+    - How indexing and slicing work
+    - Why strings cannot be changed, and what to do instead
+    - The most useful string methods
+    - How to count characters and build strings efficiently
+  before_you_start:
+    - You should be comfortable with for loops and functions.
+    - Remember that positions start from 0.
+  sections:
+    - id: slicing
+      title: Indexing and slicing
+      body: |
+        `text[0]` is the first character and `text[-1]` is the last. A slice `text[a:b]` runs from position `a` up to, but not including, `b`. Either end can be left out, and a third number sets the step. So `text[::-1]` reverses a string. A slice never raises an error for positions past the end, whereas a single index does.
+      examples:
+        - title: Slices
+          code: |
+            text = "python"
+            print(text[0], text[-1])
+            print(text[1:4])
+            print(text[:2], text[2:])
+            print(text[::-1])
+    - id: immutable
+      title: Strings cannot be changed
+      body: |
+        Strings are **immutable**, so `text[0] = "x"` is an error. Every method, such as `.upper()`, returns a **new** string, which you must store. To build text piece by piece, collect the parts in a list and use `"".join(parts)` at the end. Adding to a string in a loop works, but it can be slow on large inputs.
+      examples:
+        - title: Building a new string
+          code: |
+            text = "hello"
+            shouted = text.upper()
+            print(text, shouted)
+
+            parts = []
+            for ch in text:
+                parts.append(ch * 2)
+            print("".join(parts))
+    - id: methods
+      title: Useful methods
+      body: |
+        - `.split()` breaks text into words on any spaces, and `" ".join(words)` puts them back together
+        - `.strip()` removes spaces from both ends
+        - `.lower()` and `.upper()` change case
+        - `.replace(a, b)` swaps text
+        - `.startswith(a)` and `.endswith(a)` test the ends
+        - `.isdigit()`, `.isalpha()` and `.isalnum()` test what characters are
+        - `.find(a)` gives the first position, or -1 if it is absent
+
+        `ord("a")` gives a character's number, and `chr(97)` converts back, which is useful for shifting letters.
+      examples:
+        - title: Tidying text
+          code: |
+            raw = "  Hello   big WORLD  "
+            words = raw.lower().split()
+            print(words)
+            print(" ".join(words))
+            print(ord("a"), chr(ord("a") + 1))
+    - id: counting
+      title: Counting characters
+      body: |
+        Many string problems come down to how often each character appears. A dictionary does this in one pass. Comparing these counts is often simpler than comparing the strings.
+      examples:
+        - title: Character counts
+          code: |
+            counts = {}
+            for ch in "banana":
+                counts[ch] = counts.get(ch, 0) + 1
+            print(counts)
+  patterns:
+    - name: Indexing and slicing
+      when: You need part of a string, or the string in reverse.
+      how: Write the positions down for a small example, and remember that the end of a slice is not included.
+    - name: String methods
+      when: You are cleaning up text, or splitting it into words.
+      how: Reach for a built-in method first, since there is very often one that does exactly this.
+    - name: Counting characters
+      when: The answer depends on how often characters appear.
+      how: Build a dictionary of counts in one pass, then answer from the counts.
+    - name: Building strings
+      when: You are producing new text character by character.
+      how: Collect the pieces in a list, and join them at the end.
+    - name: Palindromes and comparison
+      when: You are comparing a string with itself, or with another string.
+      how: Compare with a reversed copy, or walk two positions inwards from each end.
+  mistakes:
+    - mistake: Calling text.upper() and not storing the result.
+      fix: Strings cannot change, so write text = text.upper().
+    - mistake: Using .split(" ") on text with several spaces in a row.
+      fix: Use .split() with no argument, which handles any amount of space.
+    - mistake: Forgetting that case and spaces matter when comparing.
+      fix: Convert with .lower() first if the task says to ignore case.
+  key_ideas:
+    - The end of a slice is not included.
+    - Strings cannot change, so methods return new strings.
+    - Collect pieces in a list, and join at the end.
+    - Many string problems are really counting problems.
+
+lists-dicts:
+  reading_minutes: 11
+  overview: |
+    Lists and dictionaries are the two workhorses of Python. Almost every algorithm later in this course stores its data in one of them, so it pays to know them well, including how fast each operation is.
+  you_will_learn:
+    - How to create, change and slice lists
+    - How to write list and dictionary comprehensions
+    - How to work with nested lists as tables
+    - How dictionaries look up values, and how to group and count with them
+  before_you_start:
+    - You should be comfortable with loops and functions.
+    - Slicing from the Strings topic works on lists too.
+  sections:
+    - id: lists
+      title: Lists
+      body: |
+        A list holds items in order, and unlike a string it can be changed. `append` adds to the end, `pop` removes from the end, and `sort` sorts in place.
+
+        **Assigning a list does not copy it.** After `b = a`, both names refer to the same list, so changing one changes both. `a[:]` or `list(a)` makes a copy.
+      examples:
+        - title: Changing lists, and a common trap
+          code: |
+            a = [3, 1, 2]
+            a.append(9)
+            a.sort()
+            print(a)
+
+            b = a
+            b.append(100)
+            print(a)
+            c = a[:]
+            c.append(5)
+            print(a, c)
+    - id: comprehensions
+      title: Comprehensions
+      body: |
+        A comprehension builds a list in one line, from a loop and an optional condition. The same idea works for dictionaries and sets.
+      examples:
+        - title: Three comprehensions
+          code: |
+            nums = [1, 2, 3, 4]
+            print([n * n for n in nums])
+            print([n for n in nums if n % 2 == 0])
+            print({n: n * n for n in nums})
+    - id: nested
+      title: Nested lists and matrices
+      body: |
+        A table is a list of rows, so `grid[r][c]` reads row `r` and column `c`. Use `len(grid)` for the rows and `len(grid[0])` for the columns.
+
+        Be careful creating grids. `[[0] * 3] * 2` makes two references to **one** row, so changing one seems to change both. Use a comprehension: `[[0] * 3 for _ in range(2)]`.
+      examples:
+        - title: Working with a grid
+          code: |
+            grid = [[0] * 3 for _ in range(2)]
+            grid[0][1] = 5
+            print(grid)
+            print(len(grid), len(grid[0]))
+    - id: dictionaries
+      title: Dictionaries
+      body: |
+        A dictionary maps **keys** to **values**, and looks up a key in about one step, however large it gets. Reading a missing key raises `KeyError`, so `.get(key, default)` is often safer. `.items()` loops over keys and values together. `.setdefault(key, [])` is handy when grouping.
+      examples:
+        - title: Counting and grouping
+          code: |
+            words = ["ant", "bee", "ape"]
+            counts = {}
+            groups = {}
+            for word in words:
+                first = word[0]
+                counts[first] = counts.get(first, 0) + 1
+                groups.setdefault(first, []).append(word)
+            print(counts)
+            print(groups)
+            for key, value in counts.items():
+                print(key, value)
+    - id: costs
+      title: How fast are these operations?
+      body: |
+        - `items[i]`, `items.append(x)`, `items.pop()` take about one step
+        - `x in items` and `items.insert(0, x)` take up to `n` steps
+        - `x in some_dict` and `some_dict[key]` take about one step
+
+        This table explains why swapping a list for a dictionary or set so often turns a slow solution into a fast one.
+  patterns:
+    - name: List basics
+      when: You are reading, updating or rearranging a list.
+      how: Decide whether to change the list or return a new one. Tests usually want a returned result.
+    - name: Comprehensions
+      when: You are building a new list from an old one.
+      how: Write it as a single expression, with an optional condition at the end.
+    - name: Nested lists and matrices
+      when: The data is a table.
+      how: Loop over rows, then columns, and write grid[r][c].
+    - name: Dictionary basics
+      when: You look things up by a name or key.
+      how: Use .get for keys that may be missing, and .items() to loop over everything.
+    - name: Grouping and counting
+      when: You need to count things, or collect them by some property.
+      how: Choose what the key should be, then update counts[key] or groups[key] as you go.
+  mistakes:
+    - mistake: Thinking b = a copies a list.
+      fix: Both names refer to one list. Copy it with a[:].
+    - mistake: Changing a list while looping over it.
+      fix: Build a new list instead, or loop over a copy.
+    - mistake: Creating a grid with [[0] * n] * m.
+      fix: Use a comprehension, so that each row is its own list.
+    - mistake: Reading a key that may not exist.
+      fix: Use .get(key, default), or check with key in the_dict.
+  key_ideas:
+    - Assigning a list does not copy it.
+    - Looking up a dictionary key takes about one step.
+    - Looking for a value in a list can take n steps.

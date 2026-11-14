@@ -47,6 +47,21 @@ def parse_bounds(constraints: str | None) -> dict[str, tuple[int, int]]:
     return bounds
 
 
+CATEGORY_PURPOSE = {
+    "normal": "An ordinary input, like the examples.",
+    "minimal": "The smallest input the task allows, where loops and boundaries often go wrong.",
+    "boundary": "A value at the edge of what the constraints allow.",
+    "negative": "Negative numbers, which catch code that assumes everything is positive.",
+    "zero": "A zero, which catches mistakes with starting values and division.",
+    "repeated": "The same value again and again, which catches code that assumes values differ.",
+    "duplicates": "Some values appear twice, which catches code that assumes they are all different.",
+    "sorted": "Values already in order.",
+    "reverse_sorted": "Values in descending order, the opposite of what code often expects.",
+    "unsorted": "The same values in a different order, to check the order does not change the answer when it should not.",
+    "large": "A large input that only checks your code finishes in time.",
+}
+
+
 def _case(args: list[Any], label: str, category: str, compare: str = "exact", needs: bool = True) -> TestCase:
     return TestCase(label=label, origin="generated", category=category, kind="args", args=args, expected=None, compare=compare, needs_expected=needs, enabled=not needs)
 
@@ -117,13 +132,29 @@ def generate_tests(draft: ImportDraft) -> tuple[list[TestCase], list[str]]:
                 add(_case(_vary_position(base, position, []), f"{name} empty", "minimal"))
             if value and minimum <= 1:
                 add(_case(_vary_position(base, position, value[:1]), f"{name} with one item", "minimal"))
+            elif value and 1 < minimum < len(value):
+                add(_case(_vary_position(base, position, value[:minimum]), f"{name} at its shortest allowed length", "minimal"))
             if value:
                 add(_case(_vary_position(base, position, [value[0]] * max(minimum, 4)), f"{name} with repeated values", "repeated"))
+            if numeric and len(value) >= 2:
+                ordered = sorted(value)
+                if ordered != value:
+                    add(_case(_vary_position(base, position, ordered), f"{name} already sorted", "sorted"))
+                if ordered[::-1] != value:
+                    add(_case(_vary_position(base, position, ordered[::-1]), f"{name} in descending order", "reverse_sorted"))
+                if len(value) >= 3:
+                    add(_case(_vary_position(base, position, value[1:] + value[:1]), f"{name} in a different order", "unsorted"))
+                maximum = length_bounds[1] if length_bounds else None
+                if maximum is None or len(value) + 2 <= maximum:
+                    add(_case(_vary_position(base, position, value + value[:2]), f"{name} with some values twice", "duplicates"))
             if numeric:
                 item_bounds = bounds.get(f"{name}[i]") or bounds.get(name)
+                if not item_bounds or item_bounds[0] <= 0 <= item_bounds[1]:
+                    add(_case(_vary_position(base, position, [0] + value[1:]), f"{name} containing zero", "zero"))
                 if not item_bounds or item_bounds[0] < 0:
                     add(_case(_vary_position(base, position, [-abs(v) - 1 for v in value]), f"{name} with negative values", "negative"))
                 if item_bounds:
+                    add(_case(_vary_position(base, position, [item_bounds[0]] * max(minimum, 2)), f"{name} with its smallest values", "boundary"))
                     add(_case(_vary_position(base, position, [item_bounds[1]] * max(minimum, 2)), f"{name} with its largest values", "boundary"))
                 size = min(length_bounds[1] if length_bounds else 10000, MAX_LARGE_ITEMS)
                 if size >= 100:

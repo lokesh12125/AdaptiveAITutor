@@ -1,0 +1,66 @@
+\chapter{Introduction}
+\section{Background and motivation}
+Most engineering and science students now have to learn programming, and many of them find the first course hard. When a beginner gets stuck, the help that works is help that comes quickly and fits what they already understand. A human tutor can give this, but one tutor cannot cover a large class. Intelligent tutoring systems (ITS) were developed to make up for that. In a widely cited review, VanLehn found that step-based tutoring systems raised learning outcomes by an effect size of 0.76 against no tutoring, which is close to the 0.79 of human tutoring \cite{vanlehn2011}.
+
+The \emph{amount} of help matters as well as its correctness, and two ideas from learning science explain why. The first is \emph{scaffolding}, described by Wood, Bruner and Ross. The tutor controls the parts of a task that are beyond the learner so that the learner can complete the rest, and withdraws that support as the learner becomes more competent \cite{wood1976}. The second is Sweller's cognitive load theory. Problem solving already places heavy demands on working memory, so a hint that is too long, or hints that arrive too often, can get in the way of learning \cite{sweller1988}. Research on help seeking in tutoring systems adds a caution. Learners do not always use on-demand help well, and teaching them to seek help more deliberately does not automatically improve their learning \cite{aleven2016}.
+
+Large language model (LLM) assistants have made the question more pressing. They answer almost any programming question at once, they give everyone the same kind of help, and they readily produce complete solutions. An eleven-week classroom study of PyTutor, a ChatGPT-based tutor, found clear benefits for students with weak foundations. The same study found a risk of over-reliance that may hinder independent problem solving \cite{yang2024}. Tools such as CodeHelp and CodeAid add guardrails so that the assistant does not give away solutions \cite{liffiton2023,kazemitabaar2024}. Their published descriptions, though, do not include a lasting model of each learner that decides how much help to give.
+
+That is the gap we worked on. We built CodePath, a tutor for novice Python programmers, on the Cognitive-State Guided Multi-Agent Adaptive Scaffolding Framework (CSMASF) proposed in our initial project submission. It has six cooperating agents. One diagnoses each attempt and one estimates the learner's state. A third looks at what helped in similar situations, and a fourth decides how much help fits. The last two prompt reflection and plan the next problem. Throughout, we wanted the tutor to behave like a patient teacher sitting beside the student, who gives only the help the student needs at that moment, never gives the full answer, and leaves the thinking to the student.
+
+\textbf{Relevant Sustainable Development Goal.} The project is aligned with United Nations SDG 4, Quality Education: ``Ensure inclusive and equitable quality education and promote lifelong learning opportunities for all'' \cite{un2015}. The most relevant target is Target 4.4: ``By 2030, substantially increase the number of youth and adults who have relevant skills, including technical and vocational skills, for employment, decent jobs and entrepreneurship.''
+
+The project maps to this target in four ways. The problem is that programming skill is in demand, but beginners who receive complete answers from AI tools may not develop it. Our objectives answer this directly, since the tutor adapts the amount of help to each learner and protects the learner's own reasoning (Section~\ref{sec:objectives}). The contribution is a working, open, web-based tutor with a verified 496-problem Python curriculum. It can be offered alongside a course at low cost and without a paid model, because every agent has a built-in deterministic mode. The intended beneficiaries are novice programmers, including learners who have no access to a personal tutor, and teachers, who get a class dashboard showing who may need support.
+
+The contribution to Target 4.4 is an \emph{expected} benefit. We have built the system and verified it as software, but we have not yet measured its effect on learners' skills (Chapter~\ref{ch:results}).
+
+\section{Objectives}\label{sec:objectives}
+The five objectives come from the initial project submission. For each one, Table~\ref{tab:objectives} gives the way it is evaluated in this report, its deliverable and its status at the time of writing.
+
+\begingroup\small
+\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.2}
+\begin{longtable}{|R{0.5cm}|R{3.5cm}|R{4.2cm}|R{3.0cm}|R{2.4cm}|}
+\caption{Objectives, evaluation methods, deliverables and status}\label{tab:objectives}\\\hline
+\textbf{No.} & \textbf{Objective} & \textbf{Evaluation method} & \textbf{Deliverable} & \textbf{Status}\\\hline\endfirsthead
+\hline\textbf{No.} & \textbf{Objective} & \textbf{Evaluation method} & \textbf{Deliverable} & \textbf{Status}\\\hline\endhead
+O1 & Build an adaptive tutor as several collaborating agents rather than one conversational model. & Pipeline tests confirm that all six agents run in order and receive each other's outputs; per-stage traces are inspected. & Six agents in a LangGraph workflow inside a web platform. & Achieved.\\\hline
+O2 & Continuously estimate mastery, confidence, confusion, cognitive load and progress from behaviour. & Unit and pipeline tests; audit checks that unknown values stay unknown and that estimates react to repeated requests and progress. & Cognitive State agent (method \code{cs-1.2}). & Achieved as behavioural estimates; not validated against an external measure.\\\hline
+O3 & Retrieve similar learners with vector cosine similarity over multidimensional profiles. & Tests of filtering, exclusion of approaches already shown, reliability thresholds and absence of identities in the output. & Retrieval agent over ChromaDB and PostgreSQL (vectors \code{sv-1}). & Achieved technically; real learner outcomes are not yet available.\\\hline
+O4 & Design a scoring algorithm that selects the scaffolding level from mastery, confidence, hint history and response time. & Policy tests, including a documented worked example recomputed by the code; audit checks of escalation and timing. & DSDA, policy version \code{dsda-2.2}. & Achieved; weights are starting values, not tuned on learners.\\\hline
+O5 & Test the framework's effectiveness on programming datasets. & Offline verification of every curriculum problem in the sandbox; scenario audit of all agents; planned learner study. & Verified curriculum, audit tool and evaluation plan. & Partly achieved: software behaviour verified; learning effectiveness not yet measured.\\\hline
+\end{longtable}
+\endgroup
+
+Two more objectives follow from the way we wanted the tutor to behave, and they are evaluated in the same way: (i) the tutor never reveals a complete solution, reference solutions or hidden tests, and (ii) help is not repeated and does not increase unless the learner asks for it.
+
+\section{Scope and constraints}
+CodePath is meant for novice and early intermediate learners of Python, typically first-year undergraduates, and for the teachers of such courses.
+
+The system includes the following functions.
+\begin{itemize}
+\item A browser workspace with an editor, separate Run, Submit and Hint actions, test results, and saved drafts.
+\item A curriculum of 17 topics with lessons, 74 techniques and 496 problems.
+\item The six tutoring agents, typed questions about selected lines, reflection questions and replies, and a learning plan with a route ahead.
+\item Learner progress and profile pages, and a teacher dashboard.
+\item Adding a question by pasting it or from a link, with suggested tests that are always labelled as suggestions.
+\end{itemize}
+
+The following are outside the scope of this phase.
+\begin{itemize}
+\item Languages other than Python are not offered.
+\item No model is trained. Every agent is rule-based, and an LLM is optional and used only for wording.
+\item No study with real learners has been carried out.
+\item The large IBM Project CodeNet archive was not imported. Only its importer exists.
+\end{itemize}
+
+We assume that learners use a modern desktop or mobile browser and that the server host can run Docker containers for code execution.
+
+We worked under three constraints.
+\begin{itemize}
+\item Development and testing used one laptop with 8~GB of memory, so the test suites had to be run one at a time.
+\item The code-execution sandbox was tested on Docker Desktop for macOS and has not been independently audited.
+\item The only model key we had carried no credit, so the LLM path was tested with a scripted stand-in.
+\end{itemize}
+
+\section{Project report organization}
+Chapter~2 defines the problem and describes the limitations of existing systems. Chapter~3 reviews thirteen research works and compares them. Chapter~4 lists the functional and non-functional requirements along with the hardware, software and data used. Chapter~5 presents the architecture and then explains each agent: its inputs, its outputs and its algorithm. Chapter~6 covers the evaluation setup and criteria, the results, a comparison with existing approaches and the limitations. Chapter~7 concludes and outlines future work. The appendix gives the steps to set up and reproduce the system.

@@ -31,6 +31,8 @@ LEVEL_VALUE = {"low": 0.15, "moderate": 0.5, "high": 0.9}
 MIN_SIMILARITY = 0.72
 MIN_SUPPORT = 3
 MIN_CANDIDATES = 5
+MAX_DIFFICULTY_GAP = 0.35
+USABLE_OUTCOMES = ("progress", "solved", "no_progress")
 
 
 def _center(value: float | None) -> float:
@@ -87,7 +89,7 @@ class VectorStore:
             metadatas=[{"provenance": case.provenance, "category": case.category, "unit_id": case.unit_id}],
         )
 
-    def query(self, vector: list[float], category: str, allow_synthetic: bool, n_results: int = 40) -> list[tuple[str, float]]:
+    def query(self, vector: list[float], category: str, allow_synthetic: bool, n_results: int = 150) -> list[tuple[str, float]]:
         where: dict[str, Any] = {"category": category}
         if not allow_synthetic:
             where = {"$and": [where, {"provenance": "live"}]}
@@ -114,16 +116,18 @@ store = VectorStore()
 
 
 def run_retrieval(db: Session, vector: list[float], category: str, issue_key: str, unit_id: str, difficulty: float,
-                  user_id: str, allow_synthetic: bool | None = None) -> RetrievalOutput:
+                  user_id: str, allow_synthetic: bool | None = None, exclude_strategies: list[str] | None = None) -> RetrievalOutput:
+    """`exclude_strategies` are approaches this learner has already seen here: suggesting them again would not help."""
+    excluded = sorted(set(exclude_strategies or []))
     allow = settings.retrieval_allow_synthetic if allow_synthetic is None else allow_synthetic
     group = category_group(category)
     try:
         hits = store.query(vector, group, allow)
     except Exception as exc:  # noqa: BLE001 - retrieval must never block tutoring
         log.warning("vector query failed: %s", type(exc).__name__)
-        return RetrievalOutput(reliable=False, reason="The vector store is unavailable, so no similar situations were used.")
+        return RetrievalOutput(reliable=False, reason="The vector store is unavailable, so no similar situations were used.", excluded_strategies=excluded)
     if not hits:
-        return RetrievalOutput(reliable=False, reason="No past situations are stored for this kind of issue yet.")
+        return RetrievalOutput(reliable=False, reason="No past situations are stored for this kind of issue yet.", excluded_strategies=excluded)
 
     similarity = dict(hits)
     cases = db.scalars(select(InterventionCase).where(InterventionCase.id.in_(similarity))).all()
@@ -135,19 +139,27 @@ def run_retrieval(db: Session, vector: list[float], category: str, issue_key: st
         base = similarity.get(case.id, 0.0)
         if base < MIN_SIMILARITY:
             continue
+        # Filters on relevance and evidence quality. Being similar in general is not enough.
+        if case.outcome not in USABLE_OUTCOMES or abs(case.difficulty - difficulty) > MAX_DIFFICULTY_GAP:
+            continue
+        if case.issue_key != issue_key and case.unit_id != unit_id:
+            continue
         quality = 1.0 if case.issue_key == issue_key else 0.85
         quality *= 1.0 if case.unit_id == unit_id else 0.9
         quality *= 1.0 - 0.5 * min(1.0, abs(case.difficulty - difficulty))
         scored.append((base * quality, case))
     if len(scored) < MIN_CANDIDATES:
-        return RetrievalOutput(reliable=False, reason="Too few closely similar situations to rely on.", candidates_considered=len(scored))
+        return RetrievalOutput(reliable=False, reason="Too few closely similar situations to rely on.", candidates_considered=len(scored), excluded_strategies=excluded)
 
     # Prefer measured outcomes. Synthetic cases are only used if no live evidence is available.
     live = [item for item in scored if item[1].provenance == "live"]
     pool = live if len(live) >= MIN_CANDIDATES else scored
     groups: dict[tuple[int, str], list[tuple[float, InterventionCase]]] = defaultdict(list)
     for item in pool:
-        groups[(item[1].level, item[1].strategy)].append(item)
+        if item[1].strategy not in excluded:
+            groups[(item[1].level, item[1].strategy)].append(item)
+    if not groups:
+        return RetrievalOutput(reliable=False, reason="This learner has already seen each approach that helped in similar situations.", candidates_considered=len(pool), excluded_strategies=excluded)
 
     def lower_bound(items: list[tuple[float, InterventionCase]]) -> float:
         n = len(items)
@@ -161,11 +173,11 @@ def run_retrieval(db: Session, vector: list[float], category: str, issue_key: st
     provenances = {case.provenance for _, case in items}
     provenance = "live" if provenances == {"live"} else ("synthetic" if provenances == {"synthetic"} else "mixed")
     if len(items) < MIN_SUPPORT:
-        return RetrievalOutput(reliable=False, reason="No single approach has enough support among similar situations.", candidates_considered=len(pool))
+        return RetrievalOutput(reliable=False, reason="No single approach has enough support among similar situations.", candidates_considered=len(pool), excluded_strategies=excluded)
     return RetrievalOutput(
         reliable=True, reason="Similar situations were found.", candidates_considered=len(pool),
         suggested_level=level, suggested_strategy=strategy, effectiveness=round(effectiveness, 3), support=len(items),
-        provenance=provenance, mean_similarity=round(sum(s for s, _ in items) / len(items), 3),
+        provenance=provenance, mean_similarity=round(sum(s for s, _ in items) / len(items), 3), excluded_strategies=excluded,
         evidence=[{
             "level": lvl, "strategy": strat, "cases": len(group_items),
             "successes": sum(1 for _, c in group_items if c.outcome in ("progress", "solved")),

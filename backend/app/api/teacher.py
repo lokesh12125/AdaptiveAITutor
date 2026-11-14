@@ -12,6 +12,7 @@ from .. import analytics
 from ..db import get_db
 from ..errors import forbidden, not_found
 from ..models import ClassMember, Classroom, Evaluation, Hint, Problem, TopicState, Unit, User
+from ..profile import build_profile, state_summary
 from ..schemas import ClassCreateIn, ClassOut
 from ..security import require_teacher, teacher_can_view_student
 from ..tutoring import cognitive
@@ -62,7 +63,7 @@ def overview(class_id: str, db: Session = Depends(get_db), teacher: User = Depen
         metrics = analytics.learner_metrics(db, [user.id])
         last = db.scalar(select(func.max(Evaluation.created_at)).where(Evaluation.user_id == user.id))
         flags = analytics.learner_flags(db, user.id)
-        learners.append({"id": user.id, "name": user.name, "solved": metrics["solved"], "started": metrics["started"], "completion_rate": metrics["completion_rate"], "hints_per_solved": metrics["hints_per_solved"], "last_active": last, "flags": flags})
+        learners.append({**state_summary(db, user.id), "id": user.id, "name": user.name, "solved": metrics["solved"], "started": metrics["started"], "completion_rate": metrics["completion_rate"], "hints_per_solved": metrics["hints_per_solved"], "last_active": last, "flags": flags})
     return {
         "class": {"id": classroom.id, "name": classroom.name, "join_code": classroom.join_code, "is_synthetic": classroom.is_synthetic, "members": len(members)},
         "metrics": analytics.learner_metrics(db, members), "topics": analytics.topic_difficulties(db, members), "common_errors": analytics.common_errors(db, members), "assistance": analytics.assistance(db, members),
@@ -72,6 +73,11 @@ def overview(class_id: str, db: Session = Depends(get_db), teacher: User = Depen
             "completion_rate": "Problems solved ÷ problems with at least one graded attempt.", "hints_per_solved": "Hints shown on solved problems ÷ problems solved. Hints on unsolved problems are not counted.",
             "time_to_complete": "Median active seconds at the first accepted submission. Solves with no recorded time are left out.", "hint_progress": "Hints followed by progress or a solve ÷ hints with a known outcome. Progress after a hint does not prove the hint caused it.",
             "first_try_rate": "Problems accepted on the first graded attempt ÷ problems attempted.",
+            "mastery": "The tutor's estimate of topic understanding, averaged over topics weighted by how much evidence each has. An estimate, not a grade.",
+            "confidence": "How sure the learner said they were on their latest attempt. Unknown until they say.",
+            "confusion": "Signs of difficulty on the latest attempt, such as a repeated issue after a hint. Needs at least two signs.",
+            "load": "Signs that a task felt heavy on the latest attempt, such as long gaps or asking for less. Needs at least two signs.",
+            "progress": "Whether the latest attempts moved forward, stalled or went back.",
         },
     }
 
@@ -96,4 +102,5 @@ def student_detail(class_id: str, student_id: str, db: Session = Depends(get_db)
         "hints": [_hint_row(h, titles.get(h.problem_id)).model_dump() for h in hints],
         "recent": [{"problem_id": e.problem_id, "title": titles.get(e.problem_id), "verdict": e.verdict, "passed": e.passed, "total": e.total, "at": e.created_at} for e in recent],
         "learning_gain": analytics.learning_gain(db, [student_id]), "is_synthetic": student.is_synthetic,
+        "profile": build_profile(db, student_id),
     }

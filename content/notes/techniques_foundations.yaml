@@ -1,0 +1,257 @@
+# Approach guidance for each technique. All wording was written for this project.
+# This describes how to think about a kind of problem. It never contains the solution to a specific problem.
+
+First programs:
+  idea: "A program is a list of instructions that Python carries out in order."
+  observations: ["The output must match exactly, including spaces and punctuation.", "Print one thing at a time, and check it before adding more."]
+  steps: ["Read what the output should look like.", "Write the smallest program that prints part of it.", "Run it, then compare character by character."]
+  approaches:
+    - {level: "Direct", idea: "Write the instructions in the order they should happen.", time: "O(1)", space: "O(1)"}
+  mistakes: ["A missing or extra space in the output.", "Forgetting the quotes around text.", "Writing Print with a capital P."]
+  edge_cases: ["Check whether the output should end with extra spaces or blank lines."]
+
+Values and types:
+  idea: "Every value has a type, and the type decides what you can do with it."
+  observations: ["Text that looks like a number is still text.", "You can ask a value its type with type(value).", "Converting makes a new value, and leaves the old one alone."]
+  steps: ["List the values you are given, and what type each one is.", "Decide what type the answer should be.", "Convert a value only where you need to."]
+  approaches:
+    - {level: "Direct", idea: "Use the right conversion or operation for each type.", time: "O(1)", space: "O(1)"}
+  mistakes: ["Adding text to a number.", "Confusing 5 and \"5\".", "Forgetting that a conversion makes a new value you must store."]
+  edge_cases: ["Text that cannot be converted, such as int(\"abc\").", "Zero, and negative numbers.", "True and False are also numbers in Python."]
+
+Simple functions:
+  idea: "A function takes values in through its parameters, and gives one back with return."
+  observations: ["The tests read what you return, not what you print.", "The function's first line tells you what you receive."]
+  steps: ["Read what the function receives and what it should give back.", "Work out the first example by hand.", "Write that calculation, and return it."]
+  approaches:
+    - {level: "Direct", idea: "Calculate the result from the parameters, and return it.", time: "O(1)", space: "O(1)"}
+  mistakes: ["Using print where return is needed.", "Changing the function's name or parameters.", "Using a fixed value rather than the parameter."]
+  edge_cases: ["Zero and negative inputs.", "Empty text.", "Very large numbers, which Python handles exactly."]
+
+Reading input:
+  idea: "input() reads one line as text, so split and convert it into the values you need."
+  observations: ["Everything from input() starts as text.", "One line may hold several values.", "The number of input() calls must match the number of lines."]
+  steps: ["Read the input format, and note how many lines there are.", "Read each line, and split it if it has several values.", "Convert the pieces you need.", "Work out the answer, and print only that."]
+  approaches:
+    - {level: "Direct", idea: "Read, convert, calculate, then print.", time: "O(1) per line", space: "O(1)"}
+  mistakes: ["Doing arithmetic on text.", "Printing extra words like \"Answer:\".", "Reading more lines than exist, which raises EOFError."]
+  edge_cases: ["Extra spaces around the input.", "Empty lines.", "Negative numbers."]
+
+Arithmetic and operators:
+  idea: "Choose the operator that matches the meaning: / divides, // gives whole groups, and % gives what is left over."
+  observations: ["/ always gives a decimal.", "// and % answer questions about groups and remainders.", "Brackets make the order clear."]
+  steps: ["Write the calculation in words.", "Choose each operator.", "Add brackets where the order matters.", "Check the first example by hand."]
+  approaches:
+    - {level: "Direct", idea: "Translate the formula directly into Python.", time: "O(1)", space: "O(1)"}
+  mistakes: ["Using / when a whole number is needed.", "Forgetting that * happens before +.", "Using ^ for powers. In Python it is **."]
+  edge_cases: ["Dividing by zero.", "Negative numbers with // and %.", "Decimal results that are not exact."]
+
+Formatting output:
+  idea: "An f-string places values into text, so you control exactly what gets shown."
+  observations: ["The output must match exactly.", "Inside an f-string, {value:.2f} shows two decimal places."]
+  steps: ["Look at the exact text expected.", "Mark which parts are fixed, and which come from values.", "Write it as an f-string.", "Compare it character by character."]
+  approaches:
+    - {level: "Direct", idea: "Build the line with an f-string, then print or return it.", time: "O(1)", space: "O(1)"}
+  mistakes: ["Forgetting the f before the quote.", "Missing spaces or punctuation.", "Rounding when the task asks you to format, or the other way round."]
+  edge_cases: ["Rounding of values ending in 5.", "Whole numbers shown as decimals.", "Empty text."]
+
+Simple decisions:
+  idea: "An if statement runs a block only when its condition is true."
+  observations: ["Each question has a yes or no answer.", "== compares, and = stores.", "Returning a comparison directly is often clearest."]
+  steps: ["Say the rule in words, using \"if\".", "Write that as a condition.", "Decide what happens otherwise.", "Test the exact boundary value."]
+  approaches:
+    - {level: "Direct", idea: "Write the condition, and return or set the right value in each branch.", time: "O(1)", space: "O(1)"}
+  mistakes: ["Using = in a condition.", "Testing the wrong boundary, such as > rather than >=.", "Returning text \"True\" rather than the value True."]
+  edge_cases: ["The exact boundary value.", "Zero.", "Negative numbers."]
+
+Multiple branches:
+  idea: "An if / elif / else chain picks exactly one outcome, by checking conditions in order."
+  observations: ["The first true condition wins, so order matters.", "Later conditions can assume earlier ones were false."]
+  steps: ["List every possible outcome.", "Order them so the most specific check comes first.", "Write the chain, ending with else if something must always apply.", "Test one value from each outcome, and each boundary."]
+  approaches:
+    - {level: "Direct", idea: "Use a single chain, from most specific to least specific.", time: "O(1)", space: "O(1)"}
+  mistakes: ["Putting a broad check first, which hides later ones.", "Using separate if statements when only one should run.", "Leaving a gap between ranges."]
+  edge_cases: ["Values exactly on each boundary.", "Values outside every expected range."]
+
+Combined conditions:
+  idea: "and needs both sides to be true, or needs just one, and not flips the answer."
+  observations: ["Each side of and / or must be a complete condition.", "Python allows 0 <= x < 10.", "Brackets make mixed conditions clear."]
+  steps: ["Write the rule in words, keeping \"and\" and \"or\" exact.", "Translate each piece into a full condition.", "Add brackets where and / or mix.", "Test cases where each side alone is true."]
+  approaches:
+    - {level: "Direct", idea: "Combine full conditions with and / or, and return the result.", time: "O(1)", space: "O(1)"}
+  mistakes: ["Writing x == 1 or 2.", "Mixing up and / or.", "Forgetting that and binds more tightly than or."]
+  edge_cases: ["Both conditions true.", "Neither true.", "Values on the boundary of a range."]
+
+Running totals:
+  idea: "Start a variable outside the loop, update it on each pass, and use it after the loop."
+  observations: ["The starting value is the answer for empty input.", "The return belongs after the loop."]
+  steps: ["Decide what to track, and its starting value.", "Decide how each item changes it.", "Trace the first example by hand.", "Return the value once the loop has finished."]
+  approaches:
+    - {level: "Direct", idea: "One loop, with one or two variables updated on each pass.", time: "O(n)", space: "O(1)"}
+  mistakes: ["Starting a product at 0 rather than 1.", "Setting the starting value inside the loop.", "Returning from inside the loop."]
+  edge_cases: ["Empty input.", "A single item.", "Negative numbers."]
+
+Digit loops:
+  idea: "% 10 gives the last digit, and // 10 removes it, so a while loop can visit every digit."
+  observations: ["Numbers have no positions, but these two operators give you the digits.", "Converting to text is another valid way."]
+  steps: ["Work through a small number by hand.", "Take the last digit, use it, then remove it.", "Repeat while the number is above zero.", "Handle zero and negatives separately if the task needs it."]
+  approaches:
+    - {level: "Using text", idea: "Convert to a string, and loop over its characters.", time: "O(d) for d digits", space: "O(d)"}
+    - {level: "Arithmetic", idea: "Use % 10 and // 10 in a while loop.", time: "O(d) for d digits", space: "O(1)"}
+  mistakes: ["Forgetting the // 10, so the loop never ends.", "A while condition that skips zero.", "Using / rather than //."]
+  edge_cases: ["The number 0, which has one digit.", "Negative numbers.", "Numbers ending in 0."]
+
+Counting and searching:
+  idea: "Go through the values, and either count those that match or stop at the first one that does."
+  observations: ["A range(start, stop, step) can often replace a condition.", "Stopping early with return or break saves work."]
+  steps: ["Say what makes a value count.", "Decide which values to go through.", "Add one when a value matches, or return when you find it.", "Decide what to give back if nothing matches."]
+  approaches:
+    - {level: "Check every value", idea: "Loop over all candidates, and test each one.", time: "O(n)", space: "O(1)"}
+    - {level: "Skip what cannot match", idea: "Use a step in range, or a formula, to visit only possible matches.", time: "Often O(n / k) or O(1)", space: "O(1)"}
+  mistakes: ["A range that stops one value too early.", "Returning inside the loop before checking everything.", "Forgetting the result when nothing matches."]
+  edge_cases: ["No matches at all.", "Every value matches.", "The boundary values themselves."]
+
+Nested loops:
+  idea: "For each pass of the outer loop, the inner loop runs completely."
+  observations: ["The cost multiplies, so n by n means n² steps.", "The inner range can depend on the outer variable."]
+  steps: ["Work out what one row or one pair looks like.", "Write the inner loop for that.", "Wrap it in the outer loop.", "Check the first and last passes of each."]
+  approaches:
+    - {level: "Nested loops", idea: "Visit every combination directly.", time: "O(n²)", space: "O(1)"}
+  mistakes: ["Using the same variable name for both loops.", "Resetting a value in the wrong loop.", "A break, which only leaves the inner loop."]
+  edge_cases: ["Size zero or one.", "Rows of different lengths."]
+
+Parameters and return values:
+  idea: "Values come in through parameters and leave through return. Nothing else needs to be shared."
+  observations: ["A function can return several values as a tuple.", "A return ends the function immediately."]
+  steps: ["Read what comes in and what should go out.", "Work out the example by hand.", "Write the steps using only the parameters.", "Return the result."]
+  approaches:
+    - {level: "Direct", idea: "Calculate from the parameters, and return the result.", time: "Depends on the steps", space: "O(1)"}
+  mistakes: ["Printing rather than returning.", "Relying on a variable from outside the function.", "A path through the function with no return."]
+  edge_cases: ["Each branch must return something.", "Zero and empty inputs."]
+
+Default and keyword arguments:
+  idea: "A default value makes a parameter optional, and keywords let callers name what they pass."
+  observations: ["Parameters with defaults come after those without.", "A mutable default is shared between calls."]
+  steps: ["Decide which parameters are optional.", "Give each a sensible default.", "Use the default inside the function like any other value.", "Test calling with and without it."]
+  approaches:
+    - {level: "Direct", idea: "Use defaults for the common case, and let callers override them.", time: "Depends on the steps", space: "O(1)"}
+  mistakes: ["Using items=[] as a default.", "Putting a default before a required parameter.", "Passing arguments in the wrong order."]
+  edge_cases: ["The default being used.", "None as a real value."]
+
+Functions as values:
+  idea: "A function is a value too, so you can pass it, store it, and return it."
+  observations: ["Passing f is not the same as calling f().", "A nested function can remember values from where it was created."]
+  steps: ["Identify the part of the behaviour that varies.", "Make that part a parameter holding a function.", "Call it inside your function.", "Test with a small lambda."]
+  approaches:
+    - {level: "Direct", idea: "Take a function as a parameter, and call it for each item.", time: "O(n) calls", space: "O(1)"}
+  mistakes: ["Writing f() when passing f.", "Forgetting to return the inner function.", "A lambda that is too long to read."]
+  edge_cases: ["An empty list of items.", "A function that returns None."]
+
+Breaking problems into helpers:
+  idea: "Give each clear step its own small function, then build the answer from them."
+  observations: ["A helper with a good name makes the main function read like a description.", "Helpers can be tested on their own."]
+  steps: ["Describe the task in a few steps.", "Find a step with a clear job.", "Write it as a helper, above the main function.", "Call it from the main function."]
+  approaches:
+    - {level: "All in one", idea: "Write everything in a single function.", time: "Same", space: "Same"}
+    - {level: "With helpers", idea: "Split out each clear step.", time: "Same, and easier to get right", space: "Same"}
+  mistakes: ["A helper that prints rather than returns.", "Too many parameters, which suggests the wrong split.", "Defining the helper inside a loop."]
+  edge_cases: ["Each helper's own smallest input."]
+
+Indexing and slicing:
+  idea: "Positions start from 0, negative positions count from the end, and s[a:b] stops before b."
+  observations: ["A slice makes a new string.", "Slices never fail on out-of-range positions, and indexing does.", "s[::-1] reverses."]
+  steps: ["Write the string out with its positions numbered.", "Mark which positions you want.", "Translate that to an index or slice.", "Test on the shortest input."]
+  approaches:
+    - {level: "Loop over positions", idea: "Build the result one character at a time.", time: "O(n)", space: "O(n)"}
+    - {level: "Slicing", idea: "Say the range you want directly.", time: "O(n), and clearer", space: "O(n)"}
+  mistakes: ["Being off by one on the stop position.", "Indexing an empty string.", "Trying to change a character in place."]
+  edge_cases: ["Empty text.", "One character.", "Positions beyond the end."]
+
+String methods:
+  idea: "Text has built-in methods for common jobs, and each gives back a new string."
+  observations: [".split() with no argument handles any amount of space.", "You must store the result, since the original never changes."]
+  steps: ["Say what you want to do to the text.", "Find a method that does it.", "Store its result.", "Check on text with odd spacing or capitals."]
+  approaches:
+    - {level: "By hand", idea: "Loop over the characters and build the result.", time: "O(n)", space: "O(n)"}
+    - {level: "Built-in methods", idea: "Use .split, .strip, .replace, .lower and .join.", time: "O(n)", space: "O(n)"}
+  mistakes: ["Forgetting to store the result.", "split(\" \") giving empty pieces on double spaces.", "Calling a method on the wrong type."]
+  edge_cases: ["Extra spaces.", "Upper and lower case.", "Empty text."]
+
+Counting characters:
+  idea: "Go through the text once, and use a dictionary or a counter to tally what you see."
+  observations: ["Case and spaces may or may not count, so check the task.", ".count() handles one character, and a dictionary handles all of them."]
+  steps: ["Decide exactly which characters count.", "Go through each character.", "Update a tally.", "Use the tally to give the answer."]
+  approaches:
+    - {level: "Repeated .count()", idea: "Call .count for each distinct character.", time: "O(n × k) for k distinct characters", space: "O(k)"}
+    - {level: "One pass", idea: "Update a dictionary once per character.", time: "O(n)", space: "O(k)"}
+  mistakes: ["Forgetting to normalise case.", "Counting spaces by accident.", "Reading a key before it exists."]
+  edge_cases: ["Empty text.", "All characters the same.", "Punctuation."]
+
+Building strings:
+  idea: "Collect the pieces in a list, then join them at the end."
+  observations: ["Text cannot be changed, so each += makes a new string.", "join needs text, so convert numbers first."]
+  steps: ["Decide what each piece is.", "Collect the pieces in order.", "Choose what goes between them.", "Join them, and return the result."]
+  approaches:
+    - {level: "Repeated +=", idea: "Add to a string in a loop.", time: "Up to O(n²)", space: "O(n)"}
+    - {level: "List and join", idea: "Collect pieces, then join once.", time: "O(n)", space: "O(n)"}
+  mistakes: ["Joining numbers without converting them.", "A separator after the last piece.", "Forgetting to return the joined text."]
+  edge_cases: ["No pieces at all.", "One piece.", "Empty pieces."]
+
+Palindromes and comparison:
+  idea: "Compare text with its reverse, or walk inwards from both ends."
+  observations: ["s == s[::-1] is short and clear.", "Two pointers can stop at the first mismatch.", "Decide whether case and punctuation count."]
+  steps: ["Decide what counts, and clean the text if needed.", "Compare the two ends.", "Move inwards until they meet.", "Test odd and even lengths."]
+  approaches:
+    - {level: "Reverse and compare", idea: "Make a reversed copy, and compare.", time: "O(n)", space: "O(n)"}
+    - {level: "Two pointers", idea: "Compare from both ends inwards.", time: "O(n)", space: "O(1)"}
+  mistakes: ["Forgetting to normalise case.", "Going past the middle.", "Off by one on the right pointer."]
+  edge_cases: ["Empty text and one character.", "Spaces and punctuation.", "Even and odd lengths."]
+
+List basics:
+  idea: "A list keeps items in order. Read by position, and add with append."
+  observations: [".sort() and .append() change the list and return None.", "sorted() gives back a new list.", "Assigning does not copy."]
+  steps: ["Decide whether to change the list or build a new one.", "Go through the items.", "Add what you need to the result.", "Return it."]
+  approaches:
+    - {level: "Build a new list", idea: "Start with [] and append to it.", time: "O(n)", space: "O(n)"}
+    - {level: "Change in place", idea: "Update the list where it is.", time: "O(n)", space: "O(1)"}
+  mistakes: ["Storing the result of .append().", "Changing a list while looping over it.", "Reading past the end."]
+  edge_cases: ["An empty list.", "One item.", "Repeated values."]
+
+Comprehensions:
+  idea: "A comprehension builds a new list from a loop, on a single line."
+  observations: ["[x for x in items if test] keeps matching items.", "Long ones are harder to read than a plain loop."]
+  steps: ["Write what each output item is.", "Add the loop.", "Add a condition if you need to filter.", "Check on the example."]
+  approaches:
+    - {level: "Plain loop", idea: "Start with [] and append.", time: "O(n)", space: "O(n)"}
+    - {level: "Comprehension", idea: "Say the same thing more briefly.", time: "O(n)", space: "O(n)"}
+  mistakes: ["Putting the if in the wrong place.", "Writing a comprehension too long to read.", "Using one just to cause side effects."]
+  edge_cases: ["An empty input gives an empty list.", "A filter that keeps nothing."]
+
+Nested lists and matrices:
+  idea: "A grid is a list of rows, so grid[r][c] reads row r, column c."
+  observations: ["The number of rows is len(grid), and columns is len(grid[0]).", "[[0] * c] * r creates shared rows, so use a comprehension."]
+  steps: ["Draw a small grid.", "Work out how positions relate to rows and columns.", "Write two loops, rows first.", "Test a grid with different height and width."]
+  approaches:
+    - {level: "Two loops", idea: "Visit every cell by row and column.", time: "O(r × c)", space: "O(1) or O(r × c)"}
+  mistakes: ["Mixing up rows and columns.", "Building a grid with shared rows.", "Assuming the grid is square."]
+  edge_cases: ["An empty grid.", "One row, or one column.", "Non-square grids."]
+
+Dictionary basics:
+  idea: "A dictionary finds a value directly from its key."
+  observations: ["Reading a missing key is an error, so use in or .get().", "Looping over a dictionary gives its keys."]
+  steps: ["Decide what the key is, and what the value is.", "Build the dictionary by going through the data.", "Look up what you need.", "Handle missing keys."]
+  approaches:
+    - {level: "Search a list", idea: "Look through pairs each time.", time: "O(n) per lookup", space: "O(n)"}
+    - {level: "Dictionary", idea: "Store by key, then look up directly.", time: "About O(1) per lookup", space: "O(n)"}
+  mistakes: ["Reading a missing key.", "Using a list as a key.", "Assuming a particular order without checking the task."]
+  edge_cases: ["An empty dictionary.", "A key that is not present.", "A value that is 0 or empty."]
+
+Grouping and counting:
+  idea: "Use the thing you group by as the key, and collect or count under it."
+  observations: ["d.get(key, 0) + 1 counts neatly.", "d.setdefault(key, []).append(item) groups neatly."]
+  steps: ["Decide what the key is for each item.", "Decide what you store under it.", "Go through the items once.", "Return what the task asks for, in the right order."]
+  approaches:
+    - {level: "Nested loops", idea: "For each item, search for others like it.", time: "O(n²)", space: "O(n)"}
+    - {level: "One pass with a dictionary", idea: "Update the dictionary once per item.", time: "O(n)", space: "O(n)"}
+  mistakes: ["Reading a key before it exists.", "Using a list as a key.", "Forgetting to sort the result when the task needs an order."]
+  edge_cases: ["Empty input.", "Everything in one group.", "Every item in its own group."]

@@ -1,0 +1,354 @@
+recursion:
+  reading_minutes: 12
+  overview: |
+    A recursive function solves a problem by calling itself on a smaller version of it. Recursion is the natural way to think about trees, divide and conquer, and backtracking, so it is worth making it feel comfortable.
+  you_will_learn:
+    - The two parts of every recursive function
+    - How to trust the recursive call rather than tracing every step
+    - How divide and conquer splits work in half
+    - How backtracking explores choices
+  before_you_start:
+    - You should be confident with functions and return values.
+    - You should know lists and slicing.
+  sections:
+    - id: two-parts
+      title: Base case and recursive step
+      body: |
+        Every recursive function needs:
+
+        1. A **base case**: the smallest input, answered directly with no further call.
+        2. A **recursive step**: a call on a smaller input, used to build the answer.
+
+        Without a base case, or if the input never shrinks, Python stops with a `RecursionError`.
+
+        The trick is to **trust the recursive call**. Assume it returns the right answer for the smaller input, and only ask: how do I use that to answer this one?
+      examples:
+        - title: Factorial
+          code: |
+            def factorial(n):
+                if n == 0:
+                    return 1
+                return n * factorial(n - 1)
+
+            print(factorial(5))
+          note: factorial(4) is trusted to be 24, so factorial(5) is just 5 times that.
+    - id: sequences
+      title: Recursion on sequences
+      body: |
+        To process a list or string, handle the first item and recurse on the rest. The empty sequence is usually the base case.
+      examples:
+        - title: Adding up a list
+          code: |
+            def total(items):
+                if not items:
+                    return 0
+                return items[0] + total(items[1:])
+
+            print(total([1, 2, 3]))
+    - id: divide-conquer
+      title: Divide and conquer
+      body: |
+        Split the input in half, solve each half recursively, then combine. Halving means only about `log n` levels of calls, which is what makes merge sort and fast exponentiation so efficient.
+      examples:
+        - title: Fast power
+          code: |
+            def fast_pow(x, n):
+                if n == 0:
+                    return 1
+                half = fast_pow(x, n // 2)
+                return half * half * (x if n % 2 else 1)
+
+            print(fast_pow(2, 10))
+    - id: backtracking
+      title: Backtracking
+      body: |
+        Backtracking explores every sequence of choices. At each step, make a choice, recurse, then **undo** it and try the next. If a choice cannot work, stop early, which is called pruning. Subsets, permutations and puzzles all follow this shape.
+      examples:
+        - title: Choosing subsets
+          code: |
+            def subsets(items):
+                out = []
+                def walk(i, chosen):
+                    if i == len(items):
+                        out.append(chosen)
+                        return
+                    walk(i + 1, chosen)
+                    walk(i + 1, chosen + [items[i]])
+                walk(0, [])
+                return out
+
+            print(subsets([1, 2]))
+          note: Each item has two choices, leave it out or include it, so n items give 2 to the power n subsets.
+  patterns:
+    - name: Linear recursion
+      when: The answer for n depends on the answer for n - 1.
+      how: Write the base case first, then express n in terms of the smaller call.
+    - name: Recursion on sequences
+      when: You are processing a list or string item by item.
+      how: Handle the first item, recurse on the rest, and use the empty case as the base.
+    - name: Divide and conquer
+      when: The problem can be split into equal parts.
+      how: Split in half, solve both recursively, and combine the results.
+    - name: Backtracking
+      when: You must explore every combination or arrangement.
+      how: Choose, recurse, undo. Return early from choices that cannot work.
+  mistakes:
+    - mistake: A missing or unreachable base case.
+      fix: Write the base case first, and check that every call moves towards it.
+    - mistake: Forgetting to return the recursive result.
+      fix: Write return f(n - 1), not just f(n - 1), or the value is lost.
+    - mistake: Sharing one list between branches during backtracking.
+      fix: Pass a new list, as in chosen + [x], or undo your change with pop after the call.
+  key_ideas:
+    - Write the base case first.
+    - Trust the recursive call.
+    - Each call must make the input smaller.
+    - Recursion uses memory for every call that has not finished.
+
+searching-sorting:
+  reading_minutes: 12
+  overview: |
+    Searching and sorting are the classic algorithms. Binary search shows how sorted data lets you throw away half the work at each step, and it turns up in far more problems than you might expect.
+  you_will_learn:
+    - How binary search works, and how to avoid its traps
+    - How to binary search on the answer itself
+    - How the standard sorting algorithms work, and what they cost
+    - How to sort by any rule using key functions
+  before_you_start:
+    - You should know loops, lists and functions well.
+    - Recursion helps for merge sort and quick sort.
+  sections:
+    - id: binary-search
+      title: Binary search
+      body: |
+        A linear search checks every item, taking up to `n` steps. If the data is **sorted**, binary search looks at the middle and discards half the remaining items each time, taking about `log n` steps. For a million items, that is about 20 steps.
+
+        Keep a range `lo` to `hi`, and make sure it shrinks on every pass so that the loop ends.
+      examples:
+        - title: Binary search
+          code: |
+            def search(nums, x):
+                lo, hi = 0, len(nums) - 1
+                while lo <= hi:
+                    mid = (lo + hi) // 2
+                    if nums[mid] == x:
+                        return mid
+                    if nums[mid] < x:
+                        lo = mid + 1
+                    else:
+                        hi = mid - 1
+                return -1
+
+            print(search([1, 3, 5, 7, 9], 7))
+    - id: search-on-answer
+      title: Binary search on the answer
+      body: |
+        Sometimes nothing is sorted, but the answer has a pattern: too small fails, and big enough works. Then you can binary search over possible **answers**, checking each with a helper that says whether it works. Look for "the smallest value such that" or "the largest value such that" in a task.
+      examples:
+        - title: Whole-number square root
+          code: |
+            def int_sqrt(n):
+                lo, hi = 0, n
+                while lo < hi:
+                    mid = (lo + hi + 1) // 2
+                    if mid * mid <= n:
+                        lo = mid
+                    else:
+                        hi = mid - 1
+                return lo
+
+            print(int_sqrt(50))
+    - id: sorting-algorithms
+      title: Sorting algorithms
+      body: |
+        | Algorithm | Idea | Typical steps |
+        |---|---|---|
+        | Selection sort | Repeatedly pick the smallest | n squared |
+        | Insertion sort | Insert each item into a sorted part | n squared |
+        | Merge sort | Sort two halves, then merge | n log n |
+        | Quick sort | Split around a pivot | n log n, on average |
+
+        In real code, use Python's `sorted`, which is fast and stable. Writing these yourself teaches how they work, and the ideas of merging and partitioning appear in many other problems.
+      examples:
+        - title: Merging two sorted lists
+          code: |
+            def merge(a, b):
+                out, i, j = [], 0, 0
+                while i < len(a) and j < len(b):
+                    if a[i] <= b[j]:
+                        out.append(a[i])
+                        i += 1
+                    else:
+                        out.append(b[j])
+                        j += 1
+                return out + a[i:] + b[j:]
+
+            print(merge([1, 4], [2, 3, 9]))
+    - id: custom-keys
+      title: Sorting by any rule
+      body: |
+        `sorted(items, key=f)` sorts by whatever `f` returns. Returning a tuple sorts by several things in order, and a minus sign reverses a number. Python's sort is **stable**, so equal items keep their original order.
+      examples:
+        - title: Custom keys
+          code: |
+            words = ["bb", "a", "ab", "c"]
+            print(sorted(words, key=lambda w: (len(w), w)))
+            scores = [["ana", 3], ["bo", 9], ["cy", 3]]
+            print(sorted(scores, key=lambda s: (-s[1], s[0])))
+  patterns:
+    - name: Linear and binary search
+      when: You are finding a position in a list.
+      how: If it is sorted, use binary search. Decide carefully whether you want the first or last match.
+    - name: Binary search on answers
+      when: You need the smallest or largest value that satisfies a test.
+      how: Write a helper that checks one candidate, then binary search over the candidates.
+    - name: Sorting algorithms
+      when: The task asks you to implement a sort.
+      how: Trace it by hand on a small list first, and try it on a list with repeats.
+    - name: Custom sort keys
+      when: Items must be ordered by a rule.
+      how: Return a tuple from key, with the most important part first.
+    - name: Merge and partition
+      when: You are combining sorted data, or separating values into groups.
+      how: Use a pointer into each list, or sort first and then merge neighbours.
+  mistakes:
+    - mistake: A binary search that never ends.
+      fix: Make sure that lo or hi always changes. Trace a range of two items by hand.
+    - mistake: Binary searching data that is not sorted.
+      fix: Binary search depends on order, so sort first or use a different approach.
+    - mistake: Calling items.sort() and using its result.
+      fix: sort() changes the list and returns None. sorted(items) returns a new list.
+  key_ideas:
+    - Halving gives about log n steps.
+    - A task asking for the smallest value such that something holds suggests binary search on the answer.
+    - sorted returns a new list, and .sort() changes the original.
+    - Sorting costs about n log n.
+
+arrays-two-pointers:
+  reading_minutes: 13
+  overview: |
+    This topic collects the techniques that turn nested loops into a single pass over an array: two pointers, sliding windows, prefix sums, and keeping a running best. These appear constantly in interview-style problems.
+  you_will_learn:
+    - How to use two pointers from both ends, and at different speeds
+    - How a sliding window avoids recomputing work
+    - How prefix sums answer range questions instantly
+    - How Kadane's idea finds the best stretch in one pass
+  before_you_start:
+    - You should know lists, loops and how indexing works.
+    - You should understand why two nested loops can be too slow.
+  sections:
+    - id: two-pointers
+      title: Two pointers from both ends
+      body: |
+        With **sorted** data, or when comparing the two ends, start one pointer at each end and move them inwards. Each step rules out at least one item, so the whole pass takes about `n` steps rather than `n * n`.
+      examples:
+        - title: Pair adding up to a target
+          code: |
+            def has_pair(nums, target):
+                i, j = 0, len(nums) - 1
+                while i < j:
+                    total = nums[i] + nums[j]
+                    if total == target:
+                        return True
+                    if total < target:
+                        i += 1
+                    else:
+                        j -= 1
+                return False
+
+            print(has_pair([1, 2, 4, 7], 6))
+          note: If the total is too small, only moving i can make it bigger, since nums is sorted.
+    - id: fast-slow
+      title: Fast and slow pointers
+      body: |
+        One pointer **reads** every item, while another marks where to **write** the next one you keep. This lets you filter or compact a list in place in one pass. A second use is walking two sorted lists together, with one pointer for each.
+      examples:
+        - title: Keeping only the non-zeros
+          code: |
+            nums = [0, 1, 0, 3]
+            write = 0
+            for read in range(len(nums)):
+                if nums[read] != 0:
+                    nums[write] = nums[read]
+                    write += 1
+            print(nums[:write])
+    - id: sliding-window
+      title: Sliding window
+      body: |
+        When a question is about a stretch of neighbouring items, keep a window and update it as it moves, instead of recomputing from scratch.
+
+        - **Fixed size:** add the new item and remove the old one.
+        - **Variable size:** grow the right edge, and shrink the left edge whenever the window breaks the rule.
+      examples:
+        - title: Longest stretch with no repeats
+          code: |
+            def longest_unique(text):
+                last = {}
+                start = best = 0
+                for i, ch in enumerate(text):
+                    if ch in last and last[ch] >= start:
+                        start = last[ch] + 1
+                    last[ch] = i
+                    best = max(best, i - start + 1)
+                return best
+
+            print(longest_unique("abcabcbb"))
+    - id: prefix-sums
+      title: Prefix sums
+      body: |
+        Store running totals once, and the total from `i` to `j` is `prefix[j + 1] - prefix[i]`, in one step. Combined with a dictionary of totals seen so far, this counts stretches with a given total, even when values are negative.
+      examples:
+        - title: Totals of ranges
+          code: |
+            nums = [1, 2, 3, 4]
+            prefix = [0]
+            for n in nums:
+                prefix.append(prefix[-1] + n)
+            print(prefix)
+            print(prefix[4] - prefix[1])
+    - id: kadane
+      title: Keeping a running best
+      body: |
+        For the largest total of any stretch, keep the best total **ending here**. At each item, either extend the previous stretch or start again from this item. This is Kadane's algorithm, and the same idea finds the best single stock trade.
+      examples:
+        - title: Largest stretch total
+          code: |
+            def best_stretch(nums):
+                best = current = nums[0]
+                for n in nums[1:]:
+                    current = max(n, current + n)
+                    best = max(best, current)
+                return best
+
+            print(best_stretch([-2, 1, -3, 4, -1, 2, 1, -5, 4]))
+  patterns:
+    - name: Two pointers from both ends
+      when: The data is sorted, or the problem compares both ends.
+      how: Start at the ends, and move whichever pointer can improve the result.
+    - name: Fast and slow pointers
+      when: You are filtering a list in place, or walking two lists together.
+      how: One pointer reads everything, and the other only moves when something is kept.
+    - name: Sliding window
+      when: The question is about stretches of neighbours.
+      how: Grow the right edge, shrink the left edge while the rule is broken, and record the best.
+    - name: Prefix sums
+      when: You need many range totals, or stretches with a given total.
+      how: Store running totals, then subtract two of them.
+    - name: Kadane and running best
+      when: You want the best stretch, or the best pair in order.
+      how: Track the best ending here, and the best seen so far.
+    - name: In-place updates
+      when: The task asks you to rearrange using little extra memory.
+      how: Swap items, or use positions in the list itself as markers.
+  mistakes:
+    - mistake: Using two pointers from both ends on unsorted data.
+      fix: Moving a pointer only rules items out if the data is sorted. Sort first, or use a dictionary.
+    - mistake: Forgetting to shrink a variable window.
+      fix: Use a while loop that moves the left edge until the window is valid again.
+    - mistake: Being off by one with prefix sums.
+      fix: Make prefix one longer than the list, starting from 0.
+  key_ideas:
+    - Each of these replaces a nested loop with one pass.
+    - Update a window rather than recomputing it.
+    - prefix[j + 1] - prefix[i] gives a range total.
+    - Ask what you need to remember about what you have already seen.

@@ -1,93 +1,108 @@
-/* Design tokens. Trellis: quiet surfaces with a slight green bias, forest primary, amber reserved for tutor help.
-   Text colours are checked against WCAG AA on their surfaces in docs/accessibility notes. */
+/* Design tokens. CodePath is light and calm by default: soft paper, white cards, one friendly blue,
+   sunny yellow for encouragement, and warm orange kept for the tutor. Text colours are checked against WCAG AA by the browser tests, in both themes. */
 :root {
   color-scheme: light;
-  --font-ui: "Figtree Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-ui: "Inter Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-display: "Plus Jakarta Sans Variable", "Inter Variable", system-ui, sans-serif;
   --font-code: "JetBrains Mono Variable", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-  --bg: #f5f7f4;
+  --bg: #f5f7fb;
   --surface: #ffffff;
-  --surface-2: #eef1ed;
-  --surface-3: #e3e8e2;
-  --border: #d8ded6;
-  --border-strong: #aab4aa;
-  --text: #17211c;
-  --text-2: #465149;
-  --text-3: #5f6b63;
-  --primary: #0b6b4c;
-  --primary-hover: #085a3f;
+  --surface-2: #f1f4f9;
+  --surface-3: #e4e9f2;
+  --border: #e2e7f0;
+  --border-strong: #c3cad8;
+  --border-control: #8b94a8;
+  --text: #1b2232;
+  --text-2: #465068;
+  --text-3: #5d677f;
+  --primary: #2558d6;
+  --primary-hover: #1d47b0;
   --on-primary: #ffffff;
-  --primary-soft: #e0f1ea;
-  --hint: #805200;
-  --hint-soft: #fbf1dc;
-  --hint-border: #e6cf9e;
-  --info: #1d5ba3;
-  --info-soft: #e3eefa;
-  --ok: #0b6b4c;
-  --ok-soft: #e0f1ea;
-  --warn: #805200;
-  --warn-soft: #fbf1dc;
-  --danger: #b0241c;
-  --danger-soft: #fbe8e6;
-  --focus: #1d5ba3;
-  --overlay: rgb(15 25 20 / 0.45);
-  --shadow-1: 0 1px 2px rgb(20 30 25 / 0.06), 0 1px 1px rgb(20 30 25 / 0.04);
-  --shadow-2: 0 8px 28px rgb(20 30 25 / 0.14);
+  --primary-soft: #e8effd;
+  --accent: #ffd24d;
+  --accent-soft: #fff7da;
+  --accent-text: #2558d6;
+  --ink: #1b2232;
+  --on-ink: #f5f7fb;
+  --hint: #b0450c;
+  --hint-soft: #fff3e8;
+  --hint-border: #f9d6b8;
+  --info: #2558d6;
+  --info-soft: #e8effd;
+  --ok: #0d7a4e;
+  --ok-soft: #e1f6ec;
+  --warn: #8a5800;
+  --warn-soft: #fdf3d7;
+  --danger: #bf2736;
+  --danger-soft: #fdebed;
+  --focus: #2558d6;
+  --overlay: rgb(27 34 50 / 0.45);
+  --shadow-1: 0 1px 2px rgb(27 34 50 / 0.05);
+  --shadow-2: 0 12px 32px rgb(27 34 50 / 0.14);
+  --shadow-card: 0 1px 2px rgb(27 34 50 / 0.04), 0 4px 14px rgb(27 34 50 / 0.04);
 
-  /* Chart series, validated with the data-visualisation palette checks. */
-  --series-1: #0b8a60;
-  --series-2: #c2750e;
-  --series-3: #5b5bb5;
-  --chart-grid: #e6eae4;
+  --series-1: #2558d6;
+  --series-2: #d9791f;
+  --series-3: #8560cf;
+  --chart-grid: #e8ecf3;
 
-  --radius-s: 6px;
-  --radius-m: 10px;
-  --radius-l: 14px;
+  --radius-s: 8px;
+  --radius-m: 12px;
+  --radius-l: 16px;
+  --radius-xl: 20px;
   --space-unit: 4px;
   --page-gutter: clamp(16px, 3vw, 32px);
   --editor-font-size: 14px;
-  --control-height: 38px;
-  --transition: 140ms ease;
+  --control-height: 40px;
+  --transition: 150ms ease;
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0f1513;
-  --surface: #17201d;
-  --surface-2: #1e2925;
-  --surface-3: #28342f;
-  --border: #2f3b36;
-  --border-strong: #4d5c55;
-  --text: #e8eeea;
-  --text-2: #b6c2bb;
-  --text-3: #97a49c;
-  --primary: #5cc8a0;
-  --primary-hover: #76d6b2;
-  --on-primary: #08251b;
-  --primary-soft: #16322a;
-  --hint: #e7b765;
-  --hint-soft: #2e2510;
-  --hint-border: #5b4a22;
-  --info: #93bff2;
-  --info-soft: #17293f;
-  --ok: #5cc8a0;
-  --ok-soft: #16322a;
-  --warn: #e7b765;
-  --warn-soft: #2e2510;
-  --danger: #f4a7a0;
-  --danger-soft: #3a1c19;
-  --focus: #93bff2;
+  --bg: #12151c;
+  --surface: #1a1e27;
+  --surface-2: #222731;
+  --surface-3: #2c3240;
+  --border: #2c3240;
+  --border-strong: #464e60;
+  --border-control: #6f7889;
+  --text: #eceff5;
+  --text-2: #c0c6d3;
+  --text-3: #a1a9b9;
+  --primary: #89aaff;
+  --primary-hover: #a5bfff;
+  --on-primary: #0e1320;
+  --primary-soft: #1d2946;
+  --accent: #ffd24d;
+  --accent-soft: #2c2610;
+  --accent-text: #89aaff;
+  --ink: #0c0e13;
+  --on-ink: #eceff5;
+  --hint: #ffb07c;
+  --hint-soft: #2b1c12;
+  --hint-border: #553520;
+  --info: #89aaff;
+  --info-soft: #1a2540;
+  --ok: #63d6a4;
+  --ok-soft: #11281f;
+  --warn: #efc36b;
+  --warn-soft: #2a2210;
+  --danger: #ff9aa4;
+  --danger-soft: #331a1e;
+  --focus: #89aaff;
   --overlay: rgb(0 0 0 / 0.6);
-  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow-2: 0 10px 30px rgb(0 0 0 / 0.5);
-  --series-1: #2a9e78;
-  --series-2: #c78428;
-  --series-3: #7f82e0;
-  --chart-grid: #26312c;
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.35);
+  --shadow-2: 0 14px 36px rgb(0 0 0 / 0.5);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3);
+  --series-1: #89aaff;
+  --series-2: #ffb07c;
+  --series-3: #b89ff0;
+  --chart-grid: #2a2f3b;
 }
 
 :root[data-density="compact"] {
-  --control-height: 32px;
+  --control-height: 34px;
   --space-unit: 3px;
 }
 

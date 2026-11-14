@@ -163,3 +163,31 @@ def test_dev_backend_blocks_network_and_home_on_macos(run):
         "    return out\n"
     )
     assert first(run(code))["value"] == ["blocked", "blocked"]
+
+
+def test_trace_records_values_on_chosen_lines(run):
+    code = "def solve(n):\n    total = 0\n    for i in range(1, n):\n        total += i\n    return total\n"
+    body = run(code, tests=[{"id": "t1", "kind": "args", "args": [3], "trace_lines": [4]}])
+    outcome = body["results"][0]
+    assert outcome["status"] == "ok" and outcome["value"] == 3, "tracing does not change the result"
+    assert [e["vars"]["i"] for e in outcome["trace"]] == ["1", "2"]
+    assert outcome["trace"][0]["line"] == 4 and outcome["trace"][0]["vars"]["total"] == "0"
+
+
+def test_trace_of_a_line_that_never_runs_is_empty(run):
+    body = run("def solve(n):\n    return n\n    n = 1\n", tests=[{"id": "t1", "kind": "args", "args": [3], "trace_lines": [3]}])
+    assert body["results"][0]["trace"] == []
+
+
+def test_trace_is_bounded_and_absent_when_not_requested(run):
+    body = run("def solve(n):\n    for i in range(100000):\n        n += i\n    return n\n", tests=[{"id": "t1", "kind": "args", "args": [1], "trace_lines": [3]}, {"id": "t2", "kind": "args", "args": [1]}])
+    assert len(body["results"][0]["trace"]) == 40
+    assert body["results"][1].get("trace") is None
+
+
+def test_trace_survives_hostile_values(run):
+    code = "class Bad:\n    def __repr__(self):\n        raise RuntimeError('no')\n\ndef solve():\n    x = Bad()\n    y = 'z' * 5000\n    return 1\n"
+    body = run(code, tests=[{"id": "t1", "kind": "args", "args": [], "trace_lines": [8]}])
+    event = body["results"][0]["trace"][0]
+    assert event["vars"]["x"] == "<unprintable>" and len(event["vars"]["y"]) == 80
+

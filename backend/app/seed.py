@@ -38,6 +38,7 @@ from .models import (
     Unit,
     User,
 )
+from .test_categories import primary
 from .tutoring.retrieval import situation_vector, store
 
 DIFFICULTY_SCORE = {"easy": 0.25, "medium": 0.5, "hard": 0.8}
@@ -49,10 +50,46 @@ def load_content_files() -> tuple[list[dict[str, Any]], list[dict[str, Any]], di
     units = json.loads((root / "units.json").read_text())
     problems = json.loads((root / "problems" / "legacy.json").read_text())
     problems += yaml.safe_load((root / "problems" / "authored.yaml").read_text())
+    bank = root / "problems" / "bank.yaml"
+    if bank.exists():
+        problems += yaml.safe_load(bank.read_text())
     solutions: dict[str, str] = {}
     for path in sorted((root / "solutions").glob("*.yaml")):
         solutions.update(yaml.safe_load(path.read_text()))
     return units, problems, solutions
+
+
+def load_guides() -> dict[str, Any]:
+    """The lesson for each topic, keyed by unit."""
+    guides: dict[str, Any] = {}
+    folder = settings.content_path / "guides"
+    if folder.exists():
+        for path in sorted(folder.glob("*.yaml")):
+            guides.update(yaml.safe_load(path.read_text()))
+    notes_path = settings.content_path / "notes" / "topics.yaml"
+    if notes_path.exists():
+        for unit_id, notes in yaml.safe_load(notes_path.read_text()).items():
+            if unit_id in guides:
+                extra = notes.pop("extra_sections", [])
+                guides[unit_id].update(notes)
+                guides[unit_id]["sections"] = [*guides[unit_id].get("sections", []), *extra]
+    return guides
+
+
+def load_patterns() -> dict[str, str]:
+    path = settings.content_path / "problems" / "patterns.yaml"
+    return yaml.safe_load(path.read_text()) if path.exists() else {}
+
+
+PLAYGROUND_ID = "playground"
+
+
+def seed_playground(db) -> None:
+    """A hidden problem with no tests, so lesson examples can run through the normal sandbox path."""
+    row = db.get(Problem, PLAYGROUND_ID) or Problem(id=PLAYGROUND_ID)
+    row.title, row.unit_id, row.description, row.starter_code, row.mode, row.archived, row.difficulty_score, row.concepts = "Scratch space", "python-basics", "Run any code here.", "", "stdio", True, 0.5, []
+    row.source_type, row.order_index = "curriculum", 0
+    db.add(row)
 
 
 def normalise_test(raw: dict[str, Any], mode: str) -> dict[str, Any]:
@@ -65,13 +102,19 @@ def normalise_test(raw: dict[str, Any], mode: str) -> dict[str, Any]:
 
 def seed_content() -> dict[str, int]:
     units, problems, solutions = load_content_files()
+    guides, patterns = load_guides(), load_patterns()
+    extra_path = settings.content_path / "problems" / "extra_tests.yaml"
+    extra_tests = yaml.safe_load(extra_path.read_text()) if extra_path.exists() else {}
     with session_scope() as db:
         for unit in units:
             row = db.get(Unit, unit["id"]) or Unit(id=unit["id"])
             row.title, row.order_index, row.track, row.summary, row.optional, row.prerequisites, row.lessons = (
                 unit["title"], unit["order"], unit["track"], unit["summary"], unit.get("optional", False), unit.get("prerequisites", []), unit.get("lessons", []),
             )
+            row.guide = guides.get(unit["id"])
             db.add(row)
+        db.flush()
+        seed_playground(db)
         db.flush()
         unit_order = {u["id"]: u["order"] for u in units}
         counters: dict[str, int] = {}
@@ -87,6 +130,8 @@ def seed_content() -> dict[str, int]:
             )
             row.description, row.starter_code, row.function_name, row.prelude = raw["description"].strip(), raw["starter_code"], raw.get("function_name"), raw.get("prelude")
             row.per_test_seconds = float(raw.get("per_test_seconds", 2.0))
+            row.pattern = raw.get("pattern") or patterns.get(slug)
+            row.constraints = raw.get("constraints")
             row.source_type, row.source_name, row.source_note = source.get("type", "curriculum"), source.get("name"), source.get("note")
             row.recommended_first = bool(raw.get("recommended_first", False))
             row.order_index = unit_order[unit_id] * 1000 + {"easy": 0, "medium": 300, "hard": 600}.get(raw.get("difficulty"), 300) + counters[unit_id] - (100 if raw.get("recommended_first") else 0)
@@ -94,10 +139,12 @@ def seed_content() -> dict[str, int]:
             db.flush()
             db.execute(delete(ProblemTest).where(ProblemTest.problem_id == slug))
             public = int(raw.get("public", 2))
-            for index, test in enumerate(raw["tests"]):
+            # Hidden tests generated from the problem's own examples come after the written ones.
+            written = len(raw["tests"])
+            for index, test in enumerate([*raw["tests"], *(extra_tests.get(slug) or [])]):
                 data = normalise_test(test, mode)
-                db.add(ProblemTest(problem_id=slug, order_index=index, visibility="public" if index < public else "hidden", origin="curriculum", kind=data["kind"],
-                                   payload=data["payload"], expected=data["expected"], compare=test.get("compare", "exact")))
+                db.add(ProblemTest(problem_id=slug, order_index=index, visibility="public" if index < public else "hidden", origin="curriculum" if index < written else "generated",
+                                   category=primary({**data["payload"]}), kind=data["kind"], payload=data["payload"], expected=data["expected"], compare=test.get("compare", "exact")))
             if slug in solutions:
                 solution = db.get(ProblemSolution, slug) or ProblemSolution(problem_id=slug)
                 solution.code = solutions[slug]
@@ -105,17 +152,17 @@ def seed_content() -> dict[str, int]:
     return {"units": len(units), "problems": len(problems), "solutions": len(solutions)}
 
 
-STRATEGIES = {
-    "syntax": ["syntax_pinpoint"], "runtime": ["error_tracing", "step_outline"], "timeout": ["termination_reasoning", "step_outline"], "resource": ["termination_reasoning"],
-    "wrong_answer": ["trace_example", "boundary_check", "return_value", "step_outline"], "partial": ["boundary_check", "trace_example", "step_outline"],
-}
+# Each level uses the matching step on the DSDA ladder (policy.yaml), so a suggestion can always be applied.
+STRATEGY_FOR_LEVEL = {1: ["conceptual_question"], 2: ["targeted_hint", "trace_failing_case"], 3: ["step_outline"], 4: ["analogous_example"]}
+SYNTAX_STRATEGY_FOR_LEVEL = {2: ["syntax_pinpoint", "syntax_read_tokens"], 3: ["syntax_checklist"], 4: ["syntax_analogous_line"]}
+CATEGORIES = ["syntax", "runtime", "timeout", "resource", "wrong_answer", "partial"]
 ISSUES = {
     "syntax": ["syntax:missing_colon", "syntax:indentation", "syntax:unbalanced_bracket"], "runtime": ["runtime:IndexError", "runtime:TypeError", "runtime:KeyError", "runtime:NameError"],
     "timeout": ["timeout:loop_no_progress", "timeout:general"], "resource": ["resource:output"], "wrong_answer": ["logic:off_by_one", "logic:missing_return", "logic:general"], "partial": ["logic:edge_case", "logic:off_by_one"],
 }
 
 
-def seed_synthetic_cases(count: int = 400) -> int:
+def seed_synthetic_cases(count: int = 2000) -> int:
     """Generated with a plausible but invented rule. Labelled 'synthetic' and excluded when configured."""
     rng = random.Random(20261109)
     with session_scope() as db:
@@ -123,9 +170,9 @@ def seed_synthetic_cases(count: int = 400) -> int:
         db.execute(delete(InterventionCase).where(InterventionCase.provenance == "synthetic"))
         cases = []
         for _ in range(count):
-            category = rng.choice(list(STRATEGIES))
+            category = rng.choice(CATEGORIES)
             mastery = rng.random()
-            level = 2 if category == "syntax" else rng.choice([1, 2, 2, 3, 3, 4])
+            level = rng.choice([2, 2, 3, 4]) if category == "syntax" else rng.choice([1, 2, 2, 3, 3, 4])
             ideal = 3 if mastery < 0.35 else (2 if mastery < 0.7 else 1)
             chance = 0.72 if abs(level - ideal) == 0 else (0.5 if abs(level - ideal) == 1 else 0.25)
             load = rng.choice([None, "low", "moderate", "high"])
@@ -134,7 +181,7 @@ def seed_synthetic_cases(count: int = 400) -> int:
                                       rng.choice([0.25, 0.5, 0.8]), rng.randint(1, 6), rng.randint(0, 4), category)
             cases.append(InterventionCase(
                 provenance="synthetic", unit_id=rng.choice(unit_ids), category=category, issue_key=rng.choice(ISSUES[category]), difficulty=rng.choice([0.25, 0.5, 0.8]), level=level,
-                strategy=rng.choice(STRATEGIES[category]), outcome="progress" if rng.random() < chance else "no_progress", vector=vector,
+                strategy=rng.choice((SYNTAX_STRATEGY_FOR_LEVEL if category == "syntax" else STRATEGY_FOR_LEVEL)[level]), outcome="progress" if rng.random() < chance else "no_progress", vector=vector,
             ))
         db.add_all(cases)
         db.flush()
@@ -216,7 +263,7 @@ def seed_demo_class() -> dict[str, int]:
                     last_issue = issue
                     db.add(Diagnostic(run_id=run.id, user_id=student.id, problem_id=problem.id, category=categories[verdict], issue_key=issue, repeat_count=repeat, confidence=0.7, data={"synthetic": True}, created_at=moment))
                     if not solved_now and rng.random() < 0.65:
-                        db.add(Hint(run_id=run.id, user_id=student.id, problem_id=problem.id, unit_id=problem.unit_id, snapshot_id=snapshot.id, issue_key=issue, category=categories[verdict], level=rng.randint(1, min(4, attempt + 2)), strategy="trace_example",
+                        db.add(Hint(run_id=run.id, user_id=student.id, problem_id=problem.id, unit_id=problem.unit_id, snapshot_id=snapshot.id, issue_key=issue, category=categories[verdict], level=rng.randint(1, min(4, attempt + 2)), strategy="targeted_hint",
                                     text="Synthetic record.", source="built_in", requested=rng.random() < 0.6, reason_student="Synthetic record.", reason_codes=["SYNTHETIC"], policy_version="synthetic", validation={}, outcome=rng.choice(["progress", "no_progress", "no_progress", "solved"]), outcome_at=moment, created_at=moment))
                     totals = topic_totals.setdefault(problem.unit_id, {"attempts": 0, "solved": 0})
                     totals["attempts"] += 1

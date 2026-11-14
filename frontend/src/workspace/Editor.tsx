@@ -3,13 +3,13 @@ import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirro
 import { python } from "@codemirror/lang-python";
 import { bracketMatching, HighlightStyle, indentOnInput, indentUnit, syntaxHighlighting, syntaxTree } from "@codemirror/language";
 import { linter, type Diagnostic } from "@codemirror/lint";
-import { highlightSelectionMatches, search, searchKeymap } from "@codemirror/search";
+import { highlightSelectionMatches, openSearchPanel, search, searchKeymap } from "@codemirror/search";
 import { Compartment, EditorState, Prec, StateEffect, StateField } from "@codemirror/state";
 import { Decoration, type DecorationSet, drawSelection, EditorView, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 
-const highlight = HighlightStyle.define([
+export const highlight = HighlightStyle.define([
   { tag: [tags.keyword, tags.controlKeyword, tags.definitionKeyword, tags.moduleKeyword, tags.operatorKeyword, tags.bool, tags.null, tags.self], class: "tok-keyword" },
   { tag: [tags.string, tags.special(tags.string)], class: "tok-string" },
   { tag: [tags.number, tags.integer, tags.float], class: "tok-number" },
@@ -49,10 +49,12 @@ const pythonSyntaxLint = linter((view) => {
   return found;
 }, { delay: 1400 });
 
-export type EditorHandle = { setCode: (code: string) => void; focus: () => void };
+export type EditorHandle = { setCode: (code: string) => void; focus: () => void; openFind: () => void };
 type Props = {
   initialCode: string; onChange: (code: string) => void; onRun: () => void; onSubmit: () => void; onHint: () => void; onSave: () => void; onEscape: () => void;
   tabSize: number; lineWrap: boolean; showLineNumbers: boolean; syntaxFeedback: boolean; markedLines: number[];
+  /** The lines the learner has selected, or null when nothing is selected. */
+  onSelectionChange?: (lines: { start: number; end: number } | null) => void;
 };
 
 export const CodeEditor = forwardRef<EditorHandle, Props>(function CodeEditor(props, ref) {
@@ -87,7 +89,18 @@ export const CodeEditor = forwardRef<EditorHandle, Props>(function CodeEditor(pr
           lint.current.of(props.syntaxFeedback ? pythonSyntaxLint : []),
           keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...searchKeymap, ...historyKeymap, indentWithTab]),
           EditorView.contentAttributes.of({ "aria-label": "Python code editor. Press Escape, then Tab, to leave the editor.", spellcheck: "false", autocapitalize: "off", autocorrect: "off" }),
-          EditorView.updateListener.of((update) => { if (update.docChanged) callbacks.current.onChange(update.state.doc.toString()); }),
+          EditorView.updateListener.of((update) => {
+            if (update.docChanged) callbacks.current.onChange(update.state.doc.toString());
+            if (update.selectionSet || update.docChanged) {
+              const { from, to, empty } = update.state.selection.main;
+              if (empty) { callbacks.current.onSelectionChange?.(null); return; }
+              const first = update.state.doc.lineAt(from);
+              const last = update.state.doc.lineAt(to);
+              // A selection that ends at the very start of a line does not include that line.
+              const end = last.from === to && last.number > first.number ? last.number - 1 : last.number;
+              callbacks.current.onSelectionChange?.({ start: first.number, end });
+            }
+          }),
         ],
       }),
     });
@@ -110,6 +123,7 @@ export const CodeEditor = forwardRef<EditorHandle, Props>(function CodeEditor(pr
       if (current) current.dispatch({ changes: { from: 0, to: current.state.doc.length, insert: code } });
     },
     focus() { view.current?.focus(); },
+    openFind() { if (view.current) { view.current.focus(); openSearchPanel(view.current); } },
   }), []);
 
   return <div className="editor-host" ref={host} data-testid="code-editor" />;

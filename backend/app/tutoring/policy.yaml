@@ -1,37 +1,71 @@
 # Experimental starting values chosen by the project team. None of these are validated research
 # results, and the report does not specify them. They exist in this file so they can be tuned and compared.
 dsda:
-  policy_version: dsda-1.0
+  policy_version: dsda-2.2
   # Weights for the need-for-help score. Unknown inputs are left out and the rest are rescaled.
   weights:
-    low_mastery: 0.25
-    low_confidence: 0.10
-    confusion: 0.20
-    cognitive_load: 0.10
-    repeated_issue: 0.20
-    unhelpful_hints: 0.15
+    low_mastery: 0.22
+    low_confidence: 0.08
+    confusion: 0.18
+    cognitive_load: 0.08
+    repeated_issue: 0.16
+    unhelpful_hints: 0.12
+    repeat_requests: 0.12      # asked again without changing the code
+    stalled_time: 0.04         # a long gap since the last meaningful action
   progress_credit: 0.15        # subtracted when the learner is visibly improving
   level_thresholds: [0.20, 0.40, 0.60, 0.80]   # score below these maps to L0, L1, L2, L3; above is L4
   first_contact_max_level: 2   # never start above this level on a new issue
   explicit_request_floor: 1    # a request for help always gets at least this
   small_request_max_level: 2   # "just a nudge"
   l3_min_prior_events: 1       # L3 needs at least this many earlier attempts or hints on the issue
-  l4_min_unhelpful_hints: 2    # L4 needs at least this many earlier hints without progress
-  syntax_max_level: 2
+  l4_min_prior_hints: 2        # L4 needs at least this many earlier hints on the issue
   high_load_max_level: 3
   offer_only_mastery: 0.7      # above this, a first unrequested failure earns an offer, not a hint
+  rapid_rerequest_seconds: 12  # asking again this quickly moves to the next angle, without skipping ahead
+  stalled_seconds: 600         # time since the last meaningful action at which stalled_time reaches 1
   retrieval_min_support: 3
   retrieval_min_effectiveness: 0.55
   retrieval_max_level_shift: 1
+  # Each issue climbs its ladder one unused step at a time, so the same kind of help is never repeated.
+  # A strategy is how the help is framed. The issue decides what it is about.
+  ladders:
+    default:
+      - {strategy: conceptual_question, level: 1}
+      - {strategy: targeted_hint, level: 2}
+      - {strategy: trace_failing_case, level: 2}
+      - {strategy: print_debugging, level: 2}
+      - {strategy: step_outline, level: 3}
+      - {strategy: analogous_example, level: 4}
+      - {strategy: direct_pointer, level: 4}     # says exactly what to change, in words. Never the solution.
+    syntax:
+      - {strategy: syntax_pinpoint, level: 2}
+      - {strategy: syntax_read_tokens, level: 2}
+      - {strategy: syntax_checklist, level: 3}
+      - {strategy: syntax_analogous_line, level: 4}
+      - {strategy: syntax_exact_fix, level: 4}   # a syntax slip is not the learning goal, so the last step names the fix
+    # A missing name stops the code before anything useful runs, so tracing or printing values cannot help.
+    name:
+      - {strategy: conceptual_question, level: 1}
+      - {strategy: targeted_hint, level: 2}
+      - {strategy: name_options, level: 2}
+      - {strategy: step_outline, level: 3}
+      - {strategy: analogous_example, level: 4}
+      - {strategy: direct_pointer, level: 4}     # the name is the issue, so this says what to add or change. Never the solution.
+  ladder_exclude:
+    logic:not_implemented: [trace_failing_case, print_debugging]   # nothing has been written to trace yet
+    structure:missing_function: [trace_failing_case, print_debugging, analogous_example]
+  # A hint this similar to an earlier one on the same problem is rejected, and the next option is used.
+  repeat_similarity_threshold: 0.8
   presentation:
     "1": {format: question, max_sentences: 2, max_words: 45}
     "2": {format: hint, max_sentences: 3, max_words: 70}
     "3": {format: outline, max_sentences: 6, max_words: 110}
     "4": {format: example, max_sentences: 7, max_words: 150}
     high_load: {max_sentences: 2, max_words: 40}
+    question: {format: hint, max_sentences: 8, max_words: 140}  # an answer to something the learner asked
 
 cognitive:
-  method_version: cs-1.0
+  method_version: cs-1.2
   bkt_guess: 0.20
   bkt_slip: 0.10
   bkt_learn: 0.12
@@ -46,6 +80,7 @@ cognitive:
   range_base: 0.35
   min_evidence_for_band: 1.5
   slow_factor: 2.0
+  same_code_requests_signal: 2 # asking this many times without changing the code counts as one signal
   baseline_active_seconds: {easy: 240, medium: 600, hard: 1200}
   self_confidence_values: {low: 0.2, medium: 0.5, high: 0.85}
 

@@ -16,6 +16,7 @@ from .models import (
     AssessmentAttempt,
     ClassMember,
     Diagnostic,
+    Draft,
     Evaluation,
     Hint,
     Problem,
@@ -51,7 +52,7 @@ def rate(numerator: int, denominator: int) -> float | None:
 
 def learner_metrics(db: Session, user_ids: list[str]) -> dict[str, Any]:
     """Shared by the student and teacher views, so both always agree."""
-    empty = {"started": 0, "solved": 0, "completion_rate": None, "hints_total": 0, "hints_per_solved": None, "median_seconds_to_complete": None, "time_sample": 0, "graded_attempts": 0, "hint_progress_rate": None, "hints_with_outcome": 0}
+    empty = {"started": 0, "submitted": 0, "solved": 0, "completion_rate": None, "hints_total": 0, "hints_per_solved": None, "median_seconds_to_complete": None, "time_sample": 0, "graded_attempts": 0, "hint_progress_rate": None, "hints_with_outcome": 0}
     if not user_ids:
         return empty
     graded = db.execute(
@@ -59,7 +60,16 @@ def learner_metrics(db: Session, user_ids: list[str]) -> dict[str, Any]:
         .where(Evaluation.user_id.in_(user_ids), Evaluation.kind == "submit", Evaluation.verdict.notin_(["service_failure", "cancelled", "no_tests"]), Evaluation.status == "completed")
         .order_by(Evaluation.created_at)
     ).all()
-    started = {(r.user_id, r.problem_id) for r in graded}
+    attempted = {(r.user_id, r.problem_id) for r in graded}
+    # A problem counts as started once the learner works on it in any way: code saved, run, a hint, or a submission.
+    # Counting only submissions made the rate look perfect while unfinished problems were never submitted.
+    open_problems = set(db.scalars(select(Problem.id).where(Problem.archived.is_(False))).all())
+    worked = {
+        *((r.user_id, r.problem_id) for r in db.execute(select(Evaluation.user_id, Evaluation.problem_id).where(Evaluation.user_id.in_(user_ids))).all()),
+        *((r.user_id, r.problem_id) for r in db.execute(select(Draft.user_id, Draft.problem_id).where(Draft.user_id.in_(user_ids))).all()),
+        *((r.user_id, r.problem_id) for r in db.execute(select(Hint.user_id, Hint.problem_id).where(Hint.user_id.in_(user_ids))).all()),
+    }
+    started = {pair for pair in worked | attempted if pair[1] in open_problems}
     solved: dict[tuple[str, str], int | None] = {}
     for row in graded:
         if row.verdict == "accepted" and (row.user_id, row.problem_id) not in solved:
@@ -71,7 +81,7 @@ def learner_metrics(db: Session, user_ids: list[str]) -> dict[str, Any]:
     return {
         "started": len(started), "solved": len(solved), "completion_rate": rate(len(solved), len(started)), "hints_total": len(hints),
         "hints_per_solved": round(on_solved / len(solved), 2) if solved else None,
-        "median_seconds_to_complete": int(statistics.median(times)) if times else None, "time_sample": len(times), "graded_attempts": len(graded),
+        "median_seconds_to_complete": int(statistics.median(times)) if times else None, "time_sample": len(times), "graded_attempts": len(graded), "submitted": len(attempted),
         "hint_progress_rate": rate(sum(1 for h in with_outcome if h.outcome in ("progress", "solved")), len(with_outcome)), "hints_with_outcome": len(with_outcome),
     }
 

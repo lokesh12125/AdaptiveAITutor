@@ -8,8 +8,8 @@ export type ActionKind = "run" | "submit" | "hint";
 const TERMINAL_EVAL = new Set(["completed", "failed", "cancelled"]);
 const TERMINAL_RUN = new Set(["completed", "failed"]);
 
-type HintOptions = { request_size?: "nudge" | "more"; question?: string };
-type SelfReport = { self_confidence?: "low" | "medium" | "high"; self_state?: "stuck" | "overwhelmed" | "fine" };
+export type HintOptions = { request_size?: "nudge" | "more"; question?: string; self_state?: "stuck" | "overwhelmed"; focus_start?: number; focus_end?: number };
+type SelfReport = { self_confidence?: "low" | "medium" | "high" };
 type Pending = { kind: ActionKind; code: string; key: string; body: Record<string, unknown> };
 
 /**
@@ -54,7 +54,7 @@ export function useActions(problemId: string, workspace: Workspace | undefined, 
   const finishedRun = run && TERMINAL_RUN.has(run.status) ? run.id : null;
   useEffect(() => {
     if (!finishedRun) return;
-    for (const key of ["home", "progress", "path", "problems", "unit"]) void client.invalidateQueries({ queryKey: [key] });
+    for (const key of ["home", "progress", "path", "problems", "unit", "submissions", "profile"]) void client.invalidateQueries({ queryKey: [key] });
     void client.invalidateQueries({ queryKey: ["workspace", problemId] });
   }, [finishedRun, client, problemId]);
 
@@ -78,7 +78,7 @@ export function useActions(problemId: string, workspace: Workspace | undefined, 
     }
   }, [problemId]);
 
-  const start = useCallback((kind: ActionKind, code: string, options: HintOptions & SelfReport & { custom_args?: string; custom_stdin?: string } = {}) => {
+  const start = useCallback((kind: ActionKind, code: string, options: HintOptions & SelfReport & { custom_args?: string; custom_stdin?: string; cases?: { test_id?: string; args?: string[]; stdin?: string }[] } = {}) => {
     const body: Record<string, unknown> = { ...options };
     if (kind !== "run") body.active_seconds = getActiveSeconds();
     void send({ kind, code, key: newKey(), body });

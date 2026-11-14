@@ -1,0 +1,18 @@
+{
+ "score": 0.472,
+ "components": {
+  "low_mastery": 0.206,
+  "confusion": 0.124,
+  "repeated_issue": 0.067,
+  "unhelpful_hints": 0.075,
+  "repeat_requests": 0.0
+ },
+ "level": 2,
+ "strategy": "targeted_hint",
+ "action": "offer_help",
+ "reason_codes": [
+  "SUPPORT_NEEDED",
+  "ESCALATE_NO_PROGRESS",
+  "OFFER_NEXT_STEP"
+ ]
+}

@@ -9,7 +9,7 @@ for port in 5173 8101 8102; do
   if (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null; then busy+=("$port"); fi
 done
 if [ "${#busy[@]}" -eq 3 ]; then
-  echo "Trellis is already running. Open http://127.0.0.1:5173"
+  echo "CodePath is already running. Open http://127.0.0.1:5173"
   exit 0
 fi
 if [ "${#busy[@]}" -gt 0 ]; then

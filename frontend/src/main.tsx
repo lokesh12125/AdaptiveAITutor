@@ -1,4 +1,5 @@
-import "@fontsource-variable/figtree";
+import "@fontsource-variable/plus-jakarta-sans";
+import "@fontsource-variable/inter";
 import "@fontsource-variable/jetbrains-mono";
 import "./styles/tokens.css";
 import "./styles/base.css";
@@ -13,7 +14,10 @@ import { BrowserRouter } from "react-router-dom";
 import { ApiError } from "./api/client";
 import { App } from "./App";
 import { ToastProvider } from "./components/ui";
+import { migrateStorage } from "./lib/migrateStorage";
 import { SessionProvider } from "./lib/session";
+
+migrateStorage();
 
 const queryClient = new QueryClient({
   defaultOptions: {
